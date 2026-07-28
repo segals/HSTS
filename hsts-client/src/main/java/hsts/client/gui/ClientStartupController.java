@@ -1,8 +1,5 @@
 package hsts.client.gui;
 
-import hsts.client.HSTSApp;
-import hsts.client.net.ClientController;
-import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -12,8 +9,11 @@ import javafx.scene.control.TextField;
 /**
  * Controller for the client's startup window: asks where the server is, and
  * connects to it.
+ *
+ * <p>Required by מתווה item 15 - the connection is established through a GUI, so
+ * the same jar can be pointed at any server on the network without rebuilding.</p>
  */
-public class ClientStartupController {
+public class ClientStartupController extends GUIScreen {
 
     @FXML private TextField hostField;
     @FXML private TextField portField;
@@ -22,11 +22,14 @@ public class ClientStartupController {
 
     @FXML
     private void initialize() {
+        bindStatusLabel(statusLabel);
+
         // Sensible defaults for testing both jars on one laptop. On the two-laptop
         // setup the address is the server laptop's LAN address.
         hostField.setText("localhost");
         portField.setText("5555");
-        info("Enter the address of the machine running G1_Server.jar.");
+
+        showMessage("Enter the address of the machine running G1_Server.jar.");
     }
 
     @FXML
@@ -35,22 +38,22 @@ public class ClientStartupController {
         final int port;
 
         if (host.isEmpty()) {
-            error("Enter the server address.");
+            showError("Enter the server address.");
             return;
         }
         try {
             port = Integer.parseInt(portField.getText().trim());
         } catch (NumberFormatException e) {
-            error("The port must be a whole number.");
+            showError("The port must be a whole number.");
             return;
         }
         if (port < 1 || port > 65535) {
-            error("The port must be between 1 and 65535.");
+            showError("The port must be between 1 and 65535.");
             return;
         }
 
         connectButton.setDisable(true);
-        info("Connecting to " + host + ":" + port + " ...");
+        showMessage("Connecting to " + host + ":" + port + " ...");
 
         // Opening a socket to an unreachable host blocks until it times out.
         // On the JavaFX thread that would freeze the window, so it runs on a
@@ -58,16 +61,16 @@ public class ClientStartupController {
         Task<Void> connect = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                ClientController.getInstance().connect(host, port);
+                controller.connect(host, port);
                 return null;
             }
         };
 
-        connect.setOnSucceeded(e -> openLogin());
+        connect.setOnSucceeded(e -> switchTo("/fxml/Login.fxml", false));
 
         connect.setOnFailed(e -> {
             connectButton.setDisable(false);
-            error(describe(connect.getException(), host, port));
+            showError(describe(connect.getException(), host, port));
         });
 
         Thread thread = new Thread(connect, "hsts-client-connect");
@@ -84,7 +87,7 @@ public class ClientStartupController {
 
         if (name.equals("ConnectException")) {
             return "Nothing is listening on " + host + ":" + port
-                 + ". Check the server is running, and that Windows Firewall "
+                 + ". Check that the server is running, and that Windows Firewall "
                  + "allows inbound TCP on that port on the server machine.";
         }
         if (name.equals("UnknownHostException")) {
@@ -94,28 +97,5 @@ public class ClientStartupController {
             return "No answer from " + host + ". Are both machines on the same network?";
         }
         return cause.getMessage() == null ? cause.toString() : cause.getMessage();
-    }
-
-    private void openLogin() {
-        try {
-            HSTSApp.getPrimaryStage().setScene(HSTSApp.loadScene("/fxml/Login.fxml"));
-        } catch (Exception e) {
-            connectButton.setDisable(false);
-            error("Connected, but the login screen failed to open: " + e.getMessage());
-        }
-    }
-
-    private void info(String text) {
-        Platform.runLater(() -> {
-            statusLabel.setStyle("-fx-text-fill: #444444;");
-            statusLabel.setText(text);
-        });
-    }
-
-    private void error(String text) {
-        Platform.runLater(() -> {
-            statusLabel.setStyle("-fx-text-fill: #b00020; -fx-font-weight: bold;");
-            statusLabel.setText(text);
-        });
     }
 }

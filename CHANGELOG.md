@@ -177,6 +177,35 @@ data is identical on both laptops and on every run.
 **Menu entries for unbuilt features are shown but disabled, labelled with their
 milestone.** Hiding them would make the menu look finished when it is not.
 
+### Problem found during GUI testing, and how it was fixed
+
+**Long messages were cut off at the bottom of the window.** Logging in twice as
+the same user produced *"This user is already logged in on another computer. Log
+out the..."* — and the rest was invisible.
+
+*Cause:* a window is sized once, when it is first shown, to fit the text it had
+at that moment. The status labels wrap, so a longer message becomes two or three
+lines, but the window did not grow to match. An error the user cannot finish
+reading is worse than no error, because it looks like the program is broken.
+
+*Fix, and where it was put:* this was not patched on the login screen alone. The
+submitted class diagram has an abstract **`GUIScreen`** base for every screen with
+a `showMessage` method, which had not been created yet — so it was created, and
+the fix lives there. Every screen now inherits one way of showing messages, and
+each one resizes the window to fit. `ClientStartupController`, `LoginScreenController`
+and `MainMenuController` were rewritten to extend it, and the server's startup
+window got the same treatment through `ServerApp.fitToContent()`.
+
+The resize is three steps, and the order matters: `applyCss()` (styles change font
+size, font size changes wrapping), then `layout()` (force the wrap to be
+recalculated *now*), then `sizeToScene()`. Without the middle step the window
+measures the *previous* message and stays one step behind.
+
+*Worth noting for the report:* this is a good example of a bug that no automated
+test would have caught. The 48 checks all passed while the message was
+unreadable, because they assert what the server sends, not what the window shows.
+It was found by a person clicking buttons.
+
 ### Verified — 48 automated checks, all passing
 
 | Group | Result |

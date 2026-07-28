@@ -1,7 +1,5 @@
 package hsts.client.gui;
 
-import hsts.client.HSTSApp;
-import hsts.client.net.ClientController;
 import hsts.common.entity.Principal;
 import hsts.common.entity.Student;
 import hsts.common.entity.SubjectCoordinator;
@@ -34,7 +32,7 @@ import java.util.List;
  * stops an honest user pressing the wrong thing; it stops nobody else. Every
  * request is authorised again on the server.</p>
  */
-public class MainMenuController {
+public class MainMenuController extends GUIScreen {
 
     private static final String REQ_LOGOUT = "logout";
 
@@ -43,16 +41,17 @@ public class MainMenuController {
     @FXML private Label  contextLabel;
     @FXML private VBox   menuBox;
     @FXML private Button logoutButton;
+    @FXML private Label  statusLabel;
     @FXML private Label  footerLabel;
-
-    private final ClientController client = ClientController.getInstance();
 
     /** One menu entry: a label, the milestone that delivers it, and whether it is ready. */
     private record MenuEntry(String text, String milestone, boolean ready) { }
 
     @FXML
     private void initialize() {
-        User user = client.getCurrentUser();
+        bindStatusLabel(statusLabel);
+
+        User user = controller.getCurrentUser();
         if (user == null) {
             nameLabel.setText("Not signed in");
             return;
@@ -76,10 +75,12 @@ public class MainMenuController {
                 "Greyed-out entries are not built yet. Milestone 2 delivers login, "
               + "roles and this menu; the features arrive in the milestones shown.");
 
-        client.setResponseHandler(this::onServerResponse);
-        client.setConnectionLostHandler(reason -> {
+        clearMessage();
+
+        controller.setResponseHandler(this::onServerResponse);
+        controller.setConnectionLostHandler(reason -> {
             logoutButton.setDisable(true);
-            contextLabel.setText(reason);
+            showError(reason);
         });
     }
 
@@ -149,8 +150,9 @@ public class MainMenuController {
     @FXML
     private void onLogout() {
         logoutButton.setDisable(true);
+        showMessage("Signing out...");
         try {
-            client.send(new Request(RequestType.LOGOUT, null, REQ_LOGOUT));
+            controller.send(new Request(RequestType.LOGOUT, null, REQ_LOGOUT));
         } catch (Exception e) {
             // Even if the message cannot be sent, return to the login screen.
             // The server clears the session when the connection drops anyway.
@@ -165,13 +167,7 @@ public class MainMenuController {
     }
 
     private void backToLogin() {
-        client.clearCurrentUser();
-        try {
-            HSTSApp.getPrimaryStage().setScene(HSTSApp.loadScene("/fxml/Login.fxml"));
-            HSTSApp.getPrimaryStage().setResizable(false);
-        } catch (Exception e) {
-            contextLabel.setText("Logged out, but the login screen failed to open: "
-                                 + e.getMessage());
-        }
+        controller.clearCurrentUser();
+        switchTo("/fxml/Login.fxml", false);
     }
 }

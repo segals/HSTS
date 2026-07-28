@@ -1,7 +1,5 @@
 package hsts.client.gui;
 
-import hsts.client.HSTSApp;
-import hsts.client.net.ClientController;
 import hsts.common.entity.User;
 import hsts.common.protocol.Credentials;
 import hsts.common.protocol.Request;
@@ -21,7 +19,7 @@ import javafx.scene.control.TextField;
  * logged in elsewhere, are both answered by the server. A client is only a
  * program on someone else's computer, and the server never trusts it.</p>
  */
-public class LoginScreenController {
+public class LoginScreenController extends GUIScreen {
 
     private static final String REQ_LOGIN = "login";
 
@@ -31,16 +29,18 @@ public class LoginScreenController {
     @FXML private Button        loginButton;
     @FXML private Label         statusLabel;
 
-    private final ClientController client = ClientController.getInstance();
-
     @FXML
     private void initialize() {
-        serverLabel.setText("Connected to " + client.describeConnection());
-        client.setResponseHandler(this::onServerResponse);
-        client.setConnectionLostHandler(reason -> {
+        bindStatusLabel(statusLabel);
+
+        serverLabel.setText("Connected to " + controller.describeConnection());
+        controller.setResponseHandler(this::onServerResponse);
+        controller.setConnectionLostHandler(reason -> {
             loginButton.setDisable(true);
-            error(reason + " Restart the client to reconnect.");
+            showError(reason + " Restart the client to reconnect.");
         });
+
+        clearMessage();
         usernameField.requestFocus();
     }
 
@@ -50,19 +50,19 @@ public class LoginScreenController {
         String password = passwordField.getText();
 
         if (username.isEmpty() || password.isEmpty()) {
-            error("Enter both a username and a password.");
+            showError("Enter both a username and a password.");
             return;
         }
 
         loginButton.setDisable(true);
-        info("Checking...");
+        showMessage("Checking...");
 
         try {
-            client.send(new Request(RequestType.LOGIN,
+            controller.send(new Request(RequestType.LOGIN,
                     new Credentials(username, password), REQ_LOGIN));
         } catch (Exception e) {
             loginButton.setDisable(false);
-            error("Could not reach the server: " + e.getMessage());
+            showError("Could not reach the server: " + e.getMessage());
         }
     }
 
@@ -76,31 +76,16 @@ public class LoginScreenController {
 
         if (!response.isOk()) {
             passwordField.clear();
-            error(response.getMessage());
+            showError(response.getMessage());
             return;
         }
 
         if (!(response.getPayload() instanceof User user)) {
-            error("The server accepted the login but sent no user details.");
+            showError("The server accepted the login but sent no user details.");
             return;
         }
 
-        client.setCurrentUser(user);
-        try {
-            HSTSApp.getPrimaryStage().setScene(HSTSApp.loadScene("/fxml/MainMenu.fxml"));
-            HSTSApp.getPrimaryStage().setResizable(true);
-        } catch (Exception e) {
-            error("Signed in, but the menu failed to open: " + e.getMessage());
-        }
-    }
-
-    private void info(String text) {
-        statusLabel.setStyle("-fx-text-fill: #444444;");
-        statusLabel.setText(text);
-    }
-
-    private void error(String text) {
-        statusLabel.setStyle("-fx-text-fill: #b00020; -fx-font-weight: bold;");
-        statusLabel.setText(text);
+        controller.setCurrentUser(user);
+        switchTo("/fxml/MainMenu.fxml", true);
     }
 }

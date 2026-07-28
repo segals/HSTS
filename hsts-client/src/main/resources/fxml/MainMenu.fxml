@@ -42,6 +42,10 @@
 
     <Region VBox.vgrow="ALWAYS"/>
 
+    <!-- wrapText is required: GUIScreen resizes the window to fit a wrapped
+         message, but a label that does not wrap has nothing to wrap onto. -->
+    <Label fx:id="statusLabel" wrapText="true" text=" "/>
+
     <Label fx:id="footerLabel" wrapText="true"
            style="-fx-text-fill: #777777; -fx-font-size: 11px;"/>
 

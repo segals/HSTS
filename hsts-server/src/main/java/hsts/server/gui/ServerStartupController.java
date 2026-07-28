@@ -183,6 +183,7 @@ public class ServerStartupController {
         Platform.runLater(() -> {
             statusLabel.setStyle("-fx-text-fill: #444444;");
             statusLabel.setText(text);
+            ServerApp.fitToContent();
         });
     }
 
@@ -190,6 +191,7 @@ public class ServerStartupController {
         Platform.runLater(() -> {
             statusLabel.setStyle("-fx-text-fill: #b00020; -fx-font-weight: bold;");
             statusLabel.setText(text);
+            ServerApp.fitToContent();
         });
     }
 }
