@@ -4,6 +4,7 @@ import hsts.server.HSTSServer;
 import hsts.server.ServerApp;
 import hsts.server.config.ConfigFile;
 import hsts.server.dao.DBController;
+import hsts.server.seed.SeedRunner;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -33,6 +34,13 @@ public class ServerStartupController {
     @FXML private CheckBox      saveSettingsBox;
     @FXML private Button        startButton;
     @FXML private Label         statusLabel;
+
+    /** What the seeder did, carried across to the console screen. */
+    private static String seedSummary = "";
+
+    public static String getSeedSummary() {
+        return seedSummary;
+    }
 
     /** Called automatically by the FXML loader once the fields are injected. */
     @FXML
@@ -91,7 +99,12 @@ public class ServerStartupController {
             protected Void call() throws Exception {
                 DBController db = DBController.getInstance();
                 db.connect(host, dbPort, database, user, password);
-                db.ensureSkeletonSchema();
+
+                updateMessage("Creating tables if needed...");
+                db.initialiseSchema();
+
+                updateMessage("Checking test data...");
+                seedSummary = SeedRunner.seedIfEmpty();
 
                 HSTSServer server = HSTSServer.getInstance();
                 server.setPort(serverPort);
@@ -99,6 +112,8 @@ public class ServerStartupController {
                 return null;
             }
         };
+
+        startup.messageProperty().addListener((obs, old, text) -> info(text));
 
         startup.setOnSucceeded(e -> {
             if (saveSettingsBox.isSelected()) {

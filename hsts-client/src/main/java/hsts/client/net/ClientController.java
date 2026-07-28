@@ -1,5 +1,6 @@
 package hsts.client.net;
 
+import hsts.common.entity.User;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.Response;
 import javafx.application.Platform;
@@ -32,6 +33,16 @@ public class ClientController {
     private HSTSClient client;
     private Consumer<Response> responseHandler = response -> { };
     private Consumer<String>   connectionLostHandler = message -> { };
+
+    /**
+     * Who is signed in on this client.
+     *
+     * <p>Held only so the screens know which menu to draw and whose name to
+     * show. It is <b>not</b> a permission check: the server decides what this
+     * user may do, on every single request. If the client were trusted, editing
+     * this field would be enough to become the principal.</p>
+     */
+    private User currentUser;
 
     private ClientController() {
     }
@@ -83,6 +94,18 @@ public class ClientController {
 
     public String describeConnection() {
         return isConnected() ? client.getHost() + ":" + client.getPort() : "not connected";
+    }
+
+    public User getCurrentUser() {
+        return currentUser;
+    }
+
+    public void setCurrentUser(User user) {
+        this.currentUser = user;
+    }
+
+    public void clearCurrentUser() {
+        this.currentUser = null;
     }
 
     // -----------------------------------------------------------------

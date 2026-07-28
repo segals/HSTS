@@ -8,14 +8,21 @@ package hsts.common.protocol;
  * dispatch to a single readable switch statement, and means adding a feature
  * later costs one new enum value rather than a new class and a new handler.</p>
  *
- * <p>Milestone 1 defines only the two values the walking skeleton needs.
- * The rest arrive with the milestone that uses them.</p>
+ * <p>Values are added milestone by milestone, as the feature that needs them is
+ * built. An unused value would be a promise the server does not keep.</p>
  */
 public enum RequestType {
 
-    /** Walking-skeleton probe: proves client to server to database and back. */
+    // ---- infrastructure ----
+
+    /** Health probe: proves client to server to database and back. */
     PING,
 
-    /** Username and password check. Milestone 1 uses it to prove salted hashing. */
-    LOGIN
+    // ---- SUC-1: login (milestone 2) ----
+
+    /** Username and password. Payload is a {@link Credentials}. */
+    LOGIN,
+
+    /** Ends the session held by this connection. */
+    LOGOUT
 }

@@ -63,7 +63,7 @@ public class ClientStartupController {
             }
         };
 
-        connect.setOnSucceeded(e -> openSkeletonCheck());
+        connect.setOnSucceeded(e -> openLogin());
 
         connect.setOnFailed(e -> {
             connectButton.setDisable(false);
@@ -96,13 +96,12 @@ public class ClientStartupController {
         return cause.getMessage() == null ? cause.toString() : cause.getMessage();
     }
 
-    private void openSkeletonCheck() {
+    private void openLogin() {
         try {
-            HSTSApp.getPrimaryStage().setScene(HSTSApp.loadScene("/fxml/SkeletonCheck.fxml"));
-            HSTSApp.getPrimaryStage().setResizable(true);
+            HSTSApp.getPrimaryStage().setScene(HSTSApp.loadScene("/fxml/Login.fxml"));
         } catch (Exception e) {
             connectButton.setDisable(false);
-            error("Connected, but the next screen failed to open: " + e.getMessage());
+            error("Connected, but the login screen failed to open: " + e.getMessage());
         }
     }
 

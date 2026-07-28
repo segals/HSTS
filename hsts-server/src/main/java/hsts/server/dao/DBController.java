@@ -1,10 +1,7 @@
 package hsts.server.dao;
 
-import hsts.common.util.PasswordHasher;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -127,96 +124,27 @@ public class DBController {
         }
     }
 
-    // =================================================================
-    //  MILESTONE 1 ONLY - throwaway skeleton schema.
-    //
-    //  These two tables exist purely to prove that JDBC works end to end.
-    //  Milestone 2 replaces them with the real schema from the plan
-    //  (docs/01_implementation_plan.md section 2). Nothing else should
-    //  ever depend on them.
-    // =================================================================
-
-    /** Creates the skeleton tables if absent and makes sure the test user exists. */
-    public void ensureSkeletonSchema() throws SQLException {
-        try (Statement st = connection.createStatement()) {
-            st.executeUpdate("""
-                CREATE TABLE IF NOT EXISTS m1_skeleton (
-                  id         INT PRIMARY KEY,
-                  note       VARCHAR(200) NOT NULL,
-                  created_at DATETIME     NOT NULL
-                ) ENGINE=InnoDB""");
-
-            st.executeUpdate("""
-                CREATE TABLE IF NOT EXISTS m1_skeleton_user (
-                  username      VARCHAR(50) PRIMARY KEY,
-                  password_hash CHAR(64)    NOT NULL,
-                  password_salt CHAR(32)    NOT NULL,
-                  full_name     VARCHAR(100) NOT NULL
-                ) ENGINE=InnoDB""");
-
-            st.executeUpdate("""
-                INSERT IGNORE INTO m1_skeleton (id, note, created_at)
-                VALUES (1, 'HSTS walking skeleton row - written by the server on first start', NOW())""");
-        }
-
-        // Seed the one test user, hashed with a fresh random salt.
-        // Password follows the documented convention: username + '!' + role initial.
-        seedSkeletonUser("teacher1", "teacher1!T", "Test Teacher One");
-    }
-
-    private void seedSkeletonUser(String username, String plainPassword, String fullName)
-            throws SQLException {
-
-        String salt = PasswordHasher.newSalt();
-        String hash = PasswordHasher.hash(plainPassword, salt);
-
-        String sql = """
-            INSERT INTO m1_skeleton_user (username, password_hash, password_salt, full_name)
-            VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE full_name = VALUES(full_name)""";
-
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, username);
-            ps.setString(2, hash);
-            ps.setString(3, salt);
-            ps.setString(4, fullName);
-            ps.executeUpdate();
-        }
-    }
-
-    /** Reads the skeleton row back - this is what the PING request returns. */
-    public String readSkeletonRow() throws SQLException {
-        String sql = "SELECT note, created_at FROM m1_skeleton WHERE id = 1";
-        try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-
-            if (rs.next()) {
-                return rs.getString("note") + "  (written " + rs.getTimestamp("created_at") + ")";
-            }
-            return "skeleton row missing";
-        }
-    }
-
     /**
-     * Checks a username and password against the stored salt and hash.
+     * Builds the schema if needed, then seeds the test data if the database is empty.
      *
-     * <p>The password is never stored and never compared directly - it is hashed
-     * with that user's salt and the two hashes are compared.</p>
+     * <p>Both steps are safe to run repeatedly, so restarting the server never
+     * duplicates anything. Seeding only happens when the {@code users} table has
+     * no rows, so real data is never overwritten by accident.</p>
      */
-    public String checkSkeletonLogin(String username, String password) throws SQLException {
-        String sql = "SELECT password_hash, password_salt, full_name "
-                   + "FROM m1_skeleton_user WHERE username = ?";
+    public void initialiseSchema() throws SQLException {
+        SchemaManager.createSchema(connection);
+    }
 
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, username);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) {
-                    return null;   // no such user
-                }
-                boolean good = PasswordHasher.matches(
-                        password, rs.getString("password_salt"), rs.getString("password_hash"));
-                return good ? rs.getString("full_name") : null;
-            }
+    /** Counts rows in a table - used to decide whether seeding is needed, and by tests. */
+    public int countRows(String table) throws SQLException {
+        // The table name cannot be a bind parameter, so it is checked against a
+        // strict pattern rather than interpolated blindly.
+        if (!table.matches("[a-z_]+")) {
+            throw new IllegalArgumentException("suspicious table name: " + table);
+        }
+        try (Statement st = connection.createStatement();
+             ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + table)) {
+            return rs.next() ? rs.getInt(1) : 0;
         }
     }
 

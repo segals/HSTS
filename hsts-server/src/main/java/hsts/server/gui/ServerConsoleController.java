@@ -33,7 +33,8 @@ public class ServerConsoleController {
         detailsLabel.setText(
                 "Listening on port " + server.getPort()
               + "\nDatabase: " + db.getDescribedUrl()
-              + "\nMySQL version: " + mysqlVersion);
+              + "\nMySQL version: " + mysqlVersion
+              + "\n" + ServerStartupController.getSeedSummary());
 
         // From here on, every server log line lands in this text area.
         //

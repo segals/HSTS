@@ -1,9 +1,15 @@
 package hsts.server;
 
+import hsts.common.entity.User;
 import hsts.common.protocol.Credentials;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.Response;
+import hsts.server.boundary.IUserManagementSystem;
+import hsts.server.boundary.LocalUserManagementAdapter;
+import hsts.server.control.LoginController;
 import hsts.server.dao.DBController;
+import hsts.server.dao.UserDAO;
+import hsts.server.push.SessionRegistry;
 import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
 
@@ -15,17 +21,16 @@ import java.util.function.Consumer;
 /**
  * The HSTS server: the one place every client message arrives.
  *
- * <p><b>Singleton</b> - the second of the two required by the submitted class
- * diagram. There must be exactly one listening socket and one registry of
- * connected users.</p>
+ * <p><b>Singleton</b> - one of the two required by the submitted class diagram.
+ * There must be exactly one listening socket and one registry of who is
+ * connected.</p>
  *
- * <p>It extends OCSF's {@link AbstractServer}, which does the socket work and
- * calls {@link #handleMessageFromClient} once per incoming message, on that
- * client's own thread.</p>
+ * <p>It extends OCSF's {@link AbstractServer}, which owns the sockets and calls
+ * {@link #handleMessageFromClient} once per message, on that client's own thread.</p>
  *
- * <p>In the finished system this class stays thin: it decides which controller
- * should deal with a request and does nothing else. Milestone 1 answers the two
- * skeleton requests inline, because no controllers exist yet.</p>
+ * <p>This class stays deliberately thin. It decides <em>which controller</em>
+ * should deal with a request and does nothing else - no SQL, no business rules.
+ * Everything real happens in the Application tier behind it.</p>
  */
 public class HSTSServer extends AbstractServer {
 
@@ -35,8 +40,13 @@ public class HSTSServer extends AbstractServer {
 
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm:ss");
 
-    /** Where log lines go. The console screen replaces this to show them on screen. */
     private Consumer<String> logSink = System.out::println;
+
+    // ---- Application tier ----
+    private final SessionRegistry sessions = new SessionRegistry();
+    private final UserDAO userDAO = new UserDAO();
+    private final IUserManagementSystem userManagement = new LocalUserManagementAdapter(userDAO);
+    private final LoginController loginController = new LoginController(userManagement, sessions);
 
     private HSTSServer(int port) {
         super(port);
@@ -47,6 +57,10 @@ public class HSTSServer extends AbstractServer {
             instance = new HSTSServer(DEFAULT_PORT);
         }
         return instance;
+    }
+
+    public SessionRegistry getSessions() {
+        return sessions;
     }
 
     public void setLogSink(Consumer<String> sink) {
@@ -64,10 +78,10 @@ public class HSTSServer extends AbstractServer {
     /**
      * Called by OCSF for every message from every client.
      *
-     * <p>Note the try/catch around everything. If this method throws, OCSF drops
-     * that client's connection with no explanation, which during a live demo
+     * <p>Everything is wrapped in a try/catch. If this method throws, OCSF drops
+     * that client's connection with no explanation - which during a live demo
      * looks exactly like a network fault. Catching here means the client always
-     * gets an answer it can display, even when something has gone wrong.</p>
+     * receives something it can display, even when something has gone wrong.</p>
      */
     @Override
     protected void handleMessageFromClient(Object msg, ConnectionToClient client) {
@@ -79,13 +93,18 @@ public class HSTSServer extends AbstractServer {
             return;
         }
 
-        log("Request " + request.getType() + " from " + client);
+        // Any message counts as activity, which is what the inactivity timeout
+        // in requirement 76 will measure against.
+        sessions.touch(client, System.currentTimeMillis());
+
+        log("Request " + request.getType() + " from " + describe(client));
 
         Response response;
         try {
             response = switch (request.getType()) {
-                case PING  -> handlePing();
-                case LOGIN -> handleLogin(request);
+                case PING   -> handlePing();
+                case LOGIN  -> handleLogin(request, client);
+                case LOGOUT -> loginController.logout(client);
             };
         } catch (Exception e) {
             log("FAILED to handle " + request.getType() + ": " + e);
@@ -101,35 +120,47 @@ public class HSTSServer extends AbstractServer {
         sendSafely(client, response);
     }
 
-    /** Walking-skeleton probe: proves the server can reach MySQL and answer. */
     private Response handlePing() throws Exception {
         DBController db = DBController.getInstance();
-        String payload = "MySQL " + db.getServerVersion() + "  |  " + db.readSkeletonRow();
-        return Response.ok(payload, "Round trip complete: client, server, database, client.");
+        return Response.ok("MySQL " + db.getServerVersion(),
+                           "Round trip complete: client, server, database, client.");
     }
 
-    /** Milestone 1 login: proves the salted hash comparison works against a real row. */
-    private Response handleLogin(Request request) throws Exception {
+    private Response handleLogin(Request request, ConnectionToClient client) {
         if (!(request.getPayload() instanceof Credentials credentials)) {
             return Response.error("Login request carried no credentials.");
         }
+        Response response = loginController.authenticate(credentials, client);
 
-        String fullName = DBController.getInstance()
-                .checkSkeletonLogin(credentials.getUsername(), credentials.getPassword());
-
-        if (fullName == null) {
-            // Deliberately does not say which of the two was wrong.
-            return Response.error("Incorrect username or password.");
+        if (response.isOk() && response.getPayload() instanceof User user) {
+            log("Logged in: " + user.getUsername() + " (" + user.getRole()
+                + ") - " + sessions.getActiveCount() + " active session(s)");
         }
-        return Response.ok(fullName, "Welcome, " + fullName + ".");
+        return response;
     }
 
     private void sendSafely(ConnectionToClient client, Response response) {
         try {
             client.sendToClient(response);
         } catch (IOException e) {
-            log("Could not reply to " + client + ": " + e.getMessage());
+            log("Could not reply to " + describe(client) + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * A readable name for a connection.
+     *
+     * <p>OCSF's own {@code toString()} reads the socket address, which is already
+     * gone by the time the disconnect hook runs - it prints "null". Preferring
+     * the logged-in username avoids that, and is more useful anyway.</p>
+     */
+    private String describe(ConnectionToClient client) {
+        Object username = client.getInfo("username");
+        if (username != null) {
+            return String.valueOf(username);
+        }
+        String text = String.valueOf(client);
+        return "null".equals(text) ? "a disconnected client" : text;
     }
 
     // -----------------------------------------------------------------
@@ -138,19 +169,31 @@ public class HSTSServer extends AbstractServer {
 
     @Override
     protected void clientConnected(ConnectionToClient client) {
-        log("Client connected: " + client + "  (total " + getNumberOfClients() + ")");
+        log("Client connected: " + describe(client) + "  (total " + getNumberOfClients() + ")");
     }
 
+    /**
+     * A client went away.
+     *
+     * <p>This is what stops requirement 4 from becoming a trap. Without clearing
+     * the session here, closing the client window would leave that user marked as
+     * logged in forever, and she could never log in again.</p>
+     */
     @Override
     protected synchronized void clientDisconnected(ConnectionToClient client) {
-        log("Client disconnected: " + client);
+        String who = describe(client);
+        loginController.handleDisconnect(client);
+        log("Client disconnected: " + who + "  (" + sessions.getActiveCount() + " session(s) left)");
     }
 
     @Override
     protected synchronized void clientException(ConnectionToClient client, Throwable exception) {
-        // A client closing its window arrives here as an EOFException. That is
-        // normal, not an error, so it is logged quietly.
-        log("Client dropped: " + client + " (" + exception.getClass().getSimpleName() + ")");
+        // Closing the client window arrives here as an EOFException. That is
+        // normal, not a fault, so it is logged quietly - but the session must
+        // still be released.
+        String who = describe(client);
+        loginController.handleDisconnect(client);
+        log("Client dropped: " + who + " (" + exception.getClass().getSimpleName() + ")");
     }
 
     @Override
