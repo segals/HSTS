@@ -60,6 +60,12 @@
                       "JavaFX runtime components are missing".
                   -->
                   <mainClass>hsts.server.ServerLauncher</mainClass>
+                  <manifestEntries>
+                    <!-- See the matching note in hsts-client/pom.xml: silences the
+                         JDK 24+ restricted-method warnings from JavaFX's native
+                         library loading, by granting the access properly. -->
+                    <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+                  </manifestEntries>
                 </transformer>
                 <!-- Keeps META-INF/services intact so the JDBC driver is still found. -->
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>

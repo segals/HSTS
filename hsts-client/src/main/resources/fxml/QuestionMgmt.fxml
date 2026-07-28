@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    SUC-2 / מתווה scenario 2: the question bank.
+
+      1. add a question to the bank
+      2. edit a question - the previous version stays in the bank
+      3. browse the bank
+      4. delete a question
+
+    A question holds its text, four answers with exactly one correct, and an
+    optional picture (system description §3.1). Each belongs to one course.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.QuestionMgmtController"
+      spacing="10" prefWidth="1000" prefHeight="680">
+
+    <fx:define>
+        <!-- Exactly one answer may be correct, so the four radio buttons share
+             one group - the control itself makes two correct answers impossible. -->
+        <ToggleGroup fx:id="correctGroup"/>
+    </fx:define>
+
+    <padding>
+        <Insets top="14" right="18" bottom="14" left="18"/>
+    </padding>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Question bank" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+        <Label text="Course:"/>
+        <ComboBox fx:id="courseCombo" prefWidth="240"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack"/>
+    </HBox>
+
+    <Separator/>
+
+    <HBox spacing="14" VBox.vgrow="ALWAYS">
+
+        <!-- ================= left: the bank ================= -->
+        <VBox spacing="6" prefWidth="330" minWidth="260">
+            <Label fx:id="bankCountLabel" style="-fx-font-weight: bold;"/>
+            <ListView fx:id="questionList" VBox.vgrow="ALWAYS"/>
+            <HBox spacing="6">
+                <Button fx:id="newButton"      text="New"      onAction="#onNew"/>
+                <Button fx:id="deleteButton"   text="Delete"   onAction="#onDelete"/>
+                <Button fx:id="versionsButton" text="History"  onAction="#onShowVersions"/>
+            </HBox>
+        </VBox>
+
+        <!-- ================= right: the editor ================= -->
+        <ScrollPane fitToWidth="true" HBox.hgrow="ALWAYS">
+            <VBox spacing="8">
+                <padding><Insets right="8"/></padding>
+
+                <Label fx:id="editorTitleLabel" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+                <Label fx:id="versionLabel" style="-fx-text-fill: #666666; -fx-font-size: 11px;"/>
+
+                <Label text="Question text"/>
+                <TextArea fx:id="textArea" prefRowCount="3" wrapText="true"/>
+
+                <Label text="Instructions for answering (optional)"/>
+                <TextArea fx:id="instructionsArea" prefRowCount="2" wrapText="true"/>
+
+                <GridPane hgap="10" vgap="6">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="80"/>
+                        <ColumnConstraints minWidth="200" hgrow="ALWAYS"/>
+                        <ColumnConstraints minWidth="80"/>
+                        <ColumnConstraints minWidth="140"/>
+                    </columnConstraints>
+
+                    <Label text="Topic" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                    <!-- editable: pick an existing topic, or type a new one -->
+                    <ComboBox fx:id="topicCombo" editable="true" maxWidth="Infinity"
+                              GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                    <Label text="Difficulty" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+                    <ComboBox fx:id="difficultyCombo" maxWidth="Infinity"
+                              GridPane.rowIndex="0" GridPane.columnIndex="3"/>
+                </GridPane>
+
+                <Separator/>
+                <Label text="Answers - mark exactly one as correct"
+                       style="-fx-font-weight: bold;"/>
+
+                <GridPane hgap="8" vgap="6">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="90"/>
+                        <ColumnConstraints minWidth="300" hgrow="ALWAYS"/>
+                    </columnConstraints>
+
+                    <RadioButton fx:id="correct1" text="1. correct" toggleGroup="$correctGroup"
+                                 GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                    <TextField fx:id="answer1" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                    <RadioButton fx:id="correct2" text="2. correct" toggleGroup="$correctGroup"
+                                 GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                    <TextField fx:id="answer2" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                    <RadioButton fx:id="correct3" text="3. correct" toggleGroup="$correctGroup"
+                                 GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                    <TextField fx:id="answer3" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                    <RadioButton fx:id="correct4" text="4. correct" toggleGroup="$correctGroup"
+                                 GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                    <TextField fx:id="answer4" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                </GridPane>
+
+                <Separator/>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Label text="Picture (optional)" style="-fx-font-weight: bold;"/>
+                    <Button fx:id="chooseImageButton" text="Choose..." onAction="#onChooseImage"/>
+                    <Button fx:id="clearImageButton"  text="Remove"    onAction="#onClearImage"/>
+                    <Label fx:id="imageLabel" style="-fx-text-fill: #666666;"/>
+                </HBox>
+                <ImageView fx:id="imagePreview" fitHeight="150" preserveRatio="true"/>
+
+                <Separator/>
+                <HBox spacing="8">
+                    <Button fx:id="saveButton" text="Save" onAction="#onSave" defaultButton="true"/>
+                    <CheckBox fx:id="readOnlyNotice" visible="false"/>
+                </HBox>
+
+                <Label fx:id="statusLabel" wrapText="true" text=" "/>
+            </VBox>
+        </ScrollPane>
+    </HBox>
+
+</VBox>

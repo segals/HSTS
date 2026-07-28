@@ -44,8 +44,18 @@ public class MainMenuController extends GUIScreen {
     @FXML private Label  statusLabel;
     @FXML private Label  footerLabel;
 
-    /** One menu entry: a label, the milestone that delivers it, and whether it is ready. */
-    private record MenuEntry(String text, String milestone, boolean ready) { }
+    /**
+     * One menu entry.
+     *
+     * @param text      what the button says
+     * @param milestone which milestone delivers it, shown while it is not ready
+     * @param fxml      the screen to open, or null if it is not built yet
+     */
+    private record MenuEntry(String text, String milestone, String fxml) {
+        boolean ready() {
+            return fxml != null;
+        }
+    }
 
     @FXML
     private void initialize() {
@@ -68,6 +78,9 @@ public class MainMenuController extends GUIScreen {
             button.setMaxWidth(Double.MAX_VALUE);
             button.setDisable(!entry.ready());
             button.setStyle("-fx-alignment: CENTER-LEFT; -fx-padding: 8 12 8 12;");
+            if (entry.ready()) {
+                button.setOnAction(e -> switchTo(entry.fxml(), true));
+            }
             menuBox.getChildren().add(button);
         }
 
@@ -116,32 +129,32 @@ public class MainMenuController extends GUIScreen {
         List<MenuEntry> entries = new ArrayList<>();
 
         if (user instanceof Teacher) {                       // also covers coordinators
-            entries.add(new MenuEntry("Question bank",              "milestone 3",  false));
-            entries.add(new MenuEntry("Build an exam",              "milestone 4",  false));
-            entries.add(new MenuEntry("Release an exam",            "milestone 6",  false));
-            entries.add(new MenuEntry("Exams running now",          "milestone 8",  false));
-            entries.add(new MenuEntry("Mark and approve grades",    "milestone 9",  false));
-            entries.add(new MenuEntry("Results and histogram",      "milestone 11", false));
-            entries.add(new MenuEntry("My reports",                 "milestone 13", false));
-            entries.add(new MenuEntry("Course study bot",           "milestone 14", false));
+            entries.add(new MenuEntry("Question bank",           "milestone 3",  "/fxml/QuestionMgmt.fxml"));
+            entries.add(new MenuEntry("Build an exam",           "milestone 4",  null));
+            entries.add(new MenuEntry("Release an exam",         "milestone 6",  null));
+            entries.add(new MenuEntry("Exams running now",       "milestone 8",  null));
+            entries.add(new MenuEntry("Mark and approve grades", "milestone 9",  null));
+            entries.add(new MenuEntry("Results and histogram",   "milestone 11", null));
+            entries.add(new MenuEntry("My reports",              "milestone 13", null));
+            entries.add(new MenuEntry("Course study bot",        "milestone 14", null));
         }
 
         if (user instanceof SubjectCoordinator) {
-            entries.add(new MenuEntry("Approve or reject exams",    "milestone 5",  false));
+            entries.add(new MenuEntry("Approve or reject exams", "milestone 5",  null));
         }
 
         if (user instanceof Student) {
-            entries.add(new MenuEntry("Take an exam",               "milestone 7",  false));
-            entries.add(new MenuEntry("My grades",                  "milestone 10", false));
-            entries.add(new MenuEntry("Ask the course bot",         "milestone 14", false));
-            entries.add(new MenuEntry("My bot history",             "milestone 14", false));
+            entries.add(new MenuEntry("Take an exam",            "milestone 7",  null));
+            entries.add(new MenuEntry("My grades",               "milestone 10", null));
+            entries.add(new MenuEntry("Ask the course bot",      "milestone 14", null));
+            entries.add(new MenuEntry("My bot history",          "milestone 14", null));
         }
 
         if (user instanceof Principal) {
-            entries.add(new MenuEntry("Browse questions",           "milestone 12", false));
-            entries.add(new MenuEntry("Browse exams",               "milestone 12", false));
-            entries.add(new MenuEntry("Browse results",             "milestone 12", false));
-            entries.add(new MenuEntry("Statistical reports",        "milestone 13", false));
+            entries.add(new MenuEntry("Browse questions",        "milestone 12", null));
+            entries.add(new MenuEntry("Browse exams",            "milestone 12", null));
+            entries.add(new MenuEntry("Browse results",          "milestone 12", null));
+            entries.add(new MenuEntry("Statistical reports",     "milestone 13", null));
         }
 
         return entries;

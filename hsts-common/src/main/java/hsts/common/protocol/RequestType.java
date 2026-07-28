@@ -24,5 +24,31 @@ public enum RequestType {
     LOGIN,
 
     /** Ends the session held by this connection. */
-    LOGOUT
+    LOGOUT,
+
+    // ---- SUC-2: question bank (milestone 3) ----
+
+    /** The courses the signed-in teacher teaches. No payload. */
+    COURSE_LIST_MINE,
+
+    /** The live question bank for one course. Payload is the course code. */
+    QUESTION_LIST_BY_COURSE,
+
+    /** One full question including its picture. Payload is a {@link QuestionRef}. */
+    QUESTION_GET,
+
+    /** Every stored version of one question. Payload is a {@link QuestionRef}. */
+    QUESTION_VERSIONS,
+
+    /** Topics already used in a course, for the combo box. Payload is the course code. */
+    QUESTION_TOPICS,
+
+    /** Adds a new question. Payload is a {@code Question}. */
+    QUESTION_ADD,
+
+    /** Saves an edit as a new version. Payload is a {@code Question}. */
+    QUESTION_EDIT,
+
+    /** Removes a question from the bank (soft delete). Payload is the question id. */
+    QUESTION_DELETE
 }

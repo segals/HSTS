@@ -227,3 +227,90 @@ It was found by a person clicking buttons.
 
 - The two-laptop LAN test, carried over from milestone 1.
 - GUI click-through of the login and menu screens.
+
+---
+
+## Milestone 3 — the question bank · 2026-07-29
+
+**Covers:** SUC-2, מתווה scenario 2 (all four items), requirements 14–18.
+
+### What was built
+
+| Item | Notes |
+|---|---|
+| `Question`, `Answer`, `DifficultyLevel` | Entities, with `version` / `isCurrent` / `isDeleted` / `topic` |
+| `QuestionDAO` | Versioning, soft delete, 5-digit id generation, topic lookup |
+| `CourseDAO` | Read-only — courses come from an external system (requirement 11) |
+| `QuestionController` | SUC-2, with all validation |
+| `QuestionMgmt.fxml` + controller | Add, edit, browse, delete, version history, picture upload |
+| `QuestionRef` | Points at a question *and* a version — "which question" is two facts now |
+| Menu wiring | "Question bank" is the first live entry |
+
+### Decisions made, and why
+
+**Editing never updates a row.** `QuestionDAO.update()` deliberately throws
+`UnsupportedOperationException`; edits go through `createNewVersion()`, which
+clears `is_current` on every existing row and inserts a new one. All three steps
+run in a single transaction — halfway through, the question has *no* current
+version at all, and a failure there would make it vanish from the bank while
+still sitting in the database.
+
+**A question number is never reused.** The next id is `MAX(...) + 1` across *all*
+versions, including deleted ones. Reusing a freed number would make two different
+questions share an identifier, and every exam that referenced the old one would
+silently change meaning. Verified by test 11.
+
+**Deleting is soft, and marks every version.** The question leaves the bank and
+future exam building, but stays in the database, because a student's marked paper
+from last month must keep showing the question she actually answered. A real
+`DELETE` would either fail on the foreign key or destroy that history.
+
+**The list view does not carry pictures.** A picture can be hundreds of kilobytes;
+a 25-question list would drag every one across the network to render a table of
+text. Images load only when a single question is opened. NFR 18 asks for the
+computing to be done as efficiently as possible, and this is one of the places it
+actually costs something.
+
+**The topic combo box is editable and pre-filled from the course.** Automatic exam
+building selects by exact topic, so "Fractions", "fractions" and "Fraction" would
+quietly become three separate topics and break it. Offering what already exists
+makes the consistent choice the easy one.
+
+**Exactly one correct answer is enforced three times.** The radio buttons make two
+impossible in the GUI; the client re-checks before sending; the server checks
+again. Only the third one counts — a client is a program on someone else's
+computer and can send anything.
+
+### Problem found by the test suite
+
+**Every edit was rejected with "The question must belong to a course".**
+`editQuestion` validated the incoming question *before* filling in the course code
+from the stored one. On an edit the course is not the client's to supply — it is
+baked into the 5-digit id and comes from the database — so validation always saw
+an empty field.
+
+The GUI would have hidden this, because the screen happens to send the course code
+it already has. The server must not depend on that, so the fix was to look up the
+existing question, copy its course code, and only then validate.
+
+*Also fixed:* the test harness hung for four minutes instead of failing. When the
+body threw, the main thread died but OCSF's listening thread is not a daemon, so
+the JVM stayed alive with no output. The harness now always exits through a
+`finally` block.
+
+### Verified — 34 automated checks, all passing
+
+| Group | Result |
+|---|---|
+| Requests refused before signing in | 1/1 |
+| 5-digit id format: 3-digit number + 2-digit course code | 4/4 |
+| Server-side validation: empty text, empty topic, 3 answers, 0 correct, 2 correct | 5/5 |
+| **Edit creates version 2 and keeps version 1** | 4/4 |
+| **Version 1 still holds its original text, topic and difficulty** | 3/3 |
+| The bank shows each question once, at its current version | 2/2 |
+| Topic list picks up new topics | 1/1 |
+| **Pictures survive the round trip byte-for-byte; list view omits them** | 3/3 |
+| **Soft delete: gone from the bank, rows still in the database** | 4/4 |
+| A deleted question number is never handed out again | 1/1 |
+| Requirement 14: another teacher is refused both read and write | 2/2 |
+| A student has no question bank at all | 1/1 |

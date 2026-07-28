@@ -1,13 +1,18 @@
 package hsts.server;
 
+import hsts.common.entity.Question;
 import hsts.common.entity.User;
 import hsts.common.protocol.Credentials;
+import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.Response;
 import hsts.server.boundary.IUserManagementSystem;
 import hsts.server.boundary.LocalUserManagementAdapter;
 import hsts.server.control.LoginController;
+import hsts.server.control.QuestionController;
+import hsts.server.dao.CourseDAO;
 import hsts.server.dao.DBController;
+import hsts.server.dao.QuestionDAO;
 import hsts.server.dao.UserDAO;
 import hsts.server.push.SessionRegistry;
 import ocsf.server.AbstractServer;
@@ -45,8 +50,12 @@ public class HSTSServer extends AbstractServer {
     // ---- Application tier ----
     private final SessionRegistry sessions = new SessionRegistry();
     private final UserDAO userDAO = new UserDAO();
+    private final QuestionDAO questionDAO = new QuestionDAO();
+    private final CourseDAO courseDAO = new CourseDAO();
     private final IUserManagementSystem userManagement = new LocalUserManagementAdapter(userDAO);
     private final LoginController loginController = new LoginController(userManagement, sessions);
+    private final QuestionController questionController =
+            new QuestionController(questionDAO, courseDAO);
 
     private HSTSServer(int port) {
         super(port);
@@ -105,6 +114,32 @@ public class HSTSServer extends AbstractServer {
                 case PING   -> handlePing();
                 case LOGIN  -> handleLogin(request, client);
                 case LOGOUT -> loginController.logout(client);
+
+                // ---- SUC-2: question bank ----
+                // Every one of these needs a signed-in user, and every one
+                // re-checks that user's permission inside the controller. The
+                // client's menu hides what a user may not do; that is a courtesy,
+                // not a defence, because the client can send anything at all.
+                case COURSE_LIST_MINE        -> withUser(client, u ->
+                        questionController.listMyCourses(u));
+                case QUESTION_LIST_BY_COURSE -> withUser(client, u ->
+                        questionController.listByCourse(u, (String) request.getPayload()));
+                case QUESTION_TOPICS         -> withUser(client, u ->
+                        questionController.listTopics(u, (String) request.getPayload()));
+                case QUESTION_GET            -> withUser(client, u -> {
+                        QuestionRef ref = (QuestionRef) request.getPayload();
+                        return questionController.getQuestion(u, ref.getQuestionId(), ref.getVersion());
+                    });
+                case QUESTION_VERSIONS       -> withUser(client, u -> {
+                        QuestionRef ref = (QuestionRef) request.getPayload();
+                        return questionController.listVersions(u, ref.getQuestionId());
+                    });
+                case QUESTION_ADD            -> withUser(client, u ->
+                        questionController.addQuestion(u, (Question) request.getPayload()));
+                case QUESTION_EDIT           -> withUser(client, u ->
+                        questionController.editQuestion(u, (Question) request.getPayload()));
+                case QUESTION_DELETE         -> withUser(client, u ->
+                        questionController.deleteQuestion(u, (String) request.getPayload()));
             };
         } catch (Exception e) {
             log("FAILED to handle " + request.getType() + ": " + e);
@@ -118,6 +153,21 @@ public class HSTSServer extends AbstractServer {
                                 response.getMessage(), request.getRequestId());
 
         sendSafely(client, response);
+    }
+
+    /**
+     * Runs an action on behalf of the user signed in on this connection.
+     *
+     * <p>If nobody is signed in, the action never runs. Putting the check here
+     * means no handler can forget it - and forgetting it once would expose that
+     * one operation to anyone who could open a socket.</p>
+     */
+    private Response withUser(ConnectionToClient client, java.util.function.Function<User, Response> action) {
+        User user = sessions.getUser(client);
+        if (user == null) {
+            return Response.error("You are not signed in. Log in and try again.");
+        }
+        return action.apply(user);
     }
 
     private Response handlePing() throws Exception {
