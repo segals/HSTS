@@ -90,6 +90,8 @@ met" question the Assignment 3 Word document requires.)*
 | `module-info.class` collisions | none |
 | Database smoke test | **8 / 8 passed** — MySQL 8.0.46 |
 | End-to-end client↔server↔database test | **14 / 14 passed** |
+| OCSF survives a full git round trip | fresh clone byte-identical, and it builds |
+| GUI round trip, clicked through by hand | **passed** — server startup window → console showing MySQL 8.0.46; client startup → Connect → PING → login as `teacher1` |
 
 ### Known minor issue
 
@@ -100,5 +102,12 @@ a fault later.
 
 ### Still outstanding for milestone 1
 
-- GUI round trip clicked through by hand (buttons, not just the API underneath).
-- Two-laptop test over the LAN, including the Windows Firewall rule.
+- **Two-laptop test over the LAN**, including the Windows Firewall rule. Everything
+  so far has run on one machine, where the network path is real TCP but never
+  leaves the box. Until this is done, מתווה item 15 is not fully proven.
+
+### Verdict
+
+Milestone 1 achieved its purpose. The stack is proven on JDK 26 and no feature
+work is blocked on unknown technology. The one remaining check needs a second
+machine.
