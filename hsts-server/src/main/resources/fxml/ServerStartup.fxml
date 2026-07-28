@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    The server's startup window.
+
+    Required by מתווה item 15 - "שרת-לקוח, מחשבים נפרדים, הרצת Jar, GUI לאתחול הקשר":
+    the connection details must be entered through a GUI, not hard-coded and not
+    passed on a command line.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.server.gui.ServerStartupController"
+      spacing="12" prefWidth="440">
+
+    <padding>
+        <Insets top="18" right="22" bottom="18" left="22"/>
+    </padding>
+
+    <Label text="HSTS Server" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+    <Label text="Group 1 - High School Test System" style="-fx-text-fill: #555555;"/>
+
+    <Separator/>
+
+    <GridPane hgap="10" vgap="8">
+        <columnConstraints>
+            <ColumnConstraints minWidth="120"/>
+            <ColumnConstraints minWidth="240" hgrow="ALWAYS"/>
+        </columnConstraints>
+
+        <Label text="Listening port"   GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="serverPortField" promptText="5555"
+                   GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="MySQL host"       GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <TextField fx:id="dbHostField" promptText="localhost"
+                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="MySQL port"       GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="dbPortField" promptText="3306"
+                   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="Database"         GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <TextField fx:id="dbNameField" promptText="hsts"
+                   GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+        <Label text="MySQL user"       GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <TextField fx:id="dbUserField" promptText="root"
+                   GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+        <Label text="MySQL password"   GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <PasswordField fx:id="dbPasswordField"
+                       GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+    </GridPane>
+
+    <CheckBox fx:id="saveSettingsBox" selected="true"
+              text="Remember these settings (saved outside the repository)"/>
+
+    <Button fx:id="startButton" text="Start server" onAction="#onStart"
+            defaultButton="true" maxWidth="Infinity"/>
+
+    <Label fx:id="statusLabel" wrapText="true" text=" "/>
+
+</VBox>

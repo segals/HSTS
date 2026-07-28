@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>hsts</groupId>
+    <artifactId>hsts-parent</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>hsts-server</artifactId>
+  <packaging>jar</packaging>
+  <name>HSTS - Server</name>
+
+  <dependencies>
+    <dependency><groupId>hsts</groupId><artifactId>hsts-ocsf</artifactId></dependency>
+    <dependency><groupId>hsts</groupId><artifactId>hsts-common</artifactId></dependency>
+
+    <dependency><groupId>com.mysql</groupId><artifactId>mysql-connector-j</artifactId></dependency>
+
+    <!--
+        The server has a GUI too: the startup window required by מתווה item 15.
+
+        The classifier has to be repeated here. Maven matches a dependency to its
+        managed version by groupId:artifactId:type:classifier - all four. Leaving
+        the classifier off here would look for a different artifact than the one
+        managed in the parent, and the version would not be found.
+    -->
+    <dependency><groupId>org.openjfx</groupId><artifactId>javafx-base</artifactId>
+                <classifier>${javafx.platform}</classifier></dependency>
+    <dependency><groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId>
+                <classifier>${javafx.platform}</classifier></dependency>
+    <dependency><groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId>
+                <classifier>${javafx.platform}</classifier></dependency>
+    <dependency><groupId>org.openjfx</groupId><artifactId>javafx-fxml</artifactId>
+                <classifier>${javafx.platform}</classifier></dependency>
+  </dependencies>
+
+  <build>
+    <finalName>G1_Server</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <!--
+                      NOTE: ServerLauncher does NOT extend javafx.application.Application.
+                      See the long comment in ServerLauncher.java - naming an Application
+                      subclass here makes the JVM refuse to start the jar with
+                      "JavaFX runtime components are missing".
+                  -->
+                  <mainClass>hsts.server.ServerLauncher</mainClass>
+                </transformer>
+                <!-- Keeps META-INF/services intact so the JDBC driver is still found. -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <!-- Leftover signatures from signed jars make the JVM reject the fat jar. -->
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <!-- Several dependencies each carry one; they cannot coexist in a fat jar. -->
+                    <exclude>module-info.class</exclude>
+                    <exclude>META-INF/versions/*/module-info.class</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

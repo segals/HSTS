@@ -1,0 +1,103 @@
+package hsts.client.net;
+
+import hsts.common.protocol.Request;
+import hsts.common.protocol.Response;
+import javafx.application.Platform;
+
+import java.io.IOException;
+import java.util.function.Consumer;
+
+/**
+ * Sits between the screens and {@link HSTSClient}.
+ *
+ * <p>Screens never touch the socket. They call this class to send, and register
+ * a handler to be told about replies. That is the mediator role the submitted
+ * class diagram gives it, and it keeps every screen free of networking code.</p>
+ *
+ * <h2>The threading rule this class enforces</h2>
+ *
+ * <p>Replies arrive on an OCSF background thread. JavaFX forbids any thread but
+ * its own from touching a control. Rather than trusting every screen to remember
+ * that, this class wraps every callback in {@code Platform.runLater} <em>once,
+ * here</em>. Screens can then treat replies as ordinary code.</p>
+ *
+ * <p>Getting this wrong does not fail cleanly - it works most of the time and
+ * then throws at random, which is a horrible thing to debug during a demo. So it
+ * is handled in one place from the very first message.</p>
+ */
+public class ClientController {
+
+    private static ClientController instance;
+
+    private HSTSClient client;
+    private Consumer<Response> responseHandler = response -> { };
+    private Consumer<String>   connectionLostHandler = message -> { };
+
+    private ClientController() {
+    }
+
+    public static synchronized ClientController getInstance() {
+        if (instance == null) {
+            instance = new ClientController();
+        }
+        return instance;
+    }
+
+    /** Opens the connection. Throws if the server is not reachable. */
+    public void connect(String host, int port) throws IOException {
+        disconnect();
+        client = new HSTSClient(host, port, this::dispatch, this::dispatchConnectionLost);
+        client.openConnection();
+    }
+
+    public boolean isConnected() {
+        return client != null && client.isConnected();
+    }
+
+    public void disconnect() {
+        if (client != null) {
+            try {
+                client.closeConnection();
+            } catch (IOException ignored) {
+                // Shutting down anyway.
+            }
+            client = null;
+        }
+    }
+
+    public void send(Request request) throws IOException {
+        if (!isConnected()) {
+            throw new IOException("Not connected to the server.");
+        }
+        client.sendToServer(request);
+    }
+
+    /** The current screen registers here to receive replies. */
+    public void setResponseHandler(Consumer<Response> handler) {
+        this.responseHandler = (handler == null) ? response -> { } : handler;
+    }
+
+    public void setConnectionLostHandler(Consumer<String> handler) {
+        this.connectionLostHandler = (handler == null) ? message -> { } : handler;
+    }
+
+    public String describeConnection() {
+        return isConnected() ? client.getHost() + ":" + client.getPort() : "not connected";
+    }
+
+    // -----------------------------------------------------------------
+
+    private void dispatch(Object message) {
+        if (message instanceof Response response) {
+            Platform.runLater(() -> responseHandler.accept(response));
+        } else {
+            Platform.runLater(() -> responseHandler.accept(
+                    Response.error("Unrecognised message from the server: "
+                                   + (message == null ? "null" : message.getClass().getName()))));
+        }
+    }
+
+    private void dispatchConnectionLost(String reason) {
+        Platform.runLater(() -> connectionLostHandler.accept(reason));
+    }
+}

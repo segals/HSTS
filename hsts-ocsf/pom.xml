@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>hsts</groupId>
+    <artifactId>hsts-parent</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>hsts-ocsf</artifactId>
+  <packaging>jar</packaging>
+  <name>HSTS - OCSF framework (reused)</name>
+
+  <!--
+      EXTERNAL REUSE.
+
+      This module contains the Object Client-Server Framework from the
+      textbook "Object Oriented Software Engineering" (Lloseng, 2001),
+      used unmodified. The only change made to the files was converting
+      their carriage-return-only line endings to normal ones; not one
+      line of logic was touched.
+
+      Only the three classes the submitted class diagram actually uses
+      are included - AbstractClient, AbstractServer, ConnectionToClient.
+      The framework's other variants (Adaptable*, Observable*) and the
+      SimpleChat example programs are deliberately NOT part of HSTS.
+
+      Keeping the framework in its own module makes the reuse visible
+      and guarantees we never accidentally edit it.
+  -->
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <!--
+              This is 25-year-old code. It uses raw collection types and
+              overrides Object.finalize(), which JDK 26 flags as
+              deprecated-for-removal. Verified to compile with 0 errors.
+              Warnings are silenced here so that genuine warnings in OUR
+              code are not lost in the noise.
+          -->
+          <showDeprecation>false</showDeprecation>
+          <showWarnings>false</showWarnings>
+          <compilerArgs>
+            <arg>-nowarn</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

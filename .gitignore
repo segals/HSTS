@@ -1,0 +1,49 @@
+# =====================================================================
+#  HSTS - .gitignore
+#
+#  This repository is PUBLIC. Nothing containing a secret may ever be
+#  committed. The real configuration lives OUTSIDE this folder, in
+#  %USERPROFILE%\.hsts\config.properties, precisely so that a mistake
+#  in this file cannot leak a key.
+# =====================================================================
+
+# ---- secrets: belt and braces, even though the real file is elsewhere ----
+config.properties
+*config.properties
+!config.properties.example
+.hsts/
+*.key
+*.pem
+secrets*
+
+# ---- build output ----
+target/
+build/
+out/
+bin/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# ---- IDEs ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+.metadata/
+
+# ---- OS noise ----
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ---- logs and scratch ----
+*.log
+logs/
+*.tmp
+*.bak
+scratch/

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    The client's startup window - the first thing the user sees.
+
+    Required by מתווה item 15: the connection to the server is established
+    through a GUI, so the same jar can be pointed at any server on the LAN
+    without being rebuilt.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.ClientStartupController"
+      spacing="12" prefWidth="400">
+
+    <padding>
+        <Insets top="18" right="22" bottom="18" left="22"/>
+    </padding>
+
+    <Label text="HSTS Client" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+    <Label text="Group 1 - High School Test System" style="-fx-text-fill: #555555;"/>
+
+    <Separator/>
+
+    <GridPane hgap="10" vgap="8">
+        <columnConstraints>
+            <ColumnConstraints minWidth="110"/>
+            <ColumnConstraints minWidth="230" hgrow="ALWAYS"/>
+        </columnConstraints>
+
+        <Label text="Server address" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="hostField" promptText="localhost or 192.168.1.20"
+                   GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Server port"    GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <TextField fx:id="portField" promptText="5555"
+                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+    </GridPane>
+
+    <Button fx:id="connectButton" text="Connect" onAction="#onConnect"
+            defaultButton="true" maxWidth="Infinity"/>
+
+    <Label fx:id="statusLabel" wrapText="true" text=" "/>
+
+</VBox>

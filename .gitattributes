@@ -1,0 +1,56 @@
+# =====================================================================
+#  HSTS - git attributes
+# =====================================================================
+#
+#  WHY THIS FILE EXISTS - read before changing anything here.
+#
+#  The three OCSF framework files below are the original 2001 release.
+#  They use CARRIAGE-RETURN-ONLY line endings (CR, no LF) - the old
+#  Mac OS 9 format. Java compiles them correctly, but git does not
+#  leave them alone by default: on Windows, core.autocrlf can rewrite
+#  the line endings and collapse the whole file onto a single line.
+#
+#  If that happens, the "//" comment on the first line swallows the
+#  entire file, every class inside it disappears, and the build fails
+#  with errors that point nowhere near the real cause.
+#
+#  This is NOT hypothetical. It has already happened once inside this
+#  project's source folder: ocsf/EchoServer.java was converted at some
+#  point and its first two lines were fused into one -
+#
+#      package org.openjfx.demo2;// This file contains material ...
+#
+#  It survived only because the ";" happened to come before the "//".
+#
+#  Marking these files -text tells git to treat them as binary: never
+#  convert line endings, never normalise, never diff them as text.
+# =====================================================================
+
+# Default: let git normalise text files in the repository.
+* text=auto
+
+# The reused OCSF framework - DO NOT let git touch these.
+hsts-ocsf/src/main/java/ocsf/client/AbstractClient.java      -text
+hsts-ocsf/src/main/java/ocsf/server/AbstractServer.java      -text
+hsts-ocsf/src/main/java/ocsf/server/ConnectionToClient.java  -text
+
+# Explicit endings for the rest of the sources we write ourselves.
+*.java   text eol=lf
+*.xml    text eol=lf
+*.fxml   text eol=lf
+*.sql    text eol=lf
+*.md     text eol=lf
+*.css    text eol=lf
+*.properties text eol=lf
+
+# Windows helper scripts must keep CRLF or cmd.exe misreads them.
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+
+# Binary assets.
+*.png    binary
+*.jpg    binary
+*.jar    binary
+*.pdf    binary
+*.docx   binary
+*.xlsx   binary

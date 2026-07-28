@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>hsts</groupId>
+    <artifactId>hsts-parent</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>hsts-client</artifactId>
+  <packaging>jar</packaging>
+  <name>HSTS - Client</name>
+
+  <!--
+      The client deliberately has NO database dependency. It never talks
+      to MySQL. Everything it knows arrives from the server over OCSF.
+      That is the three-tier rule, and it is also why only the server
+      laptop needs a database password or a firewall rule.
+  -->
+  <dependencies>
+    <dependency><groupId>hsts</groupId><artifactId>hsts-ocsf</artifactId></dependency>
+    <dependency><groupId>hsts</groupId><artifactId>hsts-common</artifactId></dependency>
+
+    <!--
+        The classifier has to be repeated here. Maven matches a dependency to its
+        managed version by groupId:artifactId:type:classifier - all four. Leaving
+        the classifier off would look for a different artifact than the one
+        managed in the parent, and the version would not be found.
+    -->
+    <dependency><groupId>org.openjfx</groupId><artifactId>javafx-base</artifactId>
+                <classifier>${javafx.platform}</classifier></dependency>
+    <dependency><groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId>
+                <classifier>${javafx.platform}</classifier></dependency>
+    <dependency><groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId>
+                <classifier>${javafx.platform}</classifier></dependency>
+    <dependency><groupId>org.openjfx</groupId><artifactId>javafx-fxml</artifactId>
+                <classifier>${javafx.platform}</classifier></dependency>
+  </dependencies>
+
+  <build>
+    <finalName>G1_Client</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <!--
+                      ClientLauncher does NOT extend javafx.application.Application.
+                      This is the single most important line in the client build -
+                      see the comment inside ClientLauncher.java.
+                  -->
+                  <mainClass>hsts.client.ClientLauncher</mainClass>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>module-info.class</exclude>
+                    <exclude>META-INF/versions/*/module-info.class</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <!--
+                  IMPORTANT: the JavaFX *.dll native libraries live inside the
+                  win-classifier jars and MUST survive shading. They are not
+                  filtered above, and no minimizeJar is used - minimising would
+                  strip classes that FXML loads reflectively by name.
+              -->
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
