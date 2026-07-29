@@ -952,3 +952,100 @@ thirty.
 | A closed window stays visible while somebody is inside | 2/2 |
 
 Regression: **320 checks** across the project, 12/12 screens load.
+
+---
+
+## Milestones 9 and 10 — marking, and the student's own results · 2026-07-29
+
+**Covers:** SUC-9, SUC-10, מתווה scenarios 8 and 9, requirements 49–58 and 77.
+
+### What was built
+
+| Item | Notes |
+|---|---|
+| `Grade`, `QuestionFeedback`, `ExamStatistics` | Entities |
+| `GradeDAO` | Automatic marking, manual changes, approval, factor, statistics |
+| `GradingController` | SUC-9 |
+| `ResultsViewController` | SUC-10 |
+| `Grading.fxml`, `StudentResults.fxml` | The two screens |
+| `MarkedExam`, `GradeChange`, `CommentRequest` | Protocol |
+| `PushType.GRADE_APPROVED` | She is told when her mark is ready |
+
+### Decisions worth defending
+
+**Two grades are kept, not one.** `autoGrade` is what the system worked out;
+`finalGrade` is what the teacher settled on. A manual change therefore stays
+*visible as a change* rather than replacing the truth — which matters because
+requirement 52 makes an explanation compulsory and somebody may later ask what was
+altered. Tested: after changing 50 to 60, the automatic mark is still 50.
+
+**Marking is computed in Java, not in one large join.** "Add up the points of the
+questions she got right" is exactly what the course staff will ask about at the
+demo, and it is far easier to read in a loop than buried in SQL. One exam at a
+time, so nothing is lost.
+
+**Marking is idempotent and lazy as well as eager.** A paper is marked at hand-in,
+and the teacher's screen marks anything still unmarked — which covers a paper the
+clock closed while the server happened to be restarting. Re-marking an already
+marked paper does nothing, so it can never wipe a manual change.
+
+**Statistics count approved marks only.** SUC-9 computes them after approval
+(step 7 follows step 6) and acceptance test 3.7 counts approved exams. Including
+drafts would make the average wander about while the teacher works.
+
+**Statistics are recomputed, never cached.** That makes acceptance test 3.15 —
+the average reflecting a manual change immediately — true by construction rather
+than by remembering to invalidate something.
+
+**The decile bucket for 100.** A plain `grade / 10` puts 100 in an eleventh bucket
+that does not exist. `bucketFor` clamps it into 91-100, and there are tests for
+0, 10, 11 and 100 specifically.
+
+**"That exam does not exist" is the wording for another student's paper.** The
+same message as for a genuinely missing one, so trying submission numbers reveals
+nothing. This is acceptance test 4.6 rewritten for a desktop client — the original
+assumed a browser and a URL to tamper with.
+
+**Unapproved marks are blanked before the list is sent.** Requirement 53 says she
+sees nothing until approval; the list still shows that the exam exists and is
+waiting (acceptance test 4.2), but the numbers are stripped on the server rather
+than merely hidden by the screen.
+
+### Found by the validation loop
+
+Two faults, both in the tests rather than the product, and both worth recording
+because they are the kind that hide real ones.
+
+**1. An assertion that depended on run order.** `RESULTS_MINE` was asserted to
+return exactly one exam. Run after milestones 7 and 8, the same student had sat
+others — so the *correct* behaviour failed the test. Now it looks for the exam it
+cares about instead of counting.
+
+**2. A test that could only ever run once.** It released with a hard-coded code,
+and codes are unique for ever, so a second run failed at setup with an unhelpful
+`NullPointerException`. It now asks the server for a free code — which also
+exercises that endpoint. Verified by running it twice in a row without a reset.
+
+### Verified — 65 automated checks, all passing
+
+| Group | Result |
+|---|---|
+| **Automatic marking: 2 of 4 right gives 50; all right gives 100** | 5/5 |
+| Blanks count as wrong; the marker sees the right answers | 2/2 |
+| **Acceptance test 3.11: a paper still being sat cannot be marked** | 2/2 |
+| Permissions, including **requirement 55 — no statistics for a student** | 5/5 |
+| **Tests 3.4 and 3.6: no reason refused, 105 and −5 refused** | 4/4 |
+| A proper change keeps the automatic mark and the reason | 4/4 |
+| Comments, per question and overall | 2/2 |
+| **Test 4.2: nothing reaches her before approval** | 3/3 |
+| Approval, and the push that tells her | 2/2 |
+| **Tests 4.3, 4.4, 4.10, 4.11: right answers, comments, no private notes, her time** | 6/6 |
+| **Test 4.6 rewritten: another student's paper is refused, and says nothing** | 2/2 |
+| **Tests 3.7, 3.8, 3.14: average, median, decile buckets including 100** | 10/10 |
+| **Test 3.15: statistics follow a change at once** | 1/1 |
+| **Test 3.12: changing after approval tells her again** | 2/2 |
+| **Requirement 77: a factor, and 100 stays 100** | 4/4 |
+| **Test 3.10: approve everything at once** | 3/3 |
+| Test 4.12: a student who has sat nothing | 2/2 |
+
+Regression: **385 checks** across the project, 14/14 screens load.

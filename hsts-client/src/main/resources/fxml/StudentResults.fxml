@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    SUC-10 / מתווה scenario 9: a student looking at her own results.
+
+      1. she sees the marks of the exams she has sat
+      2. she sees the marked paper - wrong questions marked, teacher comments
+
+    Requirement 57: her own results only. Requirement 55: never the class
+    average, median or deciles - there is nowhere on this screen for them, and
+    the server refuses to send them to a student in any case.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.StudentResultsController"
+      spacing="0" prefWidth="1000" prefHeight="720" minWidth="820" minHeight="560">
+
+    <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="My grades" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
+        </VBox>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
+    </HBox>
+
+    <HBox spacing="16" VBox.vgrow="ALWAYS">
+        <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
+
+        <VBox styleClass="card" spacing="10" prefWidth="330" minWidth="280">
+            <Label text="MY EXAMS" styleClass="section-title" wrapText="true"/>
+            <ListView fx:id="resultList" VBox.vgrow="ALWAYS"/>
+            <Label text="An exam appears here as soon as you sit it. The mark appears once your teacher has approved it."
+                   styleClass="caption" wrapText="true"/>
+        </VBox>
+
+        <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS" minWidth="440">
+            <VBox spacing="4">
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label fx:id="examTitleLabel" styleClass="h3" wrapText="true"
+                           HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                    <Label fx:id="gradeLabel"
+                           style="-fx-font-size: 30px; -fx-font-weight: 600;" wrapText="true"/>
+                </HBox>
+                <Label fx:id="examMetaLabel" styleClass="caption" wrapText="true"/>
+            </VBox>
+
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                <VBox spacing="12">
+                    <padding><Insets top="12" right="10" bottom="12" left="0"/></padding>
+
+                    <VBox fx:id="generalCommentBox" spacing="5" visible="false" managed="false">
+                        <Label text="YOUR TEACHER WROTE" styleClass="section-title" wrapText="true"/>
+                        <Label fx:id="generalCommentLabel" wrapText="true"/>
+                    </VBox>
+
+                    <VBox fx:id="questionBox" spacing="12"/>
+                </VBox>
+            </ScrollPane>
+
+            <Label fx:id="statusLabel" wrapText="true" text=" "
+                   styleClass="status" maxWidth="Infinity"/>
+        </VBox>
+    </HBox>
+
+</VBox>

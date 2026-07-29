@@ -133,7 +133,7 @@ public class MainMenuController extends GUIScreen {
             entries.add(new MenuEntry("Build an exam",           "milestone 4",  "/fxml/ExamBuilder.fxml"));
             entries.add(new MenuEntry("Release an exam",         "milestone 6",  "/fxml/ExamRelease.fxml"));
             entries.add(new MenuEntry("Exams running now",       "milestone 8",  "/fxml/TeacherLiveExam.fxml"));
-            entries.add(new MenuEntry("Mark and approve grades", "milestone 9",  null));
+            entries.add(new MenuEntry("Mark and approve grades", "milestone 9",  "/fxml/Grading.fxml"));
             entries.add(new MenuEntry("Results and histogram",   "milestone 11", null));
             entries.add(new MenuEntry("My reports",              "milestone 13", null));
             entries.add(new MenuEntry("Course study bot",        "milestone 14", null));
@@ -146,7 +146,7 @@ public class MainMenuController extends GUIScreen {
 
         if (user instanceof Student) {
             entries.add(new MenuEntry("Take an exam",            "milestone 7",  "/fxml/TakeExam.fxml"));
-            entries.add(new MenuEntry("My grades",               "milestone 10", null));
+            entries.add(new MenuEntry("My grades",               "milestone 10", "/fxml/StudentResults.fxml"));
             entries.add(new MenuEntry("Ask the course bot",      "milestone 14", null));
             entries.add(new MenuEntry("My bot history",          "milestone 14", null));
         }

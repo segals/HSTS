@@ -62,5 +62,14 @@ public enum PushType {
      * <p>Sent to the teacher who released the sitting. NFR 18 forbids a Refresh
      * button on her screen just as much as on a student's.</p>
      */
-    EXAM_LIVE_STATUS
+    EXAM_LIVE_STATUS,
+
+    /**
+     * A mark has been approved, or changed after approval.
+     *
+     * <p>Requirement 53 makes the result available to the student on approval;
+     * NFR 18 means she should not have to keep checking. Payload is the
+     * submission id.</p>
+     */
+    GRADE_APPROVED
 }

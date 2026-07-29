@@ -59,6 +59,8 @@ public class FxmlLoadCheck {
         "/fxml/ExamRelease.fxml",
         "/fxml/TakeExam.fxml",
         "/fxml/TeacherLiveExam.fxml",
+        "/fxml/Grading.fxml",
+        "/fxml/StudentResults.fxml",
         "/fxml/ServerStartup.fxml",
         "/fxml/ServerConsole.fxml",
     };

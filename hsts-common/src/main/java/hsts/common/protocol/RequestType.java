@@ -128,5 +128,45 @@ public enum RequestType {
     LIVE_STATUS,
 
     /** Changes the time allowed, mid-exam. Payload is a {@link TimeChangeRequest}. */
-    LIVE_CHANGE_TIME
+    LIVE_CHANGE_TIME,
+
+    // ---- SUC-9: marking (milestone 9) ----
+
+    /** Sittings this teacher released that have papers in them. No payload. */
+    GRADING_SITTINGS,
+
+    /** Every mark in one sitting. Payload is the execution id. */
+    GRADING_LIST,
+
+    /** One paper, marked, with the right answers shown. Payload is the submission id. */
+    GRADING_GET,
+
+    /** Changes a mark by hand. Payload is a {@link GradeChange}. */
+    GRADING_CHANGE,
+
+    /** A note against one question. Payload is a {@link CommentRequest}. */
+    GRADING_QUESTION_COMMENT,
+
+    /** A note about the paper as a whole. Payload is a {@link CommentRequest}. */
+    GRADING_GENERAL_COMMENT,
+
+    /** Publishes one mark. Payload is the submission id. */
+    GRADING_APPROVE,
+
+    /** Publishes every unapproved mark in a sitting. Payload is the execution id. */
+    GRADING_APPROVE_ALL,
+
+    /** Adds a factor to every mark in a sitting. Payload is a {@link GradeChange}. */
+    GRADING_FACTOR,
+
+    /** Average, median and deciles. Payload is the execution id. */
+    GRADING_STATISTICS,
+
+    // ---- SUC-10: a student reading her results (milestone 10) ----
+
+    /** Every exam she has sat. No payload. */
+    RESULTS_MINE,
+
+    /** One of her marked papers. Payload is the submission id. */
+    RESULTS_MARKED_EXAM
 }

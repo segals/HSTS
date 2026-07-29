@@ -3,7 +3,9 @@ package hsts.server;
 import hsts.common.entity.Exam;
 import hsts.common.entity.Question;
 import hsts.common.entity.User;
+import hsts.common.protocol.CommentRequest;
 import hsts.common.protocol.Credentials;
+import hsts.common.protocol.GradeChange;
 import hsts.common.protocol.ExamBuildCriteria;
 import hsts.common.protocol.ExamDecision;
 import hsts.common.protocol.ExamRef;
@@ -20,7 +22,9 @@ import hsts.server.boundary.LocalUserManagementAdapter;
 import hsts.server.control.ExamApprovalController;
 import hsts.server.control.ExamBuilderController;
 import hsts.server.control.ExamExecutionController;
+import hsts.server.control.GradingController;
 import hsts.server.control.LiveExamController;
+import hsts.server.control.ResultsViewController;
 import hsts.server.control.TakeExamController;
 import hsts.server.control.LoginController;
 import hsts.server.control.QuestionController;
@@ -28,6 +32,7 @@ import hsts.server.dao.CourseDAO;
 import hsts.server.dao.DBController;
 import hsts.server.dao.ExamDAO;
 import hsts.server.dao.ExecutionDAO;
+import hsts.server.dao.GradeDAO;
 import hsts.server.dao.SubmissionDAO;
 import hsts.server.dao.QuestionDAO;
 import hsts.server.dao.UserDAO;
@@ -90,6 +95,11 @@ public class HSTSServer extends AbstractServer {
     private final ExamClockService examClock = new ExamClockService(submissionDAO, pushService);
     private final LiveExamController liveExamController =
             new LiveExamController(executionDAO, submissionDAO, userDAO, pushService);
+    private final GradeDAO gradeDAO = new GradeDAO();
+    private final GradingController gradingController = new GradingController(
+            gradeDAO, submissionDAO, executionDAO, examDAO, userDAO, pushService);
+    private final ResultsViewController resultsViewController =
+            new ResultsViewController(gradeDAO, submissionDAO, executionDAO, examDAO);
 
     private HSTSServer(int port) {
         super(port);
@@ -235,6 +245,45 @@ public class HSTSServer extends AbstractServer {
                         liveExamController.getLiveStatus(u, (Integer) request.getPayload()));
                 case LIVE_CHANGE_TIME -> withUser(client, u ->
                         liveExamController.changeTime(u, (TimeChangeRequest) request.getPayload()));
+
+                // ---- SUC-9: marking ----
+                case GRADING_SITTINGS -> withUser(client, u ->
+                        gradingController.listSittingsToMark(u));
+                case GRADING_LIST     -> withUser(client, u ->
+                        gradingController.listGrades(u, (Integer) request.getPayload()));
+                case GRADING_GET      -> withUser(client, u ->
+                        gradingController.getMarkedExam(u, (Integer) request.getPayload()));
+                case GRADING_CHANGE   -> withUser(client, u -> {
+                        GradeChange c = (GradeChange) request.getPayload();
+                        return gradingController.changeGrade(u, c.getSubmissionId(),
+                                c.getValue(), c.getExplanation());
+                    });
+                case GRADING_QUESTION_COMMENT -> withUser(client, u -> {
+                        CommentRequest c = (CommentRequest) request.getPayload();
+                        return gradingController.addQuestionComment(u, c.getSubmissionId(),
+                                c.getQuestionId(), c.getQuestionVersion(), c.getComment());
+                    });
+                case GRADING_GENERAL_COMMENT -> withUser(client, u -> {
+                        CommentRequest c = (CommentRequest) request.getPayload();
+                        return gradingController.addGeneralComment(u, c.getSubmissionId(),
+                                c.getComment());
+                    });
+                case GRADING_APPROVE     -> withUser(client, u ->
+                        gradingController.approve(u, (Integer) request.getPayload()));
+                case GRADING_APPROVE_ALL -> withUser(client, u ->
+                        gradingController.approveAll(u, (Integer) request.getPayload()));
+                case GRADING_FACTOR      -> withUser(client, u -> {
+                        GradeChange c = (GradeChange) request.getPayload();
+                        return gradingController.applyFactor(u, c.getExecutionId(), c.getValue());
+                    });
+                case GRADING_STATISTICS  -> withUser(client, u ->
+                        gradingController.getStatistics(u, (Integer) request.getPayload()));
+
+                // ---- SUC-10: a student reading her results ----
+                case RESULTS_MINE        -> withUser(client, u ->
+                        resultsViewController.listMyResults(u));
+                case RESULTS_MARKED_EXAM -> withUser(client, u ->
+                        resultsViewController.getMyMarkedExam(u, (Integer) request.getPayload()));
             };
 
             // A newly saved exam goes straight into a coordinator's queue, so tell
@@ -256,6 +305,19 @@ public class HSTSServer extends AbstractServer {
                         attempt.getStudentName() + " "
                         + (request.getType() == RequestType.TAKE_START
                            ? "started the exam." : "handed in."));
+
+                // Requirement 49: mark it now rather than waiting for somebody to
+                // look. Marking is idempotent, and the teacher's screen marks
+                // anything still unmarked - which covers a paper the clock closed
+                // while the server happened to be restarting.
+                if (request.getType() == RequestType.TAKE_SUBMIT) {
+                    try {
+                        gradeDAO.autoGrade(attempt.getSubmissionId());
+                    } catch (Exception e) {
+                        log("Could not mark submission " + attempt.getSubmissionId()
+                            + " straight away: " + e.getMessage());
+                    }
+                }
             }
         } catch (Exception e) {
             log("FAILED to handle " + request.getType() + ": " + e);
