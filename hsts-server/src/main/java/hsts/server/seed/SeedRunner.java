@@ -144,7 +144,12 @@ public final class SeedRunner {
                 st.executeUpdate("SET FOREIGN_KEY_CHECKS = 1");
             }
         }
-        return "Test data reset. " + seedAll();
+        // People and courses first, then the content that depends on them. Split in
+        // two because seedAll() is also the "empty database" path on server start,
+        // where an untouched question bank is the honest starting point.
+        String people = seedAll();
+        String content = DemoContentSeeder.seed();
+        return "Test data reset. " + people + " " + content;
     }
 
     private static String seedAll() throws SQLException {
