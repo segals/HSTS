@@ -257,6 +257,13 @@ public class ExamDAO implements IDAO<Exam, String> {
         return queryList(sql, authorId, null);
     }
 
+    /** Current versions of every exam written for one course (מתווה 12). */
+    public List<Exam> findCurrentByCourse(String courseCode) throws SQLException {
+        String sql = baseSelect() + " WHERE e.course_code = ? AND e.is_current = TRUE"
+                   + " ORDER BY e.exam_id";
+        return queryList(sql, courseCode, null);
+    }
+
     /** Every exam awaiting approval in one subject - the coordinator's list. */
     public List<Exam> findPendingBySubject(String subjectCode) throws SQLException {
         String sql = baseSelect()

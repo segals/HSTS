@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    SUC-11 / SUC-12 / מתווה scenario 12: the statistical reports.
+
+      "ניתן לראות ממוצע, חציון והתפלגות עשרונית של בחינות ולהשוות בין:
+       בחינות שונות של אותה מורה,
+       בחינות שונות של אותו קורס,
+       בחינות שונות של אותה תלמידה."
+
+    One screen for all three, because the screen does not know what the three
+    are. It asks the server which reports this user may run, asks the chosen
+    report what it can be run about, and draws whatever comes back.
+
+    That is why requirement 64 - "a new report should take minimal development"
+    - is satisfied on this side too: a fourth report needs one enum value and
+    one strategy class on the server, and NOTHING here.
+
+    Which reports appear depends on the role. The principal gets all three
+    (requirement 63); a teacher gets one, about the exams she wrote
+    (requirement 59). A student cannot open this screen at all.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import hsts.client.gui.HistogramView?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.ReportsController"
+      spacing="0" prefWidth="1280" prefHeight="800" minWidth="1040" minHeight="640">
+
+    <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="Statistical reports" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
+        </VBox>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
+    </HBox>
+
+    <HBox spacing="14" VBox.vgrow="ALWAYS">
+        <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
+
+        <VBox spacing="12" prefWidth="330" minWidth="290">
+            <VBox styleClass="card" spacing="8">
+                <Label text="WHICH REPORT" styleClass="section-title" wrapText="true"/>
+                <ListView fx:id="typeList" prefHeight="190"/>
+            </VBox>
+            <VBox styleClass="card" spacing="8" VBox.vgrow="ALWAYS">
+                <Label fx:id="subjectHeadingLabel" text="ABOUT WHOM"
+                       styleClass="section-title" wrapText="true"/>
+                <ListView fx:id="subjectList" VBox.vgrow="ALWAYS"/>
+            </VBox>
+        </VBox>
+
+        <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS" minWidth="580">
+            <VBox spacing="3">
+                <Label fx:id="titleLabel" styleClass="h3" wrapText="true" maxWidth="Infinity"/>
+                <Label fx:id="descriptionLabel" styleClass="caption" wrapText="true"
+                       maxWidth="Infinity"/>
+            </VBox>
+
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                <VBox spacing="14">
+                    <padding><Insets top="12" right="10" bottom="6" left="0"/></padding>
+
+                    <HBox fx:id="statsRow" spacing="10"/>
+
+                    <VBox spacing="6">
+                        <HBox alignment="CENTER_LEFT" spacing="8">
+                            <Label text="HOW THE MARKS ARE SPREAD" styleClass="section-title"
+                                   wrapText="true"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label fx:id="histogramScopeLabel" styleClass="caption"
+                                   wrapText="true"/>
+                        </HBox>
+                        <HistogramView fx:id="histogram"/>
+                    </VBox>
+
+                    <VBox spacing="6">
+                        <HBox alignment="CENTER_LEFT" spacing="8">
+                            <Label text="THE EXAMS COMPARED" styleClass="section-title"
+                                   wrapText="true"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label text="click a row to plot just that exam"
+                                   styleClass="caption" wrapText="true"/>
+                        </HBox>
+                        <TableView fx:id="lineTable" prefHeight="280">
+                            <columns>
+                                <TableColumn fx:id="examColumn"    text="Exam"       prefWidth="230"/>
+                                <TableColumn fx:id="detailColumn"  text="Detail"     prefWidth="290"/>
+                                <TableColumn fx:id="countColumn"   text="Marks"      prefWidth="70"/>
+                                <TableColumn fx:id="averageColumn" text="Average"    prefWidth="80"/>
+                                <TableColumn fx:id="medianColumn"  text="Median"     prefWidth="80"/>
+                                <TableColumn fx:id="markColumn"    text="Her mark"   prefWidth="80"/>
+                                <TableColumn fx:id="gapColumn"     text="vs class"   prefWidth="80"/>
+                            </columns>
+                        </TableView>
+                    </VBox>
+                </VBox>
+            </ScrollPane>
+
+            <Label fx:id="statusLabel" wrapText="true" text=" "
+                   styleClass="status" maxWidth="Infinity"/>
+        </VBox>
+    </HBox>
+
+</VBox>

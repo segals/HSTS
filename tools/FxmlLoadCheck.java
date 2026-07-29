@@ -63,6 +63,7 @@ public class FxmlLoadCheck {
         "/fxml/StudentResults.fxml",
         "/fxml/TeacherReports.fxml",
         "/fxml/PrincipalBrowse.fxml",
+        "/fxml/Reports.fxml",
         "/fxml/ServerStartup.fxml",
         "/fxml/ServerConsole.fxml",
     };

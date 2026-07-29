@@ -37,6 +37,47 @@ public class ExamStatistics implements Serializable {
     public ExamStatistics() {
     }
 
+    /**
+     * Works the figures out over a list of marks.
+     *
+     * <p>Lives here rather than in a DAO because four different callers need it -
+     * one sitting, one whole exam, and the three reports of מתווה 12 - and a demo
+     * where the class average and the report average are produced by two separate
+     * pieces of arithmetic is a demo waiting to embarrass somebody.</p>
+     *
+     * @param marks the marks to describe. Sorted in place, so the median can be
+     *              read off directly; callers hand in a list they own.
+     */
+    public static ExamStatistics over(java.util.List<Integer> marks) {
+        ExamStatistics stats = new ExamStatistics();
+        stats.setComputedAt(LocalDateTime.now());
+
+        if (marks == null || marks.isEmpty()) {
+            stats.setGradeCount(0);
+            return stats;
+        }
+        java.util.Collections.sort(marks);
+        stats.setGradeCount(marks.size());
+
+        double sum = 0;
+        int[] buckets = new int[DECILE_COUNT];
+        for (int mark : marks) {
+            sum += mark;
+            buckets[bucketFor(mark)]++;
+        }
+        stats.setAverage(sum / marks.size());
+        stats.setDeciles(buckets);
+
+        // Odd count: the middle one. Even count: the mean of the middle two,
+        // which is the ordinary definition and matches acceptance test 3.8.
+        int middle = marks.size() / 2;
+        stats.setMedian(marks.size() % 2 == 1
+                ? marks.get(middle)
+                : (marks.get(middle - 1) + marks.get(middle)) / 2.0);
+
+        return stats;
+    }
+
     public int getExecutionId()          { return executionId; }
     public double getAverage()           { return average; }
     public double getMedian()            { return median; }

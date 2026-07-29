@@ -136,7 +136,8 @@ public class MainMenuController extends GUIScreen {
             entries.add(new MenuEntry("Mark and approve grades", "milestone 9",  "/fxml/Grading.fxml"));
             entries.add(new MenuEntry("Results and histogram",   "milestone 11",
                                       "/fxml/TeacherReports.fxml"));
-            entries.add(new MenuEntry("My reports",              "milestone 13", null));
+            entries.add(new MenuEntry("My reports",              "milestone 13",
+                                      "/fxml/Reports.fxml"));
             entries.add(new MenuEntry("Course study bot",        "milestone 14", null));
         }
 
@@ -157,7 +158,8 @@ public class MainMenuController extends GUIScreen {
             // are three tabs of one screen rather than three near-identical windows.
             entries.add(new MenuEntry("Browse questions, exams and results", "milestone 12",
                                       "/fxml/PrincipalBrowse.fxml"));
-            entries.add(new MenuEntry("Statistical reports",     "milestone 13", null));
+            entries.add(new MenuEntry("Statistical reports",     "milestone 13",
+                                      "/fxml/Reports.fxml"));
         }
 
         return entries;

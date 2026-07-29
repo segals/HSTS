@@ -18,7 +18,9 @@ import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
+import hsts.common.protocol.ReportRequest;
 import hsts.common.protocol.ResultsQuery;
+import hsts.common.enums.ReportType;
 import hsts.server.boundary.IUserManagementSystem;
 import hsts.server.boundary.LocalUserManagementAdapter;
 import hsts.server.control.ExamApprovalController;
@@ -27,8 +29,10 @@ import hsts.server.control.ExamExecutionController;
 import hsts.server.control.GradingController;
 import hsts.server.control.LiveExamController;
 import hsts.server.control.PrincipalController;
+import hsts.server.control.ReportController;
 import hsts.server.control.ResultsViewController;
 import hsts.server.control.TeacherReportController;
+import hsts.server.control.strategy.ReportFactory;
 import hsts.server.control.TakeExamController;
 import hsts.server.control.LoginController;
 import hsts.server.control.QuestionController;
@@ -108,6 +112,9 @@ public class HSTSServer extends AbstractServer {
             new TeacherReportController(examDAO, executionDAO, gradeDAO);
     private final PrincipalController principalController =
             new PrincipalController(questionDAO, examDAO, executionDAO, gradeDAO);
+    private final ReportFactory reportFactory =
+            new ReportFactory(examDAO, gradeDAO, userDAO, courseDAO);
+    private final ReportController reportController = new ReportController(reportFactory);
 
     private HSTSServer(int port) {
         super(port);
@@ -318,6 +325,14 @@ public class HSTSServer extends AbstractServer {
                         principalController.listSittings(u, (String) request.getPayload()));
                 case PRINCIPAL_RESULTS   -> withUser(client, u ->
                         principalController.getResults(u, (ResultsQuery) request.getPayload()));
+
+                // ---- SUC-11 / SUC-12: statistical reports, via Factory + Strategy ----
+                case REPORT_TYPES    -> withUser(client, u ->
+                        reportController.listTypes(u));
+                case REPORT_SUBJECTS -> withUser(client, u ->
+                        reportController.listSubjects(u, (ReportType) request.getPayload()));
+                case REPORT_GENERATE -> withUser(client, u ->
+                        reportController.generate(u, (ReportRequest) request.getPayload()));
             };
 
             // A newly saved exam goes straight into a coordinator's queue, so tell

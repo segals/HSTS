@@ -518,7 +518,14 @@ public final class DemoContentSeeder {
 
         for (int i = 0; i < students.size() && i < correctCounts.length; i++) {
             String studentId = students.get(i);
-            int rightAnswers = Math.min(correctCounts[i], questionCount);
+
+            // Rotated by the sitting, so the same girl is not bottom of every class.
+            // Without this, marks are handed out by position in an alphabetical
+            // list and one student is last in every exam she sits - which makes the
+            // "compare one student's exams" report of מתווה 12 a flat line and
+            // teaches a reader nothing about whether it works.
+            int slot = (i + executionId * 3) % correctCounts.length;
+            int rightAnswers = Math.min(correctCounts[slot], questionCount);
 
             // A believable spread of finishing times, and never past the deadline.
             int minutesTaken = 20 + (i * 7) % 40;

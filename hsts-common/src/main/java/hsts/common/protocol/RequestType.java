@@ -207,5 +207,16 @@ public enum RequestType {
     PRINCIPAL_SITTINGS,
 
     /** Marks and statistics together. Payload is a {@link ResultsQuery}. */
-    PRINCIPAL_RESULTS
+    PRINCIPAL_RESULTS,
+
+    // ---- SUC-11 / SUC-12: statistical reports (milestone 13) ----
+
+    /** Which reports this user may run. No payload. */
+    REPORT_TYPES,
+
+    /** What a report can be run about. Payload is a {@link hsts.common.enums.ReportType}. */
+    REPORT_SUBJECTS,
+
+    /** Builds one report. Payload is a {@link ReportRequest}. */
+    REPORT_GENERATE
 }

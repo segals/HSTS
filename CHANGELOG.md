@@ -1337,3 +1337,103 @@ for a student with no attempt at any exam anywhere.
 | Screens | 16/16 load |
 
 Run **twice back to back with no database reset**, identical both times.
+
+---
+
+## Milestone 13 — the statistical reports, via Factory and Strategy
+
+מתווה scenario 12: *"ניתן לראות ממוצע, חציון והתפלגות עשרונית של בחינות ולהשוות
+בין: בחינות שונות של אותה מורה, בחינות שונות של אותו קורס, בחינות שונות של אותה
+תלמידה"* — the same three figures, compared across a teacher's exams, a course's
+exams, or one student's exams. Requirement 63 says the same.
+
+### The two patterns the class diagram promised
+
+This is where **Factory** and **Strategy** were committed to in Assignment 2, and
+requirement 64 — *"הפקת דו"חות חדשים תדרוש עבודת פיתוח מינימלית"* — is the reason
+they are here rather than a `switch`.
+
+| Piece | What it does |
+|---|---|
+| `ReportStrategy` | one interface; three implementations, one per comparison |
+| `TeacherReportStrategy` | exams by author — requirements 59 **and** 63 |
+| `CourseReportStrategy` | exams by course |
+| `StudentReportStrategy` | one student's marks against the classes she sat with |
+| `ReportFactory` | type → strategy, held in an `EnumMap` |
+| `ReportController` | holds a strategy and calls it — **no `if` chain anywhere** |
+
+**A fourth report costs one enum value and one class.** Not the controller, not
+the screen, not the other strategies. The screen in particular knows nothing about
+what the reports are: it asks the server which ones this user may run, asks the
+chosen report what it can be run *about*, and draws what comes back. That is why
+`listSubjects()` sits on the strategy rather than the controller — a new report
+arrives carrying its own chooser.
+
+### The arithmetic moved
+
+`ExamStatistics.over(marks)` now holds the average/median/decile calculation, and
+`GradeDAO` delegates to it. It moved when the reports became a fourth caller — one
+copy of the maths means the class average, the exam average and the report average
+cannot disagree.
+
+### Who may run what
+
+- **Principal** — all three, about anyone (requirement 63).
+- **Teacher** — one, about herself (requirement 59: *"כל הבחינות שכתבה"*).
+- **Student** — none (requirement 55).
+
+The teacher's restriction is enforced by **overwriting the key she sends** with her
+own id, not by refusing her. Asking for a colleague's report returns her own, so
+there is nothing to probe for. `M13Test` §5 asserts exactly that: it asks for Maya
+Cohen's report as Noa Levi and gets Noa Levi's back.
+
+### The by-student report is shaped differently, on purpose
+
+The other two compare classes with classes. Here every row is a single mark, and
+deciles over one mark would be a chart with one bar. So each row carries the
+**class** figures for the sitting she was in with **her** mark highlighted against
+them — because 70 means one thing in a class averaging 55 and another in a class
+averaging 85.
+
+Even on the client this is data-driven, not report-driven: a `ReportLine` either
+carries a highlight or it does not, and `ReportsController` never asks which report
+produced it.
+
+### Two things the validation loop caught
+
+**1. The demo data made the report say nothing.** The seeder handed marks out by
+position in an alphabetical list, so the same girl was bottom of every class she
+sat in — and the "compare one student's exams" report was a flat line 25 to 39
+points below average every time. It proves the query runs; it demonstrates
+nothing. Marks are now rotated by sitting, and Avigail Barak reads **−9.4, −5.5,
++6.3, +11.3** in date order — a student improving, which is what the report is for.
+
+**2. A suite whose total drifted.** `M13Test` reported **104 checks one run and 114
+the next**. Not a failure — `checkFigures` called `check()` once per row, and the
+by-course report legitimately picks up more exams as the other suites create them.
+But a total that moves on its own is useless for spotting a regression, which is
+the one thing running the suite twice is meant to detect. The per-row loops are now
+single `allMatch` checks over all rows, and the count is 82 every time.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| M2 | 48/48 |
+| M3 | 34/34 |
+| M4 | 43/43 |
+| M5 | 32/32 |
+| M6 | 76/76 |
+| M7 | 55/55 |
+| M8 | 33/33 |
+| M9 | 75/75 |
+| M10 | 43/43 |
+| M11 | 57/57 |
+| **M13 (new)** | **82/82** |
+| **Total** | **578 checks** |
+| Screens | 17/17 load |
+
+Run **twice back to back with no database reset**, identical both times. The
+factory is tested directly as well as through the screen — every `ReportType` has a
+strategy, and each strategy is checked to claim the type it is registered under, so
+a crossed wiring cannot pass as merely "not null".

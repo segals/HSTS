@@ -460,38 +460,14 @@ public class GradeDAO implements IDAO<Grade, Integer> {
     }
 
     /**
-     * Average, median and deciles over a list of marks that is already sorted.
+     * The arithmetic itself lives on {@link ExamStatistics}.
      *
-     * <p>Shared by the per-sitting and per-exam figures so the two can never drift
-     * apart - a demo where the class average and the exam average are computed by
-     * two different pieces of arithmetic is a demo waiting to embarrass somebody.</p>
+     * <p>It moved there when the reports of מתווה 12 became a fourth caller. One
+     * copy of the maths means the class average, the exam average and the report
+     * average can never disagree.</p>
      */
-    private ExamStatistics statisticsOver(List<Integer> sortedMarks) {
-        ExamStatistics stats = new ExamStatistics();
-        stats.setGradeCount(sortedMarks.size());
-        stats.setComputedAt(LocalDateTime.now());
-
-        if (sortedMarks.isEmpty()) {
-            return stats;
-        }
-
-        double sum = 0;
-        int[] deciles = new int[ExamStatistics.DECILE_COUNT];
-        for (int mark : sortedMarks) {
-            sum += mark;
-            deciles[ExamStatistics.bucketFor(mark)]++;
-        }
-        stats.setAverage(sum / sortedMarks.size());
-        stats.setDeciles(deciles);
-
-        // Odd count: the middle one. Even count: the mean of the middle two,
-        // which is the ordinary definition and matches acceptance test 3.8.
-        int middle = sortedMarks.size() / 2;
-        stats.setMedian(sortedMarks.size() % 2 == 1
-                ? sortedMarks.get(middle)
-                : (sortedMarks.get(middle - 1) + sortedMarks.get(middle)) / 2.0);
-
-        return stats;
+    private ExamStatistics statisticsOver(List<Integer> marks) {
+        return ExamStatistics.over(marks);
     }
 
     // -----------------------------------------------------------------
