@@ -26,9 +26,9 @@
       spacing="0" prefWidth="900" prefHeight="600">
 
     <HBox styleClass="header-bar" spacing="12" alignment="CENTER_LEFT">
-        <VBox spacing="2">
-            <Label fx:id="titleLabel" styleClass="h2"/>
-            <Label fx:id="subtitleLabel" styleClass="caption"/>
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label fx:id="titleLabel" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="closeButton" text="Close" onAction="#onClose" styleClass="quiet"/>
@@ -39,7 +39,7 @@
 
         <!-- ===== every stored version ===== -->
         <VBox styleClass="card" spacing="10" prefWidth="260" minWidth="230">
-            <Label text="STORED VERSIONS" styleClass="section-title"/>
+            <Label text="STORED VERSIONS" styleClass="section-title" wrapText="true"/>
             <ListView fx:id="versionList" VBox.vgrow="ALWAYS"/>
             <Label text="Select an older version to compare it with the current one."
                    styleClass="caption" wrapText="true"/>
@@ -48,9 +48,9 @@
         <!-- ===== side-by-side comparison ===== -->
         <VBox styleClass="card" spacing="10" HBox.hgrow="ALWAYS">
             <HBox spacing="10" alignment="CENTER_LEFT">
-                <Label text="COMPARISON" styleClass="section-title"/>
+                <Label text="COMPARISON" styleClass="section-title" wrapText="true"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Label fx:id="changeSummaryLabel" styleClass="caption"/>
+                <Label fx:id="changeSummaryLabel" styleClass="caption" wrapText="true"/>
             </HBox>
 
             <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">

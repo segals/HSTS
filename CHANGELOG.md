@@ -746,3 +746,36 @@ then fails and the message tells her to press Generate.
 
 Regression: M2 **48/48**, M3 **34/34**, M4 **43/43**, M5 **32/32** — **233 checks**
 across the project. All 10 screens load.
+
+---
+
+## Interface: no truncated text anywhere · 2026-07-29
+
+*Reported:* text cut off inside windows, with "..." in the middle of it.
+
+Two separate causes, both fixed at the source rather than screen by screen.
+
+**1. Three places deliberately cut text and appended "...".**
+`Question.getSummary` at 70 characters, `ExamQuestion.toString` at 60, and the
+exam-builder row label at 80. That made sense when list cells could not wrap —
+but the cells wrap now, so the shortening only put an ellipsis in the middle of
+the very question the teacher was reading in order to choose. All three removed;
+the text is shown in full.
+
+**2. A JavaFX `Label` truncates by default.** Unlike a wrapped cell, a plain
+`Label` narrower than its text shows an ellipsis and nothing else — and widening
+the window does not help once the layout has stopped growing. **80 labels across
+all 10 screens** now have `wrapText="true"`.
+
+**3. Wrapping alone was not enough inside a header bar.** A label can only wrap if
+it has somewhere to wrap *into*. The title and subtitle sit in a `VBox` inside an
+`HBox`, and without `hgrow` that `VBox` kept its preferred width, got squeezed
+when the window narrowed, and clipped instead of re-wrapping. The header `VBox` on
+all 7 screens that have one now grows into the leftover space.
+
+Combined with `GUIScreen.fitToContent`, which already resizes a window when a
+message changes, every screen now shows its text in full and re-flows as it is
+resized.
+
+Verified: 10/10 screens load, and M2 **48/48**, M3 **34/34**, M4 **43/43**,
+M5 **32/32**, M6 **76/76** — 233 checks, no regressions.

@@ -30,12 +30,12 @@
     <VBox styleClass="card" spacing="18" maxWidth="Infinity">
 
         <VBox spacing="3">
-            <Label text="HSTS Server" styleClass="h1"/>
-            <Label text="High School Test System  ·  Group 1" styleClass="muted"/>
+            <Label text="HSTS Server" styleClass="h1" wrapText="true"/>
+            <Label text="High School Test System  ·  Group 1" styleClass="muted" wrapText="true"/>
         </VBox>
 
         <VBox spacing="8">
-            <Label text="NETWORK" styleClass="section-title"/>
+            <Label text="NETWORK" styleClass="section-title" wrapText="true"/>
             <GridPane hgap="12" vgap="10">
                 <columnConstraints>
                     <ColumnConstraints minWidth="130"/>
@@ -43,14 +43,14 @@
                 </columnConstraints>
 
                 <Label text="Listening port" styleClass="field-label"
-                       GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                       GridPane.rowIndex="0" GridPane.columnIndex="0" wrapText="true"/>
                 <TextField fx:id="serverPortField" promptText="5555"
                            GridPane.rowIndex="0" GridPane.columnIndex="1"/>
             </GridPane>
         </VBox>
 
         <VBox spacing="8">
-            <Label text="DATABASE" styleClass="section-title"/>
+            <Label text="DATABASE" styleClass="section-title" wrapText="true"/>
             <GridPane hgap="12" vgap="10">
                 <columnConstraints>
                     <ColumnConstraints minWidth="130"/>
@@ -58,27 +58,27 @@
                 </columnConstraints>
 
                 <Label text="MySQL host" styleClass="field-label"
-                       GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                       GridPane.rowIndex="0" GridPane.columnIndex="0" wrapText="true"/>
                 <TextField fx:id="dbHostField" promptText="localhost"
                            GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
                 <Label text="MySQL port" styleClass="field-label"
-                       GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                       GridPane.rowIndex="1" GridPane.columnIndex="0" wrapText="true"/>
                 <TextField fx:id="dbPortField" promptText="3306"
                            GridPane.rowIndex="1" GridPane.columnIndex="1"/>
 
                 <Label text="Database" styleClass="field-label"
-                       GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                       GridPane.rowIndex="2" GridPane.columnIndex="0" wrapText="true"/>
                 <TextField fx:id="dbNameField" promptText="hsts"
                            GridPane.rowIndex="2" GridPane.columnIndex="1"/>
 
                 <Label text="User" styleClass="field-label"
-                       GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                       GridPane.rowIndex="3" GridPane.columnIndex="0" wrapText="true"/>
                 <TextField fx:id="dbUserField" promptText="root"
                            GridPane.rowIndex="3" GridPane.columnIndex="1"/>
 
                 <Label text="Password" styleClass="field-label"
-                       GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                       GridPane.rowIndex="4" GridPane.columnIndex="0" wrapText="true"/>
                 <PasswordField fx:id="dbPasswordField"
                                GridPane.rowIndex="4" GridPane.columnIndex="1"/>
             </GridPane>

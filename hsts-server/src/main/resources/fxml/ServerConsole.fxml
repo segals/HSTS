@@ -16,9 +16,9 @@
       spacing="0" prefWidth="780" prefHeight="500">
 
     <HBox styleClass="header-bar" spacing="12" alignment="CENTER_LEFT">
-        <VBox spacing="2">
-            <Label text="HSTS Server" styleClass="h2"/>
-            <Label text="running" styleClass="badge-current"/>
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="HSTS Server" styleClass="h2" wrapText="true"/>
+            <Label text="running" styleClass="badge-current" wrapText="true"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="resetDataButton" text="Reset test data" onAction="#onResetData"
@@ -29,11 +29,11 @@
         <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
 
         <VBox styleClass="card" spacing="4">
-            <Label text="STATUS" styleClass="section-title"/>
+            <Label text="STATUS" styleClass="section-title" wrapText="true"/>
             <Label fx:id="detailsLabel" wrapText="true"/>
         </VBox>
 
-        <Label text="ACTIVITY" styleClass="section-title"/>
+        <Label text="ACTIVITY" styleClass="section-title" wrapText="true"/>
         <TextArea fx:id="logArea" editable="false" wrapText="true"
                   styleClass="mono" VBox.vgrow="ALWAYS"/>
     </VBox>

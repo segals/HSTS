@@ -53,12 +53,13 @@ public class ExamQuestion implements Serializable {
     public void setOrder(int order)                { this.order = order; }
     public void setQuestion(Question question)     { this.question = question; }
 
+    /**
+     * Label for lists. The question text is shown in full - the screens wrap it
+     * rather than cutting it off with an ellipsis.
+     */
     @Override
     public String toString() {
         String text = (question == null) ? questionId : question.getText();
-        if (text != null && text.length() > 60) {
-            text = text.substring(0, 57) + "...";
-        }
-        return points + " pts   " + text;
+        return points + " pts   " + (text == null ? "" : text.replace('\n', ' '));
     }
 }

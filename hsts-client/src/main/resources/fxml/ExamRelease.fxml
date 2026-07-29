@@ -36,9 +36,9 @@
 
     <!-- ===================== header ===================== -->
     <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
-        <VBox spacing="2">
-            <Label text="Release an exam" styleClass="h2"/>
-            <Label fx:id="subtitleLabel" styleClass="caption"/>
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="Release an exam" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
@@ -51,9 +51,9 @@
         <!-- ===== approved exams ===== -->
         <VBox styleClass="card" spacing="10" prefWidth="330" minWidth="280" HBox.hgrow="ALWAYS">
             <HBox alignment="CENTER_LEFT" spacing="8">
-                <Label text="READY TO RELEASE" styleClass="section-title"/>
+                <Label text="READY TO RELEASE" styleClass="section-title" wrapText="true"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Label fx:id="releasableCountLabel" styleClass="caption"/>
+                <Label fx:id="releasableCountLabel" styleClass="caption" wrapText="true"/>
             </HBox>
             <ListView fx:id="approvedList" VBox.vgrow="ALWAYS"/>
             <Label text="Only approved versions appear here. An exam needs the coordinator's approval first."
@@ -64,7 +64,7 @@
         <VBox styleClass="card" spacing="0" prefWidth="430" minWidth="380">
 
             <VBox spacing="3">
-                <Label fx:id="chosenExamLabel" styleClass="h3"/>
+                <Label fx:id="chosenExamLabel" styleClass="h3" wrapText="true"/>
                 <Label fx:id="chosenExamMetaLabel" styleClass="caption" wrapText="true"/>
             </VBox>
 
@@ -73,11 +73,11 @@
                     <padding><Insets top="14" right="10" bottom="14" left="0"/></padding>
 
                     <VBox spacing="6">
-                        <Label text="STUDENTS MAY START FROM" styleClass="section-title"/>
+                        <Label text="STUDENTS MAY START FROM" styleClass="section-title" wrapText="true"/>
                         <HBox spacing="8" alignment="CENTER_LEFT">
                             <DatePicker fx:id="openDate" prefWidth="150"/>
                             <Spinner fx:id="openHour" prefWidth="72" editable="true"/>
-                            <Label text=":"/>
+                            <Label text=":" wrapText="true"/>
                             <Spinner fx:id="openMinute" prefWidth="72" editable="true"/>
                             <Button fx:id="nowButton" text="Now" onAction="#onSetNow"
                                     styleClass="quiet"/>
@@ -85,11 +85,11 @@
                     </VBox>
 
                     <VBox spacing="6">
-                        <Label text="AND UNTIL" styleClass="section-title"/>
+                        <Label text="AND UNTIL" styleClass="section-title" wrapText="true"/>
                         <HBox spacing="8" alignment="CENTER_LEFT">
                             <DatePicker fx:id="closeDate" prefWidth="150"/>
                             <Spinner fx:id="closeHour" prefWidth="72" editable="true"/>
-                            <Label text=":"/>
+                            <Label text=":" wrapText="true"/>
                             <Spinner fx:id="closeMinute" prefWidth="72" editable="true"/>
                         </HBox>
                         <Label text="This is the deadline to START. A student who begins just before it still gets her full time."
@@ -97,7 +97,7 @@
                     </VBox>
 
                     <VBox spacing="6">
-                        <Label text="EXECUTION CODE" styleClass="section-title"/>
+                        <Label text="EXECUTION CODE" styleClass="section-title" wrapText="true"/>
                         <HBox spacing="8" alignment="CENTER_LEFT">
                             <TextField fx:id="codeField" prefWidth="120" promptText="e.g. K7M2"/>
                             <Button fx:id="generateButton" text="Generate" onAction="#onGenerate"/>
@@ -113,9 +113,9 @@
                         </columnConstraints>
 
                         <Label text="MINUTES ALLOWED" styleClass="section-title"
-                               GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                               GridPane.rowIndex="0" GridPane.columnIndex="0" wrapText="true"/>
                         <Label text="ATTEMPTS ALLOWED" styleClass="section-title"
-                               GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                               GridPane.rowIndex="0" GridPane.columnIndex="1" wrapText="true"/>
 
                         <Spinner fx:id="durationSpinner" editable="true" prefWidth="130"
                                  GridPane.rowIndex="1" GridPane.columnIndex="0"/>
@@ -140,7 +140,7 @@
 
         <!-- ===== what is already out ===== -->
         <VBox styleClass="card" spacing="10" prefWidth="330" minWidth="280" HBox.hgrow="ALWAYS">
-            <Label text="ALREADY RELEASED BY YOU" styleClass="section-title"/>
+            <Label text="ALREADY RELEASED BY YOU" styleClass="section-title" wrapText="true"/>
             <ListView fx:id="executionList" VBox.vgrow="ALWAYS"/>
             <Label text="The same exam can be released more than once - a second class, or a re-sit."
                    styleClass="caption" wrapText="true"/>

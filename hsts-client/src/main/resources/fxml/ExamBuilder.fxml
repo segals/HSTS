@@ -42,12 +42,12 @@
 
     <!-- ===================== header ===================== -->
     <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
-        <VBox spacing="2">
-            <Label text="Build an exam" styleClass="h2"/>
-            <Label fx:id="subtitleLabel" styleClass="caption"/>
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="Build an exam" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
         </VBox>
         <Region minWidth="20"/>
-        <Label text="Course" styleClass="field-label"/>
+        <Label text="Course" styleClass="field-label" wrapText="true"/>
         <ComboBox fx:id="courseCombo" prefWidth="240"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
@@ -61,7 +61,7 @@
              Fixed width on purpose: this list is a short index, and giving it
              growth would steal the width the other two panels actually need. -->
         <VBox styleClass="card" spacing="10" prefWidth="250" minWidth="210" maxWidth="290">
-            <Label text="MY EXAMS" styleClass="section-title"/>
+            <Label text="MY EXAMS" styleClass="section-title" wrapText="true"/>
             <ListView fx:id="examList" VBox.vgrow="ALWAYS"/>
             <HBox spacing="7">
                 <Button fx:id="newExamButton"  text="New"     onAction="#onNewExam"/>
@@ -75,7 +75,7 @@
              cut off. It is the panel you read most, so it gets to grow. -->
         <VBox styleClass="card" spacing="10" prefWidth="430" minWidth="330"
               HBox.hgrow="ALWAYS">
-            <Label text="CHOOSE QUESTIONS" styleClass="section-title"/>
+            <Label text="CHOOSE QUESTIONS" styleClass="section-title" wrapText="true"/>
 
             <HBox spacing="14">
                 <RadioButton fx:id="manualRadio"    text="By hand"     toggleGroup="$modeGroup"
@@ -85,7 +85,7 @@
 
             <!-- manual: pick from the bank -->
             <VBox fx:id="manualPane" spacing="6" VBox.vgrow="ALWAYS">
-                <Label text="Ctrl-click to select several." styleClass="caption"/>
+                <Label text="Ctrl-click to select several." styleClass="caption" wrapText="true"/>
                 <ListView fx:id="bankList" VBox.vgrow="ALWAYS"/>
             </VBox>
 
@@ -100,7 +100,7 @@
                 <HBox spacing="7">
                     <Button fx:id="addQuotaButton" text="Add a line" onAction="#onAddQuota"/>
                     <Region HBox.hgrow="ALWAYS"/>
-                    <Label fx:id="quotaTotalLabel" styleClass="caption"/>
+                    <Label fx:id="quotaTotalLabel" styleClass="caption" wrapText="true"/>
                 </HBox>
             </VBox>
 
@@ -112,7 +112,7 @@
         <VBox styleClass="card" spacing="0" minWidth="380" HBox.hgrow="ALWAYS">
 
             <VBox spacing="3">
-                <Label fx:id="examTitleLabel" styleClass="h3"/>
+                <Label fx:id="examTitleLabel" styleClass="h3" wrapText="true"/>
                 <Label fx:id="examVersionLabel" styleClass="caption" wrapText="true"/>
             </VBox>
 
@@ -121,9 +121,9 @@
                     <padding><Insets top="12" right="10" bottom="12" left="0"/></padding>
 
                     <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Label text="QUESTIONS AND POINTS" styleClass="section-title"/>
+                        <Label text="QUESTIONS AND POINTS" styleClass="section-title" wrapText="true"/>
                         <Region HBox.hgrow="ALWAYS"/>
-                        <Label fx:id="totalPointsLabel"/>
+                        <Label fx:id="totalPointsLabel" wrapText="true"/>
                     </HBox>
 
                     <VBox fx:id="questionRows" spacing="5"/>
@@ -141,19 +141,19 @@
                             <ColumnConstraints minWidth="120" hgrow="ALWAYS"/>
                         </columnConstraints>
                         <Label text="DURATION (MINUTES)" styleClass="section-title"
-                               GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                               GridPane.rowIndex="0" GridPane.columnIndex="0" wrapText="true"/>
                         <Spinner fx:id="durationSpinner" editable="true" prefWidth="120"
                                  GridPane.rowIndex="1" GridPane.columnIndex="0"/>
                     </GridPane>
 
                     <VBox spacing="5">
-                        <Label text="INSTRUCTIONS SHOWN TO THE STUDENTS" styleClass="section-title"/>
+                        <Label text="INSTRUCTIONS SHOWN TO THE STUDENTS" styleClass="section-title" wrapText="true"/>
                         <TextArea fx:id="studentInstructions" prefRowCount="2" wrapText="true"/>
                     </VBox>
 
                     <VBox spacing="5">
                         <Label text="NOTES FOR THE TEACHER  ·  NEVER SHOWN TO A STUDENT"
-                               styleClass="section-title"/>
+                               styleClass="section-title" wrapText="true"/>
                         <TextArea fx:id="teacherNotes" prefRowCount="2" wrapText="true"/>
                     </VBox>
                 </VBox>

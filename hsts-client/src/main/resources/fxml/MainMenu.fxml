@@ -23,9 +23,9 @@
 
     <!-- ===== header ===== -->
     <HBox styleClass="header-bar" spacing="12" alignment="CENTER_LEFT">
-        <VBox spacing="2">
-            <Label fx:id="nameLabel" styleClass="h2"/>
-            <Label fx:id="roleLabel" styleClass="caption"/>
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label fx:id="nameLabel" styleClass="h2" wrapText="true"/>
+            <Label fx:id="roleLabel" styleClass="caption" wrapText="true"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="logoutButton" text="Log out" onAction="#onLogout" styleClass="quiet"/>
@@ -36,11 +36,11 @@
         <padding><Insets top="18" right="22" bottom="16" left="22"/></padding>
 
         <VBox styleClass="card" spacing="6">
-            <Label text="YOUR COURSES" styleClass="section-title"/>
+            <Label text="YOUR COURSES" styleClass="section-title" wrapText="true"/>
             <Label fx:id="contextLabel" wrapText="true"/>
         </VBox>
 
-        <Label text="WHAT YOU CAN DO" styleClass="section-title"/>
+        <Label text="WHAT YOU CAN DO" styleClass="section-title" wrapText="true"/>
 
         <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
             <VBox fx:id="menuBox" spacing="7"/>

@@ -464,11 +464,11 @@ public class ExamBuilderController extends GUIScreen {
         if (q == null) {
             return eq.getQuestionId() + "  (v" + eq.getQuestionVersion() + ")";
         }
-        String text = q.getText().replace('\n', ' ');
-        if (text.length() > 80) {
-            text = text.substring(0, 77) + "...";
-        }
-        return text + "      [" + q.getQuestionId() + " v" + eq.getQuestionVersion()
+        // Not shortened: the row's label wraps, so the whole question is readable.
+        // Cutting it at 80 characters put "..." in the middle of the text the
+        // teacher was reading to decide how many points it is worth.
+        return q.getText().replace('\n', ' ')
+             + "      [" + q.getQuestionId() + " v" + eq.getQuestionVersion()
              + ", " + q.getTopic() + ", " + q.getDifficulty().getDisplayName() + "]";
     }
 

@@ -30,9 +30,9 @@
 
     <!-- ===================== header ===================== -->
     <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
-        <VBox spacing="2">
-            <Label text="Exam approval" styleClass="h2"/>
-            <Label fx:id="subtitleLabel" styleClass="caption"/>
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="Exam approval" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
@@ -45,9 +45,9 @@
         <!-- ===== waiting list ===== -->
         <VBox styleClass="card" spacing="10" prefWidth="340" minWidth="280" maxWidth="420">
             <HBox alignment="CENTER_LEFT" spacing="8">
-                <Label text="WAITING FOR YOU" styleClass="section-title"/>
+                <Label text="WAITING FOR YOU" styleClass="section-title" wrapText="true"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Label fx:id="pendingCountLabel" styleClass="caption"/>
+                <Label fx:id="pendingCountLabel" styleClass="caption" wrapText="true"/>
             </HBox>
             <ListView fx:id="pendingList" VBox.vgrow="ALWAYS"/>
             <Label text="This list updates by itself when a teacher submits an exam."
@@ -58,7 +58,7 @@
         <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS" minWidth="420">
 
             <VBox spacing="3">
-                <Label fx:id="examTitleLabel" styleClass="h3"/>
+                <Label fx:id="examTitleLabel" styleClass="h3" wrapText="true"/>
                 <Label fx:id="examMetaLabel" styleClass="caption" wrapText="true"/>
             </VBox>
 
@@ -67,17 +67,17 @@
                     <padding><Insets top="12" right="10" bottom="12" left="0"/></padding>
 
                     <VBox spacing="5">
-                        <Label text="INSTRUCTIONS FOR THE STUDENTS" styleClass="section-title"/>
+                        <Label text="INSTRUCTIONS FOR THE STUDENTS" styleClass="section-title" wrapText="true"/>
                         <Label fx:id="instructionsLabel" wrapText="true"/>
                     </VBox>
 
                     <VBox spacing="5">
-                        <Label text="NOTES FROM THE TEACHER" styleClass="section-title"/>
+                        <Label text="NOTES FROM THE TEACHER" styleClass="section-title" wrapText="true"/>
                         <Label fx:id="teacherNotesLabel" wrapText="true"/>
                     </VBox>
 
                     <VBox spacing="6">
-                        <Label text="QUESTIONS" styleClass="section-title"/>
+                        <Label text="QUESTIONS" styleClass="section-title" wrapText="true"/>
                         <VBox fx:id="questionBox" spacing="6"/>
                     </VBox>
                 </VBox>
@@ -87,7 +87,7 @@
             <VBox spacing="8">
                 <padding><Insets top="12" right="0" bottom="0" left="0"/></padding>
 
-                <Label text="REASON  ·  REQUIRED IN ORDER TO REJECT" styleClass="section-title"/>
+                <Label text="REASON  ·  REQUIRED IN ORDER TO REJECT" styleClass="section-title" wrapText="true"/>
                 <TextArea fx:id="reasonArea" prefRowCount="2" wrapText="true"
                           promptText="What does the teacher need to change?"/>
 

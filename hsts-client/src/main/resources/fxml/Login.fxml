@@ -23,8 +23,8 @@
     <VBox styleClass="card" spacing="18" maxWidth="Infinity">
 
         <VBox spacing="3">
-            <Label text="Sign in" styleClass="h1"/>
-            <Label fx:id="serverLabel" styleClass="caption"/>
+            <Label text="Sign in" styleClass="h1" wrapText="true"/>
+            <Label fx:id="serverLabel" styleClass="caption" wrapText="true"/>
         </VBox>
 
         <GridPane hgap="12" vgap="10">
@@ -34,11 +34,11 @@
             </columnConstraints>
 
             <Label text="Username" styleClass="field-label"
-                   GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                   GridPane.rowIndex="0" GridPane.columnIndex="0" wrapText="true"/>
             <TextField fx:id="usernameField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
             <Label text="Password" styleClass="field-label"
-                   GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                   GridPane.rowIndex="1" GridPane.columnIndex="0" wrapText="true"/>
             <PasswordField fx:id="passwordField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
         </GridPane>
 

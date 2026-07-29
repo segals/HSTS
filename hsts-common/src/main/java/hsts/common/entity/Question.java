@@ -137,12 +137,16 @@ public class Question implements Serializable {
         return (questionId == null || questionId.length() != 5) ? "" : questionId.substring(3, 5);
     }
 
-    /** Short label for tables and lists. */
+    /**
+     * Label for tables and lists.
+     *
+     * <p>The text is <b>not</b> shortened. It used to be cut at 70 characters with
+     * an ellipsis, which put "..." in the middle of the very question the teacher
+     * was trying to choose between. The lists wrap instead, so the whole thing is
+     * readable however long it is.</p>
+     */
     public String getSummary() {
         String t = (text == null) ? "" : text.replace('\n', ' ');
-        if (t.length() > 70) {
-            t = t.substring(0, 67) + "...";
-        }
         return questionId + " (v" + version + ")  " + t;
     }
 

@@ -28,12 +28,12 @@
     <VBox styleClass="card" spacing="18" maxWidth="Infinity">
 
         <VBox spacing="3">
-            <Label text="HSTS" styleClass="h1"/>
-            <Label text="High School Test System  ·  Group 1" styleClass="muted"/>
+            <Label text="HSTS" styleClass="h1" wrapText="true"/>
+            <Label text="High School Test System  ·  Group 1" styleClass="muted" wrapText="true"/>
         </VBox>
 
         <VBox spacing="10">
-            <Label text="CONNECT TO SERVER" styleClass="section-title"/>
+            <Label text="CONNECT TO SERVER" styleClass="section-title" wrapText="true"/>
 
             <GridPane hgap="12" vgap="10">
                 <columnConstraints>
@@ -42,12 +42,12 @@
                 </columnConstraints>
 
                 <Label text="Server address" styleClass="field-label"
-                       GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                       GridPane.rowIndex="0" GridPane.columnIndex="0" wrapText="true"/>
                 <TextField fx:id="hostField" promptText="localhost  or  192.168.1.20"
                            GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
                 <Label text="Port" styleClass="field-label"
-                       GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                       GridPane.rowIndex="1" GridPane.columnIndex="0" wrapText="true"/>
                 <TextField fx:id="portField" promptText="5555"
                            GridPane.rowIndex="1" GridPane.columnIndex="1"/>
             </GridPane>

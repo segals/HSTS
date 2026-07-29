@@ -48,12 +48,12 @@
 
     <!-- ===================== header ===================== -->
     <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
-        <VBox spacing="2">
-            <Label text="Question bank" styleClass="h2"/>
-            <Label fx:id="subtitleLabel" styleClass="caption"/>
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="Question bank" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
         </VBox>
         <Region minWidth="20"/>
-        <Label text="Course" styleClass="field-label"/>
+        <Label text="Course" styleClass="field-label" wrapText="true"/>
         <ComboBox fx:id="courseCombo" prefWidth="260"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
@@ -67,9 +67,9 @@
         <VBox styleClass="card" spacing="10" prefWidth="400" minWidth="320" maxWidth="520"
               HBox.hgrow="ALWAYS">
             <HBox alignment="CENTER_LEFT" spacing="8">
-                <Label text="IN THIS COURSE" styleClass="section-title"/>
+                <Label text="IN THIS COURSE" styleClass="section-title" wrapText="true"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Label fx:id="bankCountLabel" styleClass="caption"/>
+                <Label fx:id="bankCountLabel" styleClass="caption" wrapText="true"/>
             </HBox>
 
             <ListView fx:id="questionList" VBox.vgrow="ALWAYS"/>
@@ -87,7 +87,7 @@
         <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS">
 
             <VBox spacing="3">
-                <Label fx:id="editorTitleLabel" styleClass="h3"/>
+                <Label fx:id="editorTitleLabel" styleClass="h3" wrapText="true"/>
                 <Label fx:id="versionLabel" styleClass="caption" wrapText="true"/>
             </VBox>
 
@@ -97,13 +97,13 @@
                     <padding><Insets top="14" right="10" bottom="14" left="0"/></padding>
 
                     <VBox spacing="5">
-                        <Label text="QUESTION TEXT" styleClass="section-title"/>
+                        <Label text="QUESTION TEXT" styleClass="section-title" wrapText="true"/>
                         <TextArea fx:id="textArea" prefRowCount="3" wrapText="true"/>
                     </VBox>
 
                     <VBox spacing="5">
                         <Label text="INSTRUCTIONS FOR ANSWERING  (optional)"
-                               styleClass="section-title"/>
+                               styleClass="section-title" wrapText="true"/>
                         <TextArea fx:id="instructionsArea" prefRowCount="2" wrapText="true"/>
                     </VBox>
 
@@ -114,9 +114,9 @@
                         </columnConstraints>
 
                         <Label text="TOPIC" styleClass="section-title"
-                               GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                               GridPane.rowIndex="0" GridPane.columnIndex="0" wrapText="true"/>
                         <Label text="DIFFICULTY" styleClass="section-title"
-                               GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                               GridPane.rowIndex="0" GridPane.columnIndex="1" wrapText="true"/>
 
                         <!-- editable: pick an existing topic, or type a new one -->
                         <ComboBox fx:id="topicCombo" editable="true" maxWidth="Infinity"
@@ -132,7 +132,7 @@
 
                     <VBox spacing="6">
                         <Label text="ANSWERS  ·  MARK EXACTLY ONE AS CORRECT"
-                               styleClass="section-title"/>
+                               styleClass="section-title" wrapText="true"/>
 
                         <GridPane hgap="10" vgap="7">
                             <columnConstraints>
@@ -163,13 +163,13 @@
                     </VBox>
 
                     <VBox spacing="6">
-                        <Label text="PICTURE  (optional)" styleClass="section-title"/>
+                        <Label text="PICTURE  (optional)" styleClass="section-title" wrapText="true"/>
                         <HBox spacing="8" alignment="CENTER_LEFT">
                             <Button fx:id="chooseImageButton" text="Choose file..."
                                     onAction="#onChooseImage"/>
                             <Button fx:id="clearImageButton" text="Remove"
                                     onAction="#onClearImage"/>
-                            <Label fx:id="imageLabel" styleClass="caption"/>
+                            <Label fx:id="imageLabel" styleClass="caption" wrapText="true"/>
                         </HBox>
                         <HBox fx:id="imageFrame" styleClass="image-frame" managed="false"
                               visible="false">
