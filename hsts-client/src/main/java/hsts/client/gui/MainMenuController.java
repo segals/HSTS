@@ -77,7 +77,7 @@ public class MainMenuController extends GUIScreen {
                     : entry.text() + "   —   " + entry.milestone());
             button.setMaxWidth(Double.MAX_VALUE);
             button.setDisable(!entry.ready());
-            button.setStyle("-fx-alignment: CENTER-LEFT; -fx-padding: 8 12 8 12;");
+            button.getStyleClass().add("menu-entry");
             if (entry.ready()) {
                 button.setOnAction(e -> switchTo(entry.fxml(), true));
             }

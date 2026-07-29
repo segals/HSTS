@@ -11,7 +11,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
@@ -19,34 +19,37 @@
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="hsts.client.gui.MainMenuController"
-      spacing="12" prefWidth="520" prefHeight="460">
+      spacing="0" prefWidth="560" prefHeight="560">
 
-    <padding>
-        <Insets top="18" right="24" bottom="18" left="24"/>
-    </padding>
-
-    <HBox spacing="10" alignment="CENTER_LEFT">
+    <!-- ===== header ===== -->
+    <HBox styleClass="header-bar" spacing="12" alignment="CENTER_LEFT">
         <VBox spacing="2">
-            <Label fx:id="nameLabel" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-            <Label fx:id="roleLabel" style="-fx-text-fill: #555555;"/>
+            <Label fx:id="nameLabel" styleClass="h2"/>
+            <Label fx:id="roleLabel" styleClass="caption"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button fx:id="logoutButton" text="Log out" onAction="#onLogout"/>
+        <Button fx:id="logoutButton" text="Log out" onAction="#onLogout" styleClass="quiet"/>
     </HBox>
 
-    <Separator/>
+    <!-- ===== body ===== -->
+    <VBox spacing="14" VBox.vgrow="ALWAYS">
+        <padding><Insets top="18" right="22" bottom="16" left="22"/></padding>
 
-    <Label fx:id="contextLabel" wrapText="true" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
+        <VBox styleClass="card" spacing="6">
+            <Label text="YOUR COURSES" styleClass="section-title"/>
+            <Label fx:id="contextLabel" wrapText="true"/>
+        </VBox>
 
-    <VBox fx:id="menuBox" spacing="6"/>
+        <Label text="WHAT YOU CAN DO" styleClass="section-title"/>
 
-    <Region VBox.vgrow="ALWAYS"/>
+        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+            <VBox fx:id="menuBox" spacing="7"/>
+        </ScrollPane>
 
-    <!-- wrapText is required: GUIScreen resizes the window to fit a wrapped
-         message, but a label that does not wrap has nothing to wrap onto. -->
-    <Label fx:id="statusLabel" wrapText="true" text=" "/>
+        <Label fx:id="statusLabel" wrapText="true" text=" "
+               styleClass="status" maxWidth="Infinity"/>
 
-    <Label fx:id="footerLabel" wrapText="true"
-           style="-fx-text-fill: #777777; -fx-font-size: 11px;"/>
+        <Label fx:id="footerLabel" wrapText="true" styleClass="caption"/>
+    </VBox>
 
 </VBox>

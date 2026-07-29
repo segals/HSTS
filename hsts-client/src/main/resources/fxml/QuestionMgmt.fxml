@@ -10,17 +10,21 @@
 
     A question holds its text, four answers with exactly one correct, and an
     optional picture (system description §3.1). Each belongs to one course.
+
+    LAYOUT NOTE: the Save button and the status message sit OUTSIDE the
+    ScrollPane, pinned to the bottom of the editor. They were originally the
+    last items inside it, which meant that on a short window you had to scroll
+    down to reach Save - and the confirmation message appeared somewhere you
+    were not looking.
 -->
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleGroup?>
@@ -34,7 +38,7 @@
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="hsts.client.gui.QuestionMgmtController"
-      spacing="10" prefWidth="1000" prefHeight="680">
+      spacing="0" prefWidth="1080" prefHeight="720">
 
     <fx:define>
         <!-- Exactly one answer may be correct, so the four radio buttons share
@@ -42,110 +46,152 @@
         <ToggleGroup fx:id="correctGroup"/>
     </fx:define>
 
-    <padding>
-        <Insets top="14" right="18" bottom="14" left="18"/>
-    </padding>
-
-    <HBox spacing="10" alignment="CENTER_LEFT">
-        <Label text="Question bank" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-        <Label text="Course:"/>
-        <ComboBox fx:id="courseCombo" prefWidth="240"/>
+    <!-- ===================== header ===================== -->
+    <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
+        <VBox spacing="2">
+            <Label text="Question bank" styleClass="h2"/>
+            <Label fx:id="subtitleLabel" styleClass="caption"/>
+        </VBox>
+        <Region minWidth="20"/>
+        <Label text="Course" styleClass="field-label"/>
+        <ComboBox fx:id="courseCombo" prefWidth="260"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button fx:id="backButton" text="Back to menu" onAction="#onBack"/>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
     </HBox>
 
-    <Separator/>
+    <!-- ===================== body ===================== -->
+    <HBox spacing="16" VBox.vgrow="ALWAYS">
+        <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
 
-    <HBox spacing="14" VBox.vgrow="ALWAYS">
+        <!-- ---------- left: the bank ---------- -->
+        <VBox styleClass="card" spacing="10" prefWidth="340" minWidth="290">
+            <HBox alignment="CENTER_LEFT" spacing="8">
+                <Label text="IN THIS COURSE" styleClass="section-title"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="bankCountLabel" styleClass="caption"/>
+            </HBox>
 
-        <!-- ================= left: the bank ================= -->
-        <VBox spacing="6" prefWidth="330" minWidth="260">
-            <Label fx:id="bankCountLabel" style="-fx-font-weight: bold;"/>
             <ListView fx:id="questionList" VBox.vgrow="ALWAYS"/>
-            <HBox spacing="6">
-                <Button fx:id="newButton"      text="New"      onAction="#onNew"/>
-                <Button fx:id="deleteButton"   text="Delete"   onAction="#onDelete"/>
-                <Button fx:id="versionsButton" text="History"  onAction="#onShowVersions"/>
+
+            <HBox spacing="7">
+                <Button fx:id="newButton"      text="New"     onAction="#onNew"/>
+                <Button fx:id="versionsButton" text="History" onAction="#onShowVersions"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="deleteButton"   text="Delete"  onAction="#onDelete"
+                        styleClass="danger"/>
             </HBox>
         </VBox>
 
-        <!-- ================= right: the editor ================= -->
-        <ScrollPane fitToWidth="true" HBox.hgrow="ALWAYS">
-            <VBox spacing="8">
-                <padding><Insets right="8"/></padding>
+        <!-- ---------- right: the editor ---------- -->
+        <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS">
 
-                <Label fx:id="editorTitleLabel" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
-                <Label fx:id="versionLabel" style="-fx-text-fill: #666666; -fx-font-size: 11px;"/>
-
-                <Label text="Question text"/>
-                <TextArea fx:id="textArea" prefRowCount="3" wrapText="true"/>
-
-                <Label text="Instructions for answering (optional)"/>
-                <TextArea fx:id="instructionsArea" prefRowCount="2" wrapText="true"/>
-
-                <GridPane hgap="10" vgap="6">
-                    <columnConstraints>
-                        <ColumnConstraints minWidth="80"/>
-                        <ColumnConstraints minWidth="200" hgrow="ALWAYS"/>
-                        <ColumnConstraints minWidth="80"/>
-                        <ColumnConstraints minWidth="140"/>
-                    </columnConstraints>
-
-                    <Label text="Topic" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                    <!-- editable: pick an existing topic, or type a new one -->
-                    <ComboBox fx:id="topicCombo" editable="true" maxWidth="Infinity"
-                              GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-
-                    <Label text="Difficulty" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
-                    <ComboBox fx:id="difficultyCombo" maxWidth="Infinity"
-                              GridPane.rowIndex="0" GridPane.columnIndex="3"/>
-                </GridPane>
-
-                <Separator/>
-                <Label text="Answers - mark exactly one as correct"
-                       style="-fx-font-weight: bold;"/>
-
-                <GridPane hgap="8" vgap="6">
-                    <columnConstraints>
-                        <ColumnConstraints minWidth="90"/>
-                        <ColumnConstraints minWidth="300" hgrow="ALWAYS"/>
-                    </columnConstraints>
-
-                    <RadioButton fx:id="correct1" text="1. correct" toggleGroup="$correctGroup"
-                                 GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                    <TextField fx:id="answer1" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-
-                    <RadioButton fx:id="correct2" text="2. correct" toggleGroup="$correctGroup"
-                                 GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                    <TextField fx:id="answer2" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-
-                    <RadioButton fx:id="correct3" text="3. correct" toggleGroup="$correctGroup"
-                                 GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                    <TextField fx:id="answer3" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
-
-                    <RadioButton fx:id="correct4" text="4. correct" toggleGroup="$correctGroup"
-                                 GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-                    <TextField fx:id="answer4" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
-                </GridPane>
-
-                <Separator/>
-                <HBox spacing="8" alignment="CENTER_LEFT">
-                    <Label text="Picture (optional)" style="-fx-font-weight: bold;"/>
-                    <Button fx:id="chooseImageButton" text="Choose..." onAction="#onChooseImage"/>
-                    <Button fx:id="clearImageButton"  text="Remove"    onAction="#onClearImage"/>
-                    <Label fx:id="imageLabel" style="-fx-text-fill: #666666;"/>
-                </HBox>
-                <ImageView fx:id="imagePreview" fitHeight="150" preserveRatio="true"/>
-
-                <Separator/>
-                <HBox spacing="8">
-                    <Button fx:id="saveButton" text="Save" onAction="#onSave" defaultButton="true"/>
-                    <CheckBox fx:id="readOnlyNotice" visible="false"/>
-                </HBox>
-
-                <Label fx:id="statusLabel" wrapText="true" text=" "/>
+            <VBox spacing="3">
+                <Label fx:id="editorTitleLabel" styleClass="h3"/>
+                <Label fx:id="versionLabel" styleClass="caption" wrapText="true"/>
             </VBox>
-        </ScrollPane>
+
+            <!-- Only this middle part scrolls. -->
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                <VBox spacing="12">
+                    <padding><Insets top="14" right="10" bottom="14" left="0"/></padding>
+
+                    <VBox spacing="5">
+                        <Label text="QUESTION TEXT" styleClass="section-title"/>
+                        <TextArea fx:id="textArea" prefRowCount="3" wrapText="true"/>
+                    </VBox>
+
+                    <VBox spacing="5">
+                        <Label text="INSTRUCTIONS FOR ANSWERING  (optional)"
+                               styleClass="section-title"/>
+                        <TextArea fx:id="instructionsArea" prefRowCount="2" wrapText="true"/>
+                    </VBox>
+
+                    <GridPane hgap="12" vgap="6">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="200" hgrow="ALWAYS"/>
+                            <ColumnConstraints minWidth="170"/>
+                        </columnConstraints>
+
+                        <Label text="TOPIC" styleClass="section-title"
+                               GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <Label text="DIFFICULTY" styleClass="section-title"
+                               GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                        <!-- editable: pick an existing topic, or type a new one -->
+                        <ComboBox fx:id="topicCombo" editable="true" maxWidth="Infinity"
+                                  GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="difficultyCombo" maxWidth="Infinity"
+                                  GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                        <Label text="Automatic exam building selects by topic, so reuse an existing one where you can."
+                               styleClass="caption" wrapText="true"
+                               GridPane.rowIndex="2" GridPane.columnIndex="0"
+                               GridPane.columnSpan="2"/>
+                    </GridPane>
+
+                    <VBox spacing="6">
+                        <Label text="ANSWERS  ·  MARK EXACTLY ONE AS CORRECT"
+                               styleClass="section-title"/>
+
+                        <GridPane hgap="10" vgap="7">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="78"/>
+                                <ColumnConstraints minWidth="300" hgrow="ALWAYS"/>
+                            </columnConstraints>
+
+                            <RadioButton fx:id="correct1" text="correct" toggleGroup="$correctGroup"
+                                         GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <TextField fx:id="answer1" promptText="Answer 1"
+                                       GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                            <RadioButton fx:id="correct2" text="correct" toggleGroup="$correctGroup"
+                                         GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                            <TextField fx:id="answer2" promptText="Answer 2"
+                                       GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                            <RadioButton fx:id="correct3" text="correct" toggleGroup="$correctGroup"
+                                         GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                            <TextField fx:id="answer3" promptText="Answer 3"
+                                       GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                            <RadioButton fx:id="correct4" text="correct" toggleGroup="$correctGroup"
+                                         GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                            <TextField fx:id="answer4" promptText="Answer 4"
+                                       GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                        </GridPane>
+                    </VBox>
+
+                    <VBox spacing="6">
+                        <Label text="PICTURE  (optional)" styleClass="section-title"/>
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Button fx:id="chooseImageButton" text="Choose file..."
+                                    onAction="#onChooseImage"/>
+                            <Button fx:id="clearImageButton" text="Remove"
+                                    onAction="#onClearImage"/>
+                            <Label fx:id="imageLabel" styleClass="caption"/>
+                        </HBox>
+                        <HBox fx:id="imageFrame" styleClass="image-frame" managed="false"
+                              visible="false">
+                            <ImageView fx:id="imagePreview" fitHeight="160" preserveRatio="true"/>
+                        </HBox>
+                    </VBox>
+                </VBox>
+            </ScrollPane>
+
+            <!-- ===== pinned footer: always reachable, never scrolls away ===== -->
+            <VBox spacing="8">
+                <padding><Insets top="12" right="0" bottom="0" left="0"/></padding>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Button fx:id="saveButton" text="Save" onAction="#onSave"
+                            styleClass="primary" defaultButton="true" prefWidth="150"/>
+                    <Button fx:id="cancelButton" text="Discard changes" onAction="#onNew"
+                            styleClass="quiet"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <Label fx:id="statusLabel" wrapText="true" text=" "
+                       styleClass="status" maxWidth="Infinity"/>
+            </VBox>
+        </VBox>
     </HBox>
 
 </VBox>

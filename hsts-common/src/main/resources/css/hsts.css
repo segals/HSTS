@@ -1,0 +1,257 @@
+/* =====================================================================
+   HSTS - one stylesheet for the whole client.
+
+   Every screen loads this, so the system looks like one product rather
+   than a set of separately-built windows. NFR 21 asks for interface
+   quality and friendliness; that is largely a matter of being
+   consistent, and consistency is far easier to keep in one file than
+   in inline styles scattered through a dozen FXML files.
+
+   Layout uses a 4px spacing grid: 4, 8, 12, 16, 24.
+   ===================================================================== */
+
+/* ---------- palette ----------------------------------------------- */
+* {
+    -hsts-bg:          #f6f7f9;   /* window background      */
+    -hsts-surface:     #ffffff;   /* panels and cards       */
+    -hsts-border:      #dfe3e8;   /* hairlines              */
+    -hsts-border-firm: #c4cbd4;   /* input outlines         */
+
+    -hsts-text:        #1f2933;   /* primary text           */
+    -hsts-text-muted:  #6b7280;   /* secondary text         */
+    -hsts-text-faint:  #9aa2ad;   /* hints, captions        */
+
+    -hsts-accent:      #2563eb;   /* primary action         */
+    -hsts-accent-dark: #1d4ed8;
+    -hsts-accent-soft: #eff4ff;
+
+    -hsts-danger:      #b91c1c;
+    -hsts-danger-soft: #fef2f2;
+    -hsts-success:     #15803d;
+    -hsts-success-soft:#f0fdf4;
+    -hsts-warn:        #b45309;
+}
+
+/* ---------- base --------------------------------------------------- */
+.root {
+    -fx-font-family: "Segoe UI", "Inter", system-ui, sans-serif;
+    -fx-font-size: 13px;
+    -fx-background-color: -hsts-bg;
+    -fx-text-fill: -hsts-text;
+}
+
+Label { -fx-text-fill: -hsts-text; }
+
+/* ---------- typography --------------------------------------------- */
+.h1      { -fx-font-size: 21px; -fx-font-weight: bold; }
+.h2      { -fx-font-size: 16px; -fx-font-weight: bold; }
+.h3      { -fx-font-size: 13px; -fx-font-weight: bold; }
+.muted   { -fx-text-fill: -hsts-text-muted; }
+.caption { -fx-text-fill: -hsts-text-faint; -fx-font-size: 11px; }
+.mono    { -fx-font-family: "Cascadia Mono", "Consolas", monospace; }
+
+/* A field label sitting above or beside an input. */
+.field-label {
+    -fx-text-fill: -hsts-text-muted;
+    -fx-font-size: 12px;
+}
+
+/* ---------- surfaces ----------------------------------------------- */
+.card {
+    -fx-background-color: -hsts-surface;
+    -fx-background-radius: 8;
+    -fx-border-color: -hsts-border;
+    -fx-border-radius: 8;
+    -fx-padding: 16;
+}
+
+/* The strip across the top of a full screen. */
+.header-bar {
+    -fx-background-color: -hsts-surface;
+    -fx-border-color: transparent transparent -hsts-border transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 12 18 12 18;
+}
+
+.section-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -hsts-text-muted;
+}
+
+/* ---------- buttons ------------------------------------------------ */
+.button {
+    -fx-background-color: -hsts-surface;
+    -fx-text-fill: -hsts-text;
+    -fx-border-color: -hsts-border-firm;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 7 14 7 14;
+    -fx-cursor: hand;
+}
+.button:hover  { -fx-background-color: #f0f2f5; }
+.button:armed  { -fx-background-color: #e4e7eb; }
+.button:disabled { -fx-opacity: 0.45; -fx-cursor: default; }
+
+.button.primary {
+    -fx-background-color: -hsts-accent;
+    -fx-text-fill: white;
+    -fx-border-color: -hsts-accent;
+    -fx-font-weight: bold;
+}
+.button.primary:hover { -fx-background-color: -hsts-accent-dark; -fx-border-color: -hsts-accent-dark; }
+
+.button.danger { -fx-text-fill: -hsts-danger; -fx-border-color: #e6b8b8; }
+.button.danger:hover { -fx-background-color: -hsts-danger-soft; }
+
+/* A borderless button for secondary navigation. */
+.button.quiet {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -hsts-accent;
+}
+.button.quiet:hover { -fx-background-color: -hsts-accent-soft; }
+
+/* Full-width left-aligned menu entry. */
+.menu-entry {
+    -fx-alignment: CENTER-LEFT;
+    -fx-padding: 11 14 11 14;
+    -fx-font-size: 13px;
+    -fx-background-color: -hsts-surface;
+}
+.menu-entry:hover { -fx-background-color: -hsts-accent-soft; -fx-border-color: -hsts-accent; }
+.menu-entry:disabled { -fx-opacity: 1; -fx-text-fill: -hsts-text-faint;
+                       -fx-background-color: #fafbfc; -fx-border-color: -hsts-border; }
+
+/* ---------- inputs -------------------------------------------------- */
+.text-field, .password-field, .text-area, .combo-box-base {
+    -fx-background-color: -hsts-surface;
+    -fx-border-color: -hsts-border-firm;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 6 9 6 9;
+}
+.text-area { -fx-padding: 0; }
+.text-area .content { -fx-padding: 7 9 7 9; }
+
+.text-field:focused, .password-field:focused,
+.text-area:focused, .combo-box-base:focused {
+    -fx-border-color: -hsts-accent;
+    -fx-border-width: 1.4;
+}
+
+.combo-box-base { -fx-padding: 3 6 3 6; }
+.combo-box .list-cell { -fx-padding: 5 8 5 8; }
+
+.radio-button, .check-box { -fx-cursor: hand; }
+
+/* ---------- lists --------------------------------------------------- */
+.list-view {
+    -fx-background-color: -hsts-surface;
+    -fx-border-color: -hsts-border;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+.list-cell {
+    -fx-padding: 8 10 8 10;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent -hsts-border transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.list-cell:filled:hover   { -fx-background-color: #f4f6f8; }
+.list-cell:filled:selected{ -fx-background-color: -hsts-accent-soft; -fx-text-fill: -hsts-text; }
+
+/* ---------- table ---------------------------------------------------- */
+.table-view {
+    -fx-background-color: -hsts-surface;
+    -fx-border-color: -hsts-border;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+.table-view .column-header-background { -fx-background-color: #f2f4f6; }
+.table-view .column-header {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent -hsts-border transparent transparent;
+    -fx-padding: 8 6 8 6;
+}
+.table-view .column-header .label { -fx-text-fill: -hsts-text-muted; -fx-font-weight: bold; }
+.table-row-cell { -fx-border-color: transparent transparent -hsts-border transparent; }
+.table-row-cell:selected { -fx-background-color: -hsts-accent-soft; -fx-text-fill: -hsts-text; }
+.table-row-cell:selected .text { -fx-fill: -hsts-text; }
+
+/* Marks the row that is the live version. */
+.row-current { -fx-background-color: -hsts-success-soft; }
+
+/* ---------- scroll --------------------------------------------------- */
+.scroll-pane { -fx-background-color: transparent; -fx-border-color: transparent; }
+.scroll-pane > .viewport { -fx-background-color: transparent; }
+.scroll-bar:vertical, .scroll-bar:horizontal { -fx-background-color: transparent; }
+.scroll-bar .thumb { -fx-background-color: #cbd2da; -fx-background-radius: 6; }
+.scroll-bar .thumb:hover { -fx-background-color: #aab3bd; }
+.scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-opacity: 0; -fx-padding: 0; }
+
+/* ---------- separators ----------------------------------------------- */
+.separator .line { -fx-border-color: -hsts-border; -fx-border-width: 1 0 0 0; }
+
+/* ---------- status messages ------------------------------------------ */
+.status {
+    -fx-padding: 8 12 8 12;
+    -fx-background-radius: 6;
+    -fx-font-size: 12px;
+}
+.status-info    { -fx-text-fill: -hsts-text-muted; -fx-background-color: transparent; }
+.status-error   { -fx-text-fill: -hsts-danger;  -fx-background-color: -hsts-danger-soft;
+                  -fx-font-weight: bold; }
+.status-success { -fx-text-fill: -hsts-success; -fx-background-color: -hsts-success-soft; }
+
+/* ---------- comparison view ------------------------------------------ */
+/* Used by the version-history window to mark what actually changed. */
+.diff-changed {
+    -fx-background-color: #fff7ed;
+    -fx-border-color: #fdba74;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 6 8 6 8;
+}
+.diff-same {
+    -fx-background-color: transparent;
+    -fx-padding: 6 8 6 8;
+}
+.diff-badge {
+    -fx-background-color: -hsts-warn;
+    -fx-text-fill: white;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 6 2 6;
+    -fx-background-radius: 10;
+}
+.badge-current {
+    -fx-background-color: -hsts-success;
+    -fx-text-fill: white;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 8 2 8;
+    -fx-background-radius: 10;
+}
+.badge-old {
+    -fx-background-color: #e5e7eb;
+    -fx-text-fill: -hsts-text-muted;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 8 2 8;
+    -fx-background-radius: 10;
+}
+
+/* ---------- misc ------------------------------------------------------ */
+.image-frame {
+    -fx-border-color: -hsts-border;
+    -fx-border-radius: 6;
+    -fx-background-color: #fbfcfd;
+    -fx-padding: 8;
+}
+.tooltip {
+    -fx-background-color: #1f2933;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-background-radius: 6;
+}

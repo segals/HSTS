@@ -50,7 +50,15 @@ public class ServerApp extends Application {
         if (url == null) {
             throw new IOException("FXML not found on the classpath: " + fxmlPath);
         }
-        return new Scene(new FXMLLoader(url).load());
+        Scene scene = new Scene(new FXMLLoader(url).load());
+
+        // The same stylesheet the client uses. It lives in hsts-common, which is
+        // packaged into both jars, so the two programs look like one system.
+        URL css = ServerApp.class.getResource("/css/hsts.css");
+        if (css != null) {
+            scene.getStylesheets().add(css.toExternalForm());
+        }
+        return scene;
     }
 
     public static Stage getPrimaryStage() {

@@ -8,8 +8,11 @@ import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
+import hsts.client.HSTSApp;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -22,7 +25,9 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
 import java.io.ByteArrayInputStream;
 import java.nio.file.Files;
@@ -53,6 +58,7 @@ public class QuestionMgmtController extends GUIScreen {
     private static final String REQ_DELETE   = "q.delete";
     private static final String REQ_VERSIONS = "q.versions";
 
+    @FXML private Label            subtitleLabel;
     @FXML private ComboBox<Course> courseCombo;
     @FXML private Button           backButton;
     @FXML private Label            bankCountLabel;
@@ -75,9 +81,11 @@ public class QuestionMgmtController extends GUIScreen {
     @FXML private Button    chooseImageButton;
     @FXML private Button    clearImageButton;
     @FXML private Label     imageLabel;
+    @FXML private HBox      imageFrame;
     @FXML private ImageView imagePreview;
 
     @FXML private Button saveButton;
+    @FXML private Button cancelButton;
     @FXML private Label  statusLabel;
 
     /** The question being edited, or null when composing a new one. */
@@ -89,6 +97,9 @@ public class QuestionMgmtController extends GUIScreen {
     @FXML
     private void initialize() {
         bindStatusLabel(statusLabel);
+
+        subtitleLabel.setText(
+                "Add, edit and remove questions.  Editing keeps the previous version in the bank.");
 
         difficultyCombo.setItems(FXCollections.observableArrayList(DifficultyLevel.values()));
 
@@ -286,11 +297,11 @@ public class QuestionMgmtController extends GUIScreen {
             case REQ_GET -> showQuestion((Question) response.getPayload());
             case REQ_ADD, REQ_EDIT -> {
                 saveButton.setDisable(false);
-                showMessage(response.getMessage());
+                showSuccess(response.getMessage());
                 refreshAfterChange();
             }
             case REQ_DELETE -> {
-                showMessage(response.getMessage());
+                showSuccess(response.getMessage());
                 startNewQuestion();
                 refreshAfterChange();
             }
@@ -307,34 +318,42 @@ public class QuestionMgmtController extends GUIScreen {
     }
 
     /**
-     * Shows every stored version of a question.
+     * Opens the version-history window.
      *
      * <p>This is the evidence for מתווה scenario 2 item 2 - editing kept the old
-     * copy. At the demo it is the quickest way to prove it.</p>
+     * copy. The window puts the selected older version beside the current one and
+     * marks every field that differs.</p>
+     *
+     * <p>It is a separate window rather than a dialog because a dialog cannot be
+     * left open while you look at the question underneath it, and comparing two
+     * versions is exactly the moment you want to.</p>
      */
     private void showVersionHistory(List<Question> versions) {
-        StringBuilder sb = new StringBuilder();
-        for (Question v : versions) {
-            sb.append("Version ").append(v.getVersion())
-              .append(v.isCurrent() ? "   (current)" : "")
-              .append("\n  by ").append(v.getAuthorName())
-              .append(" on ").append(v.getCreatedAt())
-              .append("\n  topic: ").append(v.getTopic())
-              .append("   difficulty: ").append(v.getDifficulty().getDisplayName())
-              .append("\n  ").append(v.getText())
-              .append("\n\n");
+        if (versions == null || versions.isEmpty()) {
+            showError("No version history came back from the server.");
+            return;
         }
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/VersionHistory.fxml"));
+            Scene scene = new Scene(loader.load());
+            HSTSApp.applyStylesheet(scene);
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Version history");
-        alert.setHeaderText(versions.size() + " version(s) of question "
-                          + versions.get(0).getQuestionId());
-        TextArea area = new TextArea(sb.toString());
-        area.setEditable(false);
-        area.setWrapText(true);
-        area.setPrefSize(620, 380);
-        alert.getDialogPane().setContent(area);
-        alert.showAndWait();
+            VersionHistoryController window = loader.getController();
+            window.setVersions(versions);
+
+            Stage stage = new Stage();
+            stage.setTitle("Version history - question " + versions.get(0).getQuestionId());
+            stage.setScene(scene);
+            stage.initOwner(HSTSApp.getPrimaryStage());
+            stage.show();
+
+            showMessage(versions.size() == 1
+                    ? "This question has only one version - it has not been edited yet."
+                    : versions.size() + " versions stored. The older ones are still in the database.");
+        } catch (Exception e) {
+            showError("Could not open the version history: " + e.getMessage());
+        }
     }
 
     // -----------------------------------------------------------------
@@ -431,7 +450,10 @@ public class QuestionMgmtController extends GUIScreen {
         }
         for (Answer a : q.getAnswers()) {
             if (a.getText().isEmpty()) {
-                return "Answer " + a.getAnswerNo() + " is empty. All four are required.";
+                // Deliberately does not name which one. Pointing at "answer 3"
+                // is no more helpful than saying they must all be filled in -
+                // the empty box is visible on screen - and it reads as nagging.
+                return "All four answers must be filled in.";
             }
         }
         if (correctGroup.getSelectedToggle() == null) {
@@ -443,12 +465,19 @@ public class QuestionMgmtController extends GUIScreen {
     private void showImagePreview() {
         boolean has = imageBytes != null && imageBytes.length > 0;
         clearImageButton.setDisable(!has);
+
+        // managed as well as visible: an invisible node that is still "managed"
+        // keeps its space in the layout, leaving an empty gap where the picture
+        // would be.
+        imageFrame.setVisible(has);
+        imageFrame.setManaged(has);
+
         if (has) {
             imagePreview.setImage(new Image(new ByteArrayInputStream(imageBytes)));
-            imageLabel.setText((imageBytes.length / 1024) + " KB");
+            imageLabel.setText((imageBytes.length / 1024) + " KB  ·  stored in the database");
         } else {
             imagePreview.setImage(null);
-            imageLabel.setText("none");
+            imageLabel.setText("no picture");
         }
     }
 

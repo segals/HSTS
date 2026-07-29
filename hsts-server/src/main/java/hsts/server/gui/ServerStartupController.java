@@ -179,17 +179,24 @@ public class ServerStartupController {
         }
     }
 
-    private void info(String text) {
-        Platform.runLater(() -> {
-            statusLabel.setStyle("-fx-text-fill: #444444;");
-            statusLabel.setText(text);
-            ServerApp.fitToContent();
-        });
-    }
+    private void info(String text)  { setStatus(text, "status-info"); }
 
-    private void error(String text) {
+    private void error(String text) { setStatus(text, "status-error"); }
+
+    /**
+     * Swaps the status style class and resizes the window to fit.
+     *
+     * <p>The look lives in {@code hsts.css} - the same stylesheet the client
+     * uses - rather than in inline styles here, so the two programs cannot drift
+     * apart visually.</p>
+     */
+    private void setStatus(String text, String styleClass) {
         Platform.runLater(() -> {
-            statusLabel.setStyle("-fx-text-fill: #b00020; -fx-font-weight: bold;");
+            statusLabel.getStyleClass().removeAll("status-info", "status-error", "status-success");
+            if (!statusLabel.getStyleClass().contains("status")) {
+                statusLabel.getStyleClass().add("status");
+            }
+            statusLabel.getStyleClass().add(styleClass);
             statusLabel.setText(text);
             ServerApp.fitToContent();
         });

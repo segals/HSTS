@@ -13,63 +13,90 @@
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
-<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="hsts.server.gui.ServerStartupController"
-      spacing="12" prefWidth="440">
+      alignment="CENTER" spacing="0" prefWidth="480">
 
-    <padding>
-        <Insets top="18" right="22" bottom="18" left="22"/>
-    </padding>
+    <padding><Insets top="26" right="26" bottom="22" left="26"/></padding>
 
-    <Label text="HSTS Server" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
-    <Label text="Group 1 - High School Test System" style="-fx-text-fill: #555555;"/>
+    <VBox styleClass="card" spacing="18" maxWidth="Infinity">
 
-    <Separator/>
+        <VBox spacing="3">
+            <Label text="HSTS Server" styleClass="h1"/>
+            <Label text="High School Test System  ·  Group 1" styleClass="muted"/>
+        </VBox>
 
-    <GridPane hgap="10" vgap="8">
-        <columnConstraints>
-            <ColumnConstraints minWidth="120"/>
-            <ColumnConstraints minWidth="240" hgrow="ALWAYS"/>
-        </columnConstraints>
+        <VBox spacing="8">
+            <Label text="NETWORK" styleClass="section-title"/>
+            <GridPane hgap="12" vgap="10">
+                <columnConstraints>
+                    <ColumnConstraints minWidth="130"/>
+                    <ColumnConstraints minWidth="240" hgrow="ALWAYS"/>
+                </columnConstraints>
 
-        <Label text="Listening port"   GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <TextField fx:id="serverPortField" promptText="5555"
-                   GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                <Label text="Listening port" styleClass="field-label"
+                       GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <TextField fx:id="serverPortField" promptText="5555"
+                           GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+            </GridPane>
+        </VBox>
 
-        <Label text="MySQL host"       GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-        <TextField fx:id="dbHostField" promptText="localhost"
-                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+        <VBox spacing="8">
+            <Label text="DATABASE" styleClass="section-title"/>
+            <GridPane hgap="12" vgap="10">
+                <columnConstraints>
+                    <ColumnConstraints minWidth="130"/>
+                    <ColumnConstraints minWidth="240" hgrow="ALWAYS"/>
+                </columnConstraints>
 
-        <Label text="MySQL port"       GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-        <TextField fx:id="dbPortField" promptText="3306"
-                   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                <Label text="MySQL host" styleClass="field-label"
+                       GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <TextField fx:id="dbHostField" promptText="localhost"
+                           GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-        <Label text="Database"         GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <TextField fx:id="dbNameField" promptText="hsts"
-                   GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                <Label text="MySQL port" styleClass="field-label"
+                       GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                <TextField fx:id="dbPortField" promptText="3306"
+                           GridPane.rowIndex="1" GridPane.columnIndex="1"/>
 
-        <Label text="MySQL user"       GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-        <TextField fx:id="dbUserField" promptText="root"
-                   GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                <Label text="Database" styleClass="field-label"
+                       GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                <TextField fx:id="dbNameField" promptText="hsts"
+                           GridPane.rowIndex="2" GridPane.columnIndex="1"/>
 
-        <Label text="MySQL password"   GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-        <PasswordField fx:id="dbPasswordField"
-                       GridPane.rowIndex="5" GridPane.columnIndex="1"/>
-    </GridPane>
+                <Label text="User" styleClass="field-label"
+                       GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                <TextField fx:id="dbUserField" promptText="root"
+                           GridPane.rowIndex="3" GridPane.columnIndex="1"/>
 
-    <CheckBox fx:id="saveSettingsBox" selected="true"
-              text="Remember these settings (saved outside the repository)"/>
+                <Label text="Password" styleClass="field-label"
+                       GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                <PasswordField fx:id="dbPasswordField"
+                               GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+            </GridPane>
 
-    <Button fx:id="startButton" text="Start server" onAction="#onStart"
-            defaultButton="true" maxWidth="Infinity"/>
+            <CheckBox fx:id="saveSettingsBox" selected="true"
+                      text="Remember these settings"/>
+            <Label text="Saved to %USERPROFILE%\.hsts\config.properties - outside the repository, so no secret can be committed."
+                   styleClass="caption" wrapText="true"/>
+        </VBox>
 
-    <Label fx:id="statusLabel" wrapText="true" text=" "/>
+        <HBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="startButton" text="Start server" onAction="#onStart"
+                    styleClass="primary" defaultButton="true" prefWidth="150"/>
+        </HBox>
+
+        <Label fx:id="statusLabel" wrapText="true" text=" "
+               styleClass="status" maxWidth="Infinity"/>
+    </VBox>
 
 </VBox>

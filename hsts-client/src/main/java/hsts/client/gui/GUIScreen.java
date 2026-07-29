@@ -50,34 +50,50 @@ public abstract class GUIScreen {
 
     /** Shows a normal, informational message. */
     public void showMessage(String text) {
-        setStatus(text, "-fx-text-fill: #444444;");
+        setStatus(text, "status-info");
+    }
+
+    /** Shows something that went well, so success is as visible as failure. */
+    public void showSuccess(String text) {
+        setStatus(text, "status-success");
     }
 
     /** Shows a failure. Same mechanism, different colour, so nothing is missed. */
     public void showError(String text) {
-        setStatus(text, "-fx-text-fill: #b00020; -fx-font-weight: bold;");
+        setStatus(text, "status-error");
     }
 
     /** Clears the message area without collapsing the layout. */
     public void clearMessage() {
-        setStatus(" ", "-fx-text-fill: #444444;");
+        setStatus(" ", "status-info");
     }
 
-    private void setStatus(String text, String style) {
+    /**
+     * Applies one of the three status styles.
+     *
+     * <p>The look lives in {@code hsts.css}, not here. Setting colours inline
+     * would mean every screen carried its own idea of what an error looks like,
+     * and they would drift apart as screens were added.</p>
+     */
+    private void setStatus(String text, String styleClass) {
         if (statusLabel == null) {
             System.out.println("[no status label bound] " + text);
             return;
         }
         // Callers may be on a background thread; JavaFX allows only its own.
         if (Platform.isFxApplicationThread()) {
-            applyStatus(text, style);
+            applyStatus(text, styleClass);
         } else {
-            Platform.runLater(() -> applyStatus(text, style));
+            Platform.runLater(() -> applyStatus(text, styleClass));
         }
     }
 
-    private void applyStatus(String text, String style) {
-        statusLabel.setStyle(style);
+    private void applyStatus(String text, String styleClass) {
+        statusLabel.getStyleClass().removeAll("status-info", "status-error", "status-success");
+        if (!statusLabel.getStyleClass().contains("status")) {
+            statusLabel.getStyleClass().add("status");
+        }
+        statusLabel.getStyleClass().add(styleClass);
         statusLabel.setText(text == null ? " " : text);
         fitToContent();
     }

@@ -314,3 +314,85 @@ the JVM stayed alive with no output. The harness now always exits through a
 | A deleted question number is never handed out again | 1/1 |
 | Requirement 14: another teacher is refused both read and write | 2/2 |
 | A student has no question bank at all | 1/1 |
+
+---
+
+## GUI overhaul and milestone 3 corrections · 2026-07-29
+
+Four problems reported after clicking through milestone 3, and a general pass
+over the interface. NFR 21 asks for interface quality and friendliness, and NFR
+19 for a design that absorbs change efficiently — both are easier to satisfy
+once the look lives in one place.
+
+### 1. Version history did not show what had changed
+
+*Reported:* "I don't see the old version and the difference between the 2."
+
+The old implementation was a dialog listing each version's fields one after
+another. It proved the versions existed but not what was different between them —
+which is the only reason to open it. Fair criticism.
+
+Replaced with a proper **`VersionHistory`** window: every stored version on the
+left, and the selected one laid out **beside the current one, field by field**,
+with each difference highlighted and counted. Text, instructions, topic,
+difficulty, all four answers, which answer is correct, and whether a picture is
+attached are all compared. It opens the newest *older* version by default,
+because that is the comparison you came for.
+
+It is a window rather than a dialog so it can be left open while looking at the
+question underneath.
+
+### 2. The Save button needed scrolling to reach
+
+The editor lived inside a `ScrollPane` and Save was the last thing in it, so on a
+short window you had to scroll to find it — and the confirmation message then
+appeared somewhere you were not looking.
+
+Save, Discard and the status message are now **pinned outside the scroll area**.
+Only the form scrolls.
+
+### 3. "Answer 2 is empty" replaced with a general message
+
+Naming the offending answer added nothing — the empty box is visible on screen —
+and it read as nagging. Both the client and the server now say **"All four answers
+must be filled in."**
+
+### 4. One stylesheet for the whole system
+
+Everything was inline `-fx-` styles scattered through the FXML, so each screen
+carried its own idea of what a heading or an error looked like. They would have
+drifted further apart with every screen added.
+
+Added **`css/hsts.css`** in `hsts-common`, which is packaged into *both* jars, so
+the server's windows match the client's. It defines a palette, type scale, a 4px
+spacing grid, and classes for cards, headers, buttons, inputs, lists, tables,
+status messages and the comparison view. Every screen was rewritten to use those
+classes; `GUIScreen` now swaps a style class rather than setting colours inline.
+
+Screens restyled: client startup, login, main menu, question bank, version
+history, server startup, server console.
+
+### 5. JavaFX native-access warnings silenced
+
+Starting either jar printed five warnings, ending with *"Restricted methods will
+be blocked in a future release"*. JavaFX loads its native libraries with
+`System.load()`, which JDK 24 made a restricted method. Nothing was broken, but it
+looks alarming during a demo and a later JDK would refuse outright.
+
+Fixed properly with `Enable-Native-Access: ALL-UNNAMED` in both jar manifests,
+rather than by suppressing the message. Both jars now start silently.
+
+### Verified
+
+| Check | Result |
+|---|---|
+| Milestone 3 suite | **34 / 34** |
+| Milestone 2 suite, for regressions | **48 / 48** |
+| Stylesheet present in both jars | yes |
+| Both jars start with no warnings | yes |
+
+### Deferred by decision
+
+The **two-laptop LAN test** is set aside for now at the user's direction. It is
+still required before submission — מתווה item 15 is not fully proven until the
+client runs on a second machine — and is recorded here so it is not forgotten.

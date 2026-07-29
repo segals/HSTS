@@ -250,7 +250,9 @@ public class QuestionController {
         int correct = 0;
         for (Answer a : answers) {
             if (isBlank(a.getText())) {
-                return "Answer " + a.getAnswerNo() + " is empty.";
+                // Deliberately generic. Naming the offending answer number adds
+                // nothing the user cannot already see on the screen.
+                return "All four answers must be filled in.";
             }
             if (a.isCorrect()) {
                 correct++;

@@ -48,7 +48,29 @@ public class HSTSApp extends Application {
         if (url == null) {
             throw new IOException("FXML not found on the classpath: " + fxmlPath);
         }
-        return new Scene(new FXMLLoader(url).load());
+        Scene scene = new Scene(new FXMLLoader(url).load());
+        applyStylesheet(scene);
+        return scene;
+    }
+
+    /**
+     * Attaches the shared stylesheet to a scene.
+     *
+     * <p>Every window goes through here, so the whole system looks like one
+     * product instead of a set of separately-built screens. The stylesheet lives
+     * in {@code hsts-common}, which is packaged into both jars, so the server's
+     * windows match the client's.</p>
+     *
+     * <p>A missing stylesheet is not fatal - the screen still works, it just
+     * looks plain - so this warns rather than throwing.</p>
+     */
+    public static void applyStylesheet(Scene scene) {
+        URL css = HSTSApp.class.getResource("/css/hsts.css");
+        if (css == null) {
+            System.err.println("Stylesheet /css/hsts.css not found - screens will look unstyled.");
+            return;
+        }
+        scene.getStylesheets().add(css.toExternalForm());
     }
 
     public static Stage getPrimaryStage() {
