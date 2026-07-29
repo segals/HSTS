@@ -63,7 +63,7 @@
     <HBox spacing="16" VBox.vgrow="ALWAYS">
         <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
 
-        <!-- ---------- left: the bank ---------- -->
+        <!-- ===== left: the bank ===== -->
         <VBox styleClass="card" spacing="10" prefWidth="340" minWidth="290">
             <HBox alignment="CENTER_LEFT" spacing="8">
                 <Label text="IN THIS COURSE" styleClass="section-title"/>
@@ -82,7 +82,7 @@
             </HBox>
         </VBox>
 
-        <!-- ---------- right: the editor ---------- -->
+        <!-- ===== right: the editor ===== -->
         <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS">
 
             <VBox spacing="3">

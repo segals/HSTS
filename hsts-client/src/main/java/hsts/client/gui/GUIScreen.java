@@ -135,8 +135,23 @@ public abstract class GUIScreen {
             stage.setScene(HSTSApp.loadScene(fxmlPath));
             stage.setResizable(resizable);
             stage.sizeToScene();
-        } catch (Exception e) {
-            showError("That screen failed to open: " + e.getMessage());
+        } catch (Exception | Error e) {
+            // FXML failures wrap the real cause several layers deep, and the
+            // outer LoadException usually has an empty message - which produced
+            // the useless "That screen failed to open:" with nothing after it.
+            // Dig out the root cause and name the file, and print the whole
+            // trace to the console for anyone who needs more.
+            Throwable root = e;
+            while (root.getCause() != null) {
+                root = root.getCause();
+            }
+            System.err.println("Failed to open " + fxmlPath);
+            e.printStackTrace();
+
+            String detail = (root.getMessage() == null || root.getMessage().isBlank())
+                    ? root.getClass().getSimpleName()
+                    : root.getClass().getSimpleName() + " - " + root.getMessage();
+            showError("Could not open " + fxmlPath + "\n" + detail);
         }
     }
 }

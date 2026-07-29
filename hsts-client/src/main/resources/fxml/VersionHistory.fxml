@@ -37,7 +37,7 @@
     <HBox spacing="16" VBox.vgrow="ALWAYS">
         <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
 
-        <!-- ---------- every stored version ---------- -->
+        <!-- ===== every stored version ===== -->
         <VBox styleClass="card" spacing="10" prefWidth="260" minWidth="230">
             <Label text="STORED VERSIONS" styleClass="section-title"/>
             <ListView fx:id="versionList" VBox.vgrow="ALWAYS"/>
@@ -45,7 +45,7 @@
                    styleClass="caption" wrapText="true"/>
         </VBox>
 
-        <!-- ---------- side-by-side comparison ---------- -->
+        <!-- ===== side-by-side comparison ===== -->
         <VBox styleClass="card" spacing="10" HBox.hgrow="ALWAYS">
             <HBox spacing="10" alignment="CENTER_LEFT">
                 <Label text="COMPARISON" styleClass="section-title"/>

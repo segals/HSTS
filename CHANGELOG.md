@@ -396,3 +396,42 @@ rather than by suppressing the message. Both jars now start silently.
 The **two-laptop LAN test** is set aside for now at the user's direction. It is
 still required before submission — מתווה item 15 is not fully proven until the
 client runs on a second machine — and is recorded here so it is not forgotten.
+
+### Bug: two screens would not open at all
+
+*Reported:* clicking **Question bank** gave "That screen failed to open: ...".
+
+**Cause: `--` is illegal inside an XML comment.** The two new screens used
+decorative separators written as
+
+```
+<!-- ---------- left: the bank ---------- -->
+```
+
+which makes the file invalid XML, so `FXMLLoader` refused it. `QuestionMgmt.fxml`
+and `VersionHistory.fxml` were both affected; the other five screens used `=====`
+and were fine.
+
+The habit came from Java and CSS, where `// ----------` and `/* ---------- */`
+are perfectly legal. The rule is specific to XML, and nothing in the build warns
+about it — the compiler cannot see inside an FXML file, so it compiled cleanly and
+all 82 automated checks still passed.
+
+**Fixed** by replacing the separators, and by two changes to stop it recurring:
+
+1. **`tools/FxmlLoadCheck.java`** — loads every screen and reports any that fail.
+   It would have caught this before the button was ever clicked. Run it after
+   `mvn package`; the command is in its header comment.
+2. **`GUIScreen.switchTo` now reports the root cause.** The outer `LoadException`
+   has an empty message, which is why the error read "That screen failed to open:"
+   with nothing after it. It now unwraps to the real cause, names the file, and
+   prints the full trace to the console.
+
+*Worth keeping for the report:* a whole category of failure that no amount of
+server-side testing can find, because it lives in a file the compiler never reads.
+
+| Check | Result |
+|---|---|
+| All 7 FXML screens load | **7 / 7** |
+| Milestone 3 suite | **34 / 34** |
+| Milestone 2 suite | **48 / 48** |
