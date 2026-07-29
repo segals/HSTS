@@ -522,3 +522,36 @@ kind of ordinary Java that would otherwise fail only at run time, on the wire.
 | Requirement 20: another teacher refused both build and edit | 2/2 |
 
 Regression: milestone 2 **48/48**, milestone 3 **34/34**, all 8 screens load.
+
+---
+
+## Interface: modern neutral theme · 2026-07-29
+
+The school-stationery direction (warm paper, serif headings, brass) was tried and
+rejected — it read as dated rather than institutional. Replaced with a clean
+modern one. As before this was **one file**, `css/hsts.css`; no FXML and no Java
+changed, which is the whole reason the styling was centralised.
+
+**What the theme does now**
+
+- A near-neutral surface palette, so the only colour on screen is colour that
+  carries meaning.
+- Primary actions are **near-black**, not blue. That leaves blue free to mean
+  "focused" everywhere else, and stops the screen having two competing
+  attention colours.
+- **6px corner radius** throughout — soft enough not to look harsh, tight enough
+  not to look like a toy.
+- Hierarchy through size, weight and whitespace rather than decoration. Headings
+  are not coloured.
+- One very light shadow on raised panels. No gradients, no glow, no translucency.
+- Sans throughout (Segoe UI Variable where present); the serif headings are gone.
+
+**Git history**
+
+At the author's request, the `Co-Authored-By` trailer was removed from all nine
+existing commits with `git filter-branch --msg-filter`, and will not be added to
+future ones. Verified before force-pushing: file contents byte-identical to the
+pre-rewrite tree, all nine commits preserved, zero trailers remaining on the
+remote. Every commit is authored solely by the project author.
+
+All 8 screens load.
