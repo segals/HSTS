@@ -92,10 +92,25 @@ public class GradingController {
                     gradeDAO.autoGrade(attempt.getSubmissionId());
                 }
             }
-            List<Grade> grades = gradeDAO.findByExecution(executionId);
-            return Response.ok(grades, grades.isEmpty()
-                    ? "Nobody has handed in yet."
-                    : grades.size() + " paper(s).");
+            // Everybody who started, not only those who handed in. A student still
+            // sitting has no mark yet, but she is counted in "how many sat it" and
+            // the teacher needs to see why the paper is not there to be marked.
+            List<Grade> grades = gradeDAO.findByExecutionIncludingUnmarked(executionId);
+
+            long stillSitting = grades.stream().filter(g -> !g.isMarked()).count();
+            long ready = grades.size() - stillSitting;
+
+            String note;
+            if (grades.isEmpty()) {
+                note = "Nobody has started this sitting yet.";
+            } else if (stillSitting == 0) {
+                note = ready + " paper(s) to mark.";
+            } else if (ready == 0) {
+                note = stillSitting + " student(s) still sitting. Nothing to mark yet.";
+            } else {
+                note = ready + " paper(s) to mark, " + stillSitting + " still sitting.";
+            }
+            return Response.ok(grades, note);
         } catch (SQLException e) {
             return Response.error("Could not load the marks: " + e.getMessage());
         }

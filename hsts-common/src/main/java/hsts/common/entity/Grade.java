@@ -52,6 +52,19 @@ public class Grade implements Serializable {
     private int executionId;
     private String submissionStatus;
 
+    /**
+     * False for a student who is <em>still sitting</em> the exam.
+     *
+     * <p>Such a student has no mark yet - there is no row in {@code grade} for her -
+     * but she must still appear in the teacher's list, because the sitting's own
+     * "how many sat it" count includes her. Leaving her out made the two numbers
+     * disagree and a sitting with one student in it look empty.</p>
+     *
+     * <p>Only the marking list ever produces one of these; every other query
+     * returns real marks, so this stays true for them.</p>
+     */
+    private boolean marked = true;
+
     /** Per-question marking: which were wrong, and any comment. */
     private List<QuestionFeedback> feedback = new ArrayList<>();
 
@@ -74,6 +87,7 @@ public class Grade implements Serializable {
     public Integer getActualDuration()         { return actualDuration; }
     public int getExecutionId()                { return executionId; }
     public String getSubmissionStatus()        { return submissionStatus; }
+    public boolean isMarked()                  { return marked; }
     public List<QuestionFeedback> getFeedback() { return feedback; }
 
     public void setSubmissionId(int id)                 { this.submissionId = id; }
@@ -92,6 +106,7 @@ public class Grade implements Serializable {
     public void setActualDuration(Integer minutes)      { this.actualDuration = minutes; }
     public void setExecutionId(int id)                  { this.executionId = id; }
     public void setSubmissionStatus(String status)      { this.submissionStatus = status; }
+    public void setMarked(boolean marked)               { this.marked = marked; }
 
     public void setFeedback(List<QuestionFeedback> feedback) {
         this.feedback = (feedback == null) ? new ArrayList<>() : new ArrayList<>(feedback);

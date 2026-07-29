@@ -84,23 +84,40 @@ public class GradingScreenController extends GUIScreen {
         factorSpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(-100, 100, 5));
 
+        // The same exam may be handed out many times - a different class, a re-sit -
+        // and each hand-out is its own sitting with its own code and its own
+        // students. So several rows sharing one exam number is normal, and the code
+        // is what tells them apart. It leads.
         useWrappingCells(sittingList, x ->
                 "Code " + x.getExecutionCode() + "  ·  exam " + x.getExamId()
-              + "\n" + x.getCourseName() + "  ·  " + x.getNumStarted() + " sat it");
+              + "\n" + x.getCourseName()
+              + "\n" + describeSitting(x));
 
         useWrappingCells(studentList, g ->
                 g.getStudentName()
-              + "\n" + g.getFinalGrade() + (g.wasChangedByHand()
-                    ? "  (system said " + g.getAutoGrade() + ")" : "")
-              + "  ·  " + (g.isApproved() ? "approved" : "not approved yet"));
+              + "\n" + (g.isMarked()
+                    ? g.getFinalGrade() + (g.wasChangedByHand()
+                          ? "  (system said " + g.getAutoGrade() + ")" : "")
+                      + "  ·  " + (g.isApproved() ? "approved" : "not approved yet")
+                    : "still sitting  ·  nothing to mark yet"));
 
         sittingList.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, execution) -> chooseSitting(execution));
         studentList.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, grade) -> {
-                    if (grade != null) {
-                        send(RequestType.GRADING_GET, grade.getSubmissionId(), REQ_GET);
+                    if (grade == null) {
+                        return;
                     }
+                    if (!grade.isMarked()) {
+                        // Acceptance test 3.11. Checked here so she gets an answer
+                        // without a round trip; the server refuses it too, and that
+                        // is the check that counts.
+                        showNoPaper();
+                        showMessage(grade.getStudentName() + " is still sitting this exam. "
+                                  + "It can be marked once she has handed in.");
+                        return;
+                    }
+                    send(RequestType.GRADING_GET, grade.getSubmissionId(), REQ_GET);
                 });
 
         controller.setResponseHandler(this::onServerResponse);
@@ -212,6 +229,11 @@ public class GradingScreenController extends GUIScreen {
                         break;
                     }
                 }
+                if (openPaper == null) {
+                    // Says how many are ready and how many are still sitting, so an
+                    // empty-looking list is never a mystery.
+                    showMessage(response.getMessage());
+                }
             }
             case REQ_GET -> showPaper((MarkedExam) response.getPayload());
             case REQ_CHANGE, REQ_COMMENT, REQ_QCOMMENT -> {
@@ -245,6 +267,24 @@ public class GradingScreenController extends GUIScreen {
     // -----------------------------------------------------------------
     //  Display
     // -----------------------------------------------------------------
+
+    /**
+     * "3 sat it · 2 handed in · 1 still sitting".
+     *
+     * <p>One number was not enough. It counted everybody who started, while the
+     * student list showed only papers handed in, so the two disagreed and there was
+     * nothing on screen to explain the gap.</p>
+     */
+    private static String describeSitting(ExamExecution x) {
+        int started = x.getNumStarted();
+        int sitting = x.getNumUnfinished();
+        int handedIn = started - sitting;
+        if (started == 0) {
+            return "nobody has started it";
+        }
+        return started + " sat it  ·  " + handedIn + " handed in"
+             + (sitting > 0 ? "  ·  " + sitting + " still sitting" : "");
+    }
 
     private void chooseSitting(ExamExecution execution) {
         sitting = execution;

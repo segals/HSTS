@@ -259,9 +259,52 @@ public class GradeDAO implements IDAO<Grade, Integer> {
         return findBySubmission(submissionId);
     }
 
-    /** Every mark in one sitting - the teacher's marking list. */
+    /** Every mark in one sitting. Only students who have handed in appear here. */
     public List<Grade> findByExecution(int executionId) throws SQLException {
         return query(baseSelect() + " WHERE s.execution_id = ? ORDER BY u.full_name", executionId);
+    }
+
+    /**
+     * Everybody who started one sitting, marked or not - the teacher's marking list.
+     *
+     * <p>Driven from {@code student_exam} with a <b>left</b> join onto {@code grade},
+     * because a student who is still sitting the exam has no row in {@code grade}
+     * yet. {@link #findByExecution} joins the other way and so silently drops her.</p>
+     *
+     * <p>That mattered: the sittings list counts everyone who <em>started</em>, so a
+     * sitting saying "1 sat it" opened onto an empty student list, and a teacher had
+     * no way to see that somebody was still working. She is now listed and flagged,
+     * which is also the message acceptance test 3.11 asks for.</p>
+     */
+    public List<Grade> findByExecutionIncludingUnmarked(int executionId) throws SQLException {
+        String sql = """
+            SELECT s.submission_id, g.auto_grade, g.final_grade, g.factor, g.is_approved,
+                   g.approved_at, g.manual_change_explanation, g.teacher_general_comment,
+                   g.graded_by, s.student_id, u.full_name AS student_name,
+                   s.actual_duration, s.execution_id, s.status AS submission_status,
+                   x.exam_id, c.name AS course_name,
+                   (g.submission_id IS NOT NULL) AS is_marked
+            FROM student_exam s
+            LEFT JOIN grade g      ON g.submission_id = s.submission_id
+            JOIN users u           ON u.user_id       = s.student_id
+            JOIN exam_execution x  ON x.execution_id  = s.execution_id
+            JOIN exam e            ON e.exam_id = x.exam_id AND e.version = x.exam_version
+            JOIN course c          ON c.course_code   = e.course_code
+            WHERE s.execution_id = ?
+            ORDER BY u.full_name""";
+
+        List<Grade> list = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setInt(1, executionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Grade g = readRow(rs);
+                    g.setMarked(rs.getBoolean("is_marked"));
+                    list.add(g);
+                }
+            }
+        }
+        return list;
     }
 
     /**

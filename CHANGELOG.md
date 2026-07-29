@@ -1049,3 +1049,92 @@ exercises that endpoint. Verified by running it twice in a row without a reset.
 | Test 4.12: a student who has sat nothing | 2/2 |
 
 Regression: **385 checks** across the project, 14/14 screens load.
+
+---
+
+## Fix — a sitting with a student still inside looked empty
+
+**Reported from the screen:** *"even an exam that 1 student sat — when I press it
+as a teacher there is no student there."*
+
+### What was wrong
+
+Two lists were counting two different things.
+
+- The **sittings** list showed `numStarted` — everybody who *started*, derived in
+  `ExecutionDAO` by counting rows in `student_exam`.
+- The **students** list came from `GradeDAO.findByExecution`, which reads
+  `FROM grade g JOIN student_exam s`. A student who is **still sitting** has no
+  row in `grade` yet, so the inner join silently dropped her.
+
+A sitting with one student still working therefore announced "1 sat it" and then
+opened onto an empty list, with nothing on screen to explain the gap.
+
+### Why the tests did not catch it
+
+They asserted it. `M9Test` contained:
+
+```java
+check("the student still sitting has no mark", marks.size() == 2);
+```
+
+Three students had started; the check expected two rows and got two. The
+expectation itself was wrong, so 65/65 passed while the defect was live. This is
+the fourth defect this project has found by clicking rather than by testing, and
+the first one where the test actively defended the bug.
+
+### The fix
+
+`GradeDAO.findByExecutionIncludingUnmarked` drives from `student_exam` with a
+**left** join onto `grade`, so everybody who started is returned. `Grade` gained a
+`marked` flag, false for a student with no mark yet. The teacher's list shows her
+as *"still sitting · nothing to mark yet"*, and clicking her says so — which is
+the message acceptance test 3.11 asks for. `findByExecution` is unchanged and
+still returns marks only; `approveAll` still uses it.
+
+The sitting label now reads **"3 sat it · 2 handed in · 1 still sitting"**, so the
+two numbers can never silently disagree again. `M9Test` asserts that
+`numStarted` equals the length of the student list.
+
+### Not a bug: one exam number, several codes
+
+Also reported: *"two exams with the same number (080101) but with different
+codes"*. That is correct and required. An exam is written once and handed out
+many times — a different class, a re-sit — and **each hand-out is its own sitting
+with its own code, its own clock and its own students** (system description
+§2.1–2.2, מתווה scenario 5). The code is what tells them apart, so it now leads
+the row and the course name sits on its own line.
+
+The particular sittings on screen (`M7AA`, `M7BB`, `M7CC`, `M8AA`) are leftovers
+from automated test runs, not teaching data.
+
+### Test harnesses made re-runnable
+
+`M6Test`, `M7Test` and `M8Test` hard-coded their execution codes. Codes are unique
+for ever, so each suite ran exactly once per database and every later run died at
+setup with *"that code is already in use"* — failures that looked alarming and
+meant nothing. Each run now picks a two-character prefix no sitting is using and
+builds its codes from it.
+
+One code was hidden in a single-quoted SQL string (`WHERE execution_code =
+'M7BB'`) and was missed by the first sweep. The `UPDATE` then matched no rows, the
+exam window was never moved into the past, and two checks failed — correctly. The
+statement is now parameterised and **asserts that it changed one row**, so a
+silent no-op cannot masquerade as a passing test again.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| M2 | 48/48 |
+| M3 | 34/34 |
+| M4 | 43/43 |
+| M5 | 32/32 |
+| M6 | 76/76 |
+| M7 | 55/55 |
+| M8 | 33/33 |
+| M9 | 74/74 (was 65; 9 new checks on the marking list) |
+| **Total** | **395 checks** |
+| Screens | 14/14 load |
+
+Run **twice back to back with no database reset**, identical both times.
