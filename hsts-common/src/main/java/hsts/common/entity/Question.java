@@ -102,8 +102,15 @@ public class Question implements Serializable {
     public void setAuthorName(String authorName)   { this.authorName = authorName; }
     public void setCreatedAt(LocalDateTime t)      { this.createdAt = t; }
 
+    /**
+     * Copies the list rather than keeping the caller's.
+     *
+     * <p>A {@code Question} crosses the network, so its fields must be
+     * serializable. List views such as {@code subList(...)} and {@code List.of(...)}
+     * are not, and one stored here would make the question unsendable.</p>
+     */
     public void setAnswers(List<Answer> answers) {
-        this.answers = (answers == null) ? new ArrayList<>() : answers;
+        this.answers = (answers == null) ? new ArrayList<>() : new ArrayList<>(answers);
     }
 
     public boolean hasImage() {

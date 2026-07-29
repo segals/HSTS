@@ -435,3 +435,90 @@ server-side testing can find, because it lives in a file the compiler never read
 | All 7 FXML screens load | **7 / 7** |
 | Milestone 3 suite | **34 / 34** |
 | Milestone 2 suite | **48 / 48** |
+
+---
+
+## Milestone 4 — building exams · 2026-07-29
+
+**Covers:** SUC-3, SUC-4, מתווה scenario 3 (all five items), requirements 20, 22–29.
+
+### What was built
+
+| Item | Notes |
+|---|---|
+| `Exam`, `ExamQuestion`, `ExamStatus` | Entities, versioned like questions |
+| `ExamBuildStrategy` + `Manual` / `Automatic` | **Strategy pattern** — the two selection algorithms |
+| `InsufficientQuestionsException` | Requirement 29, as a refusal that cannot be ignored |
+| `ExamDAO` | Versioning, 6-digit id generation, version pinning |
+| `ExamBuilderController` | SUC-3 and SUC-4, and all validation |
+| `ExamBuilder.fxml` + controller | Both build modes, live points total, quota lines |
+| `ExamBuildCriteria`, `QuestionQuota`, `ExamRef` | Protocol |
+
+### Decisions made, and why
+
+**Building returns a draft that is not saved.** The teacher gets it back, adjusts
+points, duration and instructions, and only then saves. That is what the submitted
+SUC-3 sequence diagram shows, and it is what makes requirement 29 honourable: an
+impossible automatic request is refused *before* anything exists to clean up.
+
+**Where the Strategy pattern earns its place.** `buildDraft` picks a strategy once
+and then calls it. There is no `if (automatic)` anywhere else in the controller —
+the id, the points, the duration, the validation and the saving are identical
+whichever way the questions were chosen. A third way of building would be one new
+class and no edits to what already works.
+
+**Tighter quotas are filled first.** A line fixing both topic *and* difficulty has
+the fewest candidates, so it gets first pick. Filling loose lines first could
+consume the only questions a specific line could have used and fail a request that
+was actually satisfiable.
+
+**A question is never used twice in one exam.** Quotas can overlap — "3 easy
+Fractions" and "5 of anything" may match the same question — so each is removed
+from consideration as it is taken. Without that, an exam could ask the same
+question twice and the points would still add to 100.
+
+**Points are shared evenly, remainder included.** Most question counts do not
+divide 100. Three questions become 34/33/33 rather than 33/33/33 — the remainder
+is handed out a point at a time instead of being dropped, so the total is exactly
+100 whatever the count.
+
+**Editing an exam sends it back for approval.** A new version always returns to
+`PENDING_APPROVAL`, whatever the old one was. An approved exam that is then edited
+is no longer the exam the coordinator approved — otherwise editing would be a way
+to slip changes past approval entirely.
+
+**The 100-point rule is enforced although no requirement states it.** It appears
+in מתווה scenario 3 note 3 and acceptance test 1.5, and in no numbered requirement
+— a gap found in phase 0. The מתווה is the acceptance bar, so it is enforced.
+
+### Bug found by the test suite
+
+**`ArrayList.subList()` is not serializable.** Passing one into a build request
+made the whole message fail at `sendToServer` with
+`NotSerializableException: java.util.ArrayList$SubList` — an error naming the
+network layer and saying nothing about the real cause.
+
+The test hit it, but the weakness was in the protocol class: it stored whatever
+list it was handed, so any caller could build an unsendable message by accident.
+`ExamBuildCriteria`, `Exam.setQuestions` and `Question.setAnswers` now **copy**
+into a plain `ArrayList`. `List.of(...)` has the same trap, and it is exactly the
+kind of ordinary Java that would otherwise fail only at run time, on the wire.
+
+### Verified — 43 automated checks, all passing
+
+| Group | Result |
+|---|---|
+| Manual build, versions pinned at build time | 5/5 |
+| Points shared evenly with the remainder (3 → 34/33/33) | 2/2 |
+| 6-digit id: 2 exam + 2 course + 2 subject | 5/5 |
+| **100-point rule enforced server-side, message names the real total** | 2/2 |
+| Duration and empty-exam rules (tests 1.4, 1.8) | 3/3 |
+| **Automatic build honours topic and difficulty quotas exactly** | 5/5 |
+| No duplicate questions even with overlapping quotas | 2/2 |
+| **Requirement 29: refused, and no exam row created** | 5/5 |
+| Edit creates v2, v1 survives with its original duration | 5/5 |
+| **Version pinning: rewriting a question does not change an old exam** | 3/3 |
+| Hidden teacher notes stored separately from student instructions | 2/2 |
+| Requirement 20: another teacher refused both build and edit | 2/2 |
+
+Regression: milestone 2 **48/48**, milestone 3 **34/34**, all 8 screens load.

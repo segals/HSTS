@@ -1,17 +1,22 @@
 package hsts.server;
 
+import hsts.common.entity.Exam;
 import hsts.common.entity.Question;
 import hsts.common.entity.User;
 import hsts.common.protocol.Credentials;
+import hsts.common.protocol.ExamBuildCriteria;
+import hsts.common.protocol.ExamRef;
 import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.Response;
 import hsts.server.boundary.IUserManagementSystem;
 import hsts.server.boundary.LocalUserManagementAdapter;
+import hsts.server.control.ExamBuilderController;
 import hsts.server.control.LoginController;
 import hsts.server.control.QuestionController;
 import hsts.server.dao.CourseDAO;
 import hsts.server.dao.DBController;
+import hsts.server.dao.ExamDAO;
 import hsts.server.dao.QuestionDAO;
 import hsts.server.dao.UserDAO;
 import hsts.server.push.SessionRegistry;
@@ -54,8 +59,11 @@ public class HSTSServer extends AbstractServer {
     private final CourseDAO courseDAO = new CourseDAO();
     private final IUserManagementSystem userManagement = new LocalUserManagementAdapter(userDAO);
     private final LoginController loginController = new LoginController(userManagement, sessions);
+    private final ExamDAO examDAO = new ExamDAO();
     private final QuestionController questionController =
             new QuestionController(questionDAO, courseDAO);
+    private final ExamBuilderController examBuilderController =
+            new ExamBuilderController(examDAO, questionDAO, courseDAO);
 
     private HSTSServer(int port) {
         super(port);
@@ -140,6 +148,24 @@ public class HSTSServer extends AbstractServer {
                         questionController.editQuestion(u, (Question) request.getPayload()));
                 case QUESTION_DELETE         -> withUser(client, u ->
                         questionController.deleteQuestion(u, (String) request.getPayload()));
+
+                // ---- SUC-3 / SUC-4: building exams ----
+                case EXAM_BUILD_DRAFT -> withUser(client, u ->
+                        examBuilderController.buildDraft(u, (ExamBuildCriteria) request.getPayload()));
+                case EXAM_SAVE        -> withUser(client, u ->
+                        examBuilderController.saveExam(u, (Exam) request.getPayload()));
+                case EXAM_EDIT        -> withUser(client, u ->
+                        examBuilderController.editExam(u, (Exam) request.getPayload()));
+                case EXAM_LIST_MINE   -> withUser(client, u ->
+                        examBuilderController.listMyExams(u));
+                case EXAM_GET         -> withUser(client, u -> {
+                        ExamRef ref = (ExamRef) request.getPayload();
+                        return examBuilderController.getExam(u, ref.getExamId(), ref.getVersion());
+                    });
+                case EXAM_VERSIONS    -> withUser(client, u -> {
+                        ExamRef ref = (ExamRef) request.getPayload();
+                        return examBuilderController.listVersions(u, ref.getExamId());
+                    });
             };
         } catch (Exception e) {
             log("FAILED to handle " + request.getType() + ": " + e);

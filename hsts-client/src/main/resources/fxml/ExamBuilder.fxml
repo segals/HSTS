@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    SUC-3 and SUC-4 / מתווה scenario 3: building an exam.
+
+      1. choose the questions, by hand or automatically
+      2. set the duration
+      3. instructions shown to the students
+      4. notes visible to the teacher only
+      5. edit an existing exam - the previous one stays in the bank
+
+    Notes:
+      - the points must add up to exactly 100 (מתווה scenario 3, note 3)
+      - if the bank cannot meet automatic criteria, nothing is created
+        (requirement 29)
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.ExamBuilderController"
+      spacing="0" prefWidth="1180" prefHeight="760">
+
+    <fx:define>
+        <ToggleGroup fx:id="modeGroup"/>
+    </fx:define>
+
+    <!-- ===================== header ===================== -->
+    <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
+        <VBox spacing="2">
+            <Label text="Build an exam" styleClass="h2"/>
+            <Label fx:id="subtitleLabel" styleClass="caption"/>
+        </VBox>
+        <Region minWidth="20"/>
+        <Label text="Course" styleClass="field-label"/>
+        <ComboBox fx:id="courseCombo" prefWidth="240"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
+    </HBox>
+
+    <!-- ===================== body ===================== -->
+    <HBox spacing="14" VBox.vgrow="ALWAYS">
+        <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
+
+        <!-- ===== left: my exams ===== -->
+        <VBox styleClass="card" spacing="10" prefWidth="290" minWidth="250">
+            <Label text="MY EXAMS" styleClass="section-title"/>
+            <ListView fx:id="examList" VBox.vgrow="ALWAYS"/>
+            <HBox spacing="7">
+                <Button fx:id="newExamButton"  text="New"     onAction="#onNewExam"/>
+                <Button fx:id="versionsButton" text="History" onAction="#onShowVersions"/>
+            </HBox>
+        </VBox>
+
+        <!-- ===== middle: choose the questions ===== -->
+        <VBox styleClass="card" spacing="10" prefWidth="340" minWidth="300">
+            <Label text="CHOOSE QUESTIONS" styleClass="section-title"/>
+
+            <HBox spacing="14">
+                <RadioButton fx:id="manualRadio"    text="By hand"     toggleGroup="$modeGroup"
+                             selected="true"/>
+                <RadioButton fx:id="automaticRadio" text="Automatic"   toggleGroup="$modeGroup"/>
+            </HBox>
+
+            <!-- manual: pick from the bank -->
+            <VBox fx:id="manualPane" spacing="6" VBox.vgrow="ALWAYS">
+                <Label text="Ctrl-click to select several." styleClass="caption"/>
+                <ListView fx:id="bankList" VBox.vgrow="ALWAYS"/>
+            </VBox>
+
+            <!-- automatic: quota lines -->
+            <VBox fx:id="automaticPane" spacing="8" VBox.vgrow="ALWAYS"
+                  visible="false" managed="false">
+                <Label text="How many questions of what. Leave a box blank for &quot;any&quot;."
+                       styleClass="caption" wrapText="true"/>
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <VBox fx:id="quotaBox" spacing="6"/>
+                </ScrollPane>
+                <HBox spacing="7">
+                    <Button fx:id="addQuotaButton" text="Add a line" onAction="#onAddQuota"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="quotaTotalLabel" styleClass="caption"/>
+                </HBox>
+            </VBox>
+
+            <Button fx:id="buildButton" text="Build draft" onAction="#onBuild"
+                    styleClass="primary" maxWidth="Infinity"/>
+        </VBox>
+
+        <!-- ===== right: the exam itself ===== -->
+        <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS">
+
+            <VBox spacing="3">
+                <Label fx:id="examTitleLabel" styleClass="h3"/>
+                <Label fx:id="examVersionLabel" styleClass="caption" wrapText="true"/>
+            </VBox>
+
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                <VBox spacing="12">
+                    <padding><Insets top="12" right="10" bottom="12" left="0"/></padding>
+
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="QUESTIONS AND POINTS" styleClass="section-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="totalPointsLabel"/>
+                    </HBox>
+
+                    <VBox fx:id="questionRows" spacing="5"/>
+
+                    <HBox spacing="8">
+                        <Button fx:id="evenPointsButton" text="Share points evenly"
+                                onAction="#onDistributeEvenly"/>
+                        <Button fx:id="removeQuestionButton" text="Remove selected question"
+                                onAction="#onRemoveQuestion" styleClass="danger"/>
+                    </HBox>
+
+                    <GridPane hgap="12" vgap="6">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="150"/>
+                            <ColumnConstraints minWidth="120" hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <Label text="DURATION (MINUTES)" styleClass="section-title"
+                               GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <Spinner fx:id="durationSpinner" editable="true" prefWidth="120"
+                                 GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                    </GridPane>
+
+                    <VBox spacing="5">
+                        <Label text="INSTRUCTIONS SHOWN TO THE STUDENTS" styleClass="section-title"/>
+                        <TextArea fx:id="studentInstructions" prefRowCount="2" wrapText="true"/>
+                    </VBox>
+
+                    <VBox spacing="5">
+                        <Label text="NOTES FOR THE TEACHER  ·  NEVER SHOWN TO A STUDENT"
+                               styleClass="section-title"/>
+                        <TextArea fx:id="teacherNotes" prefRowCount="2" wrapText="true"/>
+                    </VBox>
+                </VBox>
+            </ScrollPane>
+
+            <!-- pinned footer, so Save never scrolls away -->
+            <VBox spacing="8">
+                <padding><Insets top="12" right="0" bottom="0" left="0"/></padding>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Button fx:id="saveButton" text="Save exam" onAction="#onSave"
+                            styleClass="primary" prefWidth="150"/>
+                    <Button fx:id="discardButton" text="Discard" onAction="#onNewExam"
+                            styleClass="quiet"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <Label fx:id="statusLabel" wrapText="true" text=" "
+                       styleClass="status" maxWidth="Infinity"/>
+            </VBox>
+        </VBox>
+    </HBox>
+
+</VBox>

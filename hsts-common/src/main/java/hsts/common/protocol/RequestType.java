@@ -50,5 +50,30 @@ public enum RequestType {
     QUESTION_EDIT,
 
     /** Removes a question from the bank (soft delete). Payload is the question id. */
-    QUESTION_DELETE
+    QUESTION_DELETE,
+
+    // ---- SUC-3 / SUC-4: building exams (milestone 4) ----
+
+    /**
+     * Chooses questions and returns an unsaved draft exam.
+     * Payload is an {@link ExamBuildCriteria}. Nothing is written to the database -
+     * requirement 29 needs the "not enough questions" refusal to happen before
+     * anything exists.
+     */
+    EXAM_BUILD_DRAFT,
+
+    /** Saves a new exam. Payload is an {@code Exam}. */
+    EXAM_SAVE,
+
+    /** Saves an edit as a new version. Payload is an {@code Exam}. */
+    EXAM_EDIT,
+
+    /** Current versions of every exam the signed-in teacher wrote. No payload. */
+    EXAM_LIST_MINE,
+
+    /** One exam with its questions. Payload is an {@link ExamRef}. */
+    EXAM_GET,
+
+    /** Every stored version of one exam. Payload is an {@link ExamRef}. */
+    EXAM_VERSIONS
 }
