@@ -5,6 +5,8 @@ import hsts.client.net.ClientController;
 import javafx.application.Platform;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.stage.Stage;
 
 /**
@@ -121,6 +123,46 @@ public abstract class GUIScreen {
             root.applyCss();
             root.layout();
             stage.sizeToScene();
+        });
+    }
+
+    /**
+     * Makes a list show its full text, wrapped over as many lines as needed.
+     *
+     * <p>A JavaFX {@code ListView} does not wrap. Anything wider than the control
+     * is simply cut off, and widening the window does not help once the layout has
+     * stopped growing - so a list of questions shows
+     * "00101 (v1) What is the sum of the angles in" and the reader is left
+     * guessing which question that is. In a screen whose whole purpose is
+     * <em>choosing</em> from a list, that is not a cosmetic problem.</p>
+     *
+     * <p>The label's width is bound to the list's, minus room for the scroll bar,
+     * so the text re-wraps as the window is resized instead of being clipped.</p>
+     *
+     * @param toText how to turn one item into the text to display
+     */
+    protected static <T> void useWrappingCells(ListView<T> list,
+                                               java.util.function.Function<T, String> toText) {
+        list.setCellFactory(view -> new ListCell<>() {
+            private final Label label = new Label();
+            {
+                label.setWrapText(true);
+                // 28px leaves room for the scroll bar and the cell's own padding.
+                label.maxWidthProperty().bind(view.widthProperty().subtract(28));
+            }
+
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                } else {
+                    label.setText(toText.apply(item));
+                    setGraphic(label);
+                    setText(null);
+                }
+            }
         });
     }
 

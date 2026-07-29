@@ -64,7 +64,8 @@
         <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
 
         <!-- ===== left: the bank ===== -->
-        <VBox styleClass="card" spacing="10" prefWidth="340" minWidth="290">
+        <VBox styleClass="card" spacing="10" prefWidth="400" minWidth="320" maxWidth="520"
+              HBox.hgrow="ALWAYS">
             <HBox alignment="CENTER_LEFT" spacing="8">
                 <Label text="IN THIS COURSE" styleClass="section-title"/>
                 <Region HBox.hgrow="ALWAYS"/>

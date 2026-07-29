@@ -176,7 +176,7 @@ Label { -fx-text-fill: -hsts-text; }
 
 .text-field, .password-field { -fx-prompt-text-fill: -hsts-text-faint; }
 
-.combo-box-base { -fx-padding: 3 7 3 7; }
+.combo-box-base { -fx-padding: 3 4 3 7; }
 .combo-box .list-cell { -fx-padding: 6 9 6 9; }
 .combo-box-popup .list-view {
     -fx-background-radius: 6;
@@ -184,21 +184,79 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-effect: dropshadow(gaussian, rgba(20, 23, 31, 0.12), 14, 0, 0, 3);
 }
 
-.spinner { -fx-padding: 0; }
-.spinner .text-field { -fx-border-color: transparent; -fx-background-color: transparent; }
-.spinner .increment-arrow-button, .spinner .decrement-arrow-button {
+/* The drop-down chevron. Left unstyled it is a heavy black triangle on a
+   grey slab; this makes it a small grey mark that only darkens on hover. */
+.combo-box .arrow-button, .date-picker .arrow-button {
     -fx-background-color: transparent;
-    -fx-cursor: hand;
+    -fx-padding: 0 7 0 5;
 }
+.combo-box .arrow {
+    -fx-background-color: -hsts-text-faint;
+    -fx-shape: "M 0 0 L 8 0 L 4 5 Z";
+    -fx-padding: 2.5 4 2.5 4;
+}
+.combo-box:hover .arrow { -fx-background-color: -hsts-text-muted; }
 
-.radio-button, .check-box { -fx-cursor: hand; }
-.radio-button .radio, .check-box .box {
-    -fx-border-color: -hsts-border-firm;
-    -fx-background-color: -hsts-surface;
+/* ---- spinner ----
+   The default arrow buttons are two grey slabs stacked on the right and
+   they dominate a small control. These are transparent until hovered,
+   with the same chevron shape as the combo box so the two match. */
+.spinner { -fx-padding: 0; }
+.spinner .text-field {
+    -fx-border-color: transparent;
+    -fx-background-color: transparent;
+    -fx-padding: 6 4 6 10;
 }
-.radio-button:selected .radio { -fx-border-color: -hsts-accent; }
-.radio-button:selected .dot   { -fx-background-color: -hsts-accent; }
+.spinner .increment-arrow-button,
+.spinner .decrement-arrow-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+    -fx-padding: 3 8 3 8;
+}
+.spinner .increment-arrow-button:hover,
+.spinner .decrement-arrow-button:hover { -fx-background-color: #eef0f4; }
+.spinner .increment-arrow, .spinner .decrement-arrow {
+    -fx-background-color: -hsts-text-faint;
+    -fx-padding: 2.2 3.5 2.2 3.5;
+}
+.spinner .increment-arrow { -fx-shape: "M 0 5 L 8 5 L 4 0 Z"; }
+.spinner .decrement-arrow { -fx-shape: "M 0 0 L 8 0 L 4 5 Z"; }
+.spinner:hover .increment-arrow,
+.spinner:hover .decrement-arrow { -fx-background-color: -hsts-text-muted; }
+
+/* ---- radio and check ----
+   IMPORTANT: setting -fx-background-color on .radio wipes the default
+   background *radius* with it, which turns the circle into a square.
+   The radius has to be restated here or the control renders wrong. */
+.radio-button, .check-box { -fx-cursor: hand; }
+
+.radio-button .radio {
+    -fx-background-color: -hsts-surface;
+    -fx-border-color: -hsts-border-firm;
+    -fx-background-radius: 1em;      /* keeps it a circle */
+    -fx-border-radius: 1em;
+    -fx-padding: 3.5;
+}
+.radio-button:hover .radio    { -fx-border-color: -hsts-accent; }
+.radio-button:selected .radio { -fx-border-color: -hsts-accent; -fx-border-width: 1.5; }
+.radio-button .dot {
+    -fx-background-color: transparent;
+    -fx-background-radius: 1em;
+    -fx-padding: 3.5;
+}
+.radio-button:selected .dot { -fx-background-color: -hsts-accent; }
+
+.check-box .box {
+    -fx-background-color: -hsts-surface;
+    -fx-border-color: -hsts-border-firm;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-padding: 3;
+}
+.check-box:hover .box     { -fx-border-color: -hsts-accent; }
 .check-box:selected .box  { -fx-background-color: -hsts-accent; -fx-border-color: -hsts-accent; }
+.check-box .mark          { -fx-background-color: transparent; -fx-padding: 4; }
 .check-box:selected .mark { -fx-background-color: white; }
 
 /* ---------- lists --------------------------------------------------- */

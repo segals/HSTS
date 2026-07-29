@@ -34,7 +34,7 @@
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="hsts.client.gui.ExamBuilderController"
-      spacing="0" prefWidth="1180" prefHeight="760">
+      spacing="0" prefWidth="1280" prefHeight="780" minWidth="1000" minHeight="600">
 
     <fx:define>
         <ToggleGroup fx:id="modeGroup"/>
@@ -57,8 +57,10 @@
     <HBox spacing="14" VBox.vgrow="ALWAYS">
         <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
 
-        <!-- ===== left: my exams ===== -->
-        <VBox styleClass="card" spacing="10" prefWidth="290" minWidth="250">
+        <!-- ===== left: my exams =====
+             Fixed width on purpose: this list is a short index, and giving it
+             growth would steal the width the other two panels actually need. -->
+        <VBox styleClass="card" spacing="10" prefWidth="250" minWidth="210" maxWidth="290">
             <Label text="MY EXAMS" styleClass="section-title"/>
             <ListView fx:id="examList" VBox.vgrow="ALWAYS"/>
             <HBox spacing="7">
@@ -67,8 +69,12 @@
             </HBox>
         </VBox>
 
-        <!-- ===== middle: choose the questions ===== -->
-        <VBox styleClass="card" spacing="10" prefWidth="340" minWidth="300">
+        <!-- ===== middle: choose the questions =====
+             hgrow ALWAYS: without it this panel stayed at its preferred width no
+             matter how wide the window was made, and the question text stayed
+             cut off. It is the panel you read most, so it gets to grow. -->
+        <VBox styleClass="card" spacing="10" prefWidth="430" minWidth="330"
+              HBox.hgrow="ALWAYS">
             <Label text="CHOOSE QUESTIONS" styleClass="section-title"/>
 
             <HBox spacing="14">
@@ -103,7 +109,7 @@
         </VBox>
 
         <!-- ===== right: the exam itself ===== -->
-        <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS">
+        <VBox styleClass="card" spacing="0" minWidth="380" HBox.hgrow="ALWAYS">
 
             <VBox spacing="3">
                 <Label fx:id="examTitleLabel" styleClass="h3"/>

@@ -109,6 +109,17 @@ public class ExamBuilderController extends GUIScreen {
 
         bankList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
+        // Wrap, so the whole question is readable. Choosing from a list you
+        // cannot read is the one thing this screen must not ask of anybody.
+        useWrappingCells(bankList, q ->
+                q.getQuestionId() + "  ·  v" + q.getVersion()
+              + "  ·  " + q.getTopic() + "  ·  " + q.getDifficulty().getDisplayName()
+              + "\n" + q.getText());
+
+        useWrappingCells(examList, e ->
+                e.getExamId() + "  ·  v" + e.getVersion() + "  ·  " + e.getStatus().getDisplayName()
+              + "\n" + e.getQuestionCount() + " questions  ·  " + e.getDurationMinutes() + " min");
+
         modeGroup.selectedToggleProperty().addListener((obs, old, mode) -> {
             boolean automatic = mode == automaticRadio;
             manualPane.setVisible(!automatic);
@@ -499,16 +510,23 @@ public class ExamBuilderController extends GUIScreen {
         private final Spinner<Integer> count = new Spinner<>(1, 100, 5);
 
         QuotaRow(List<String> availableTopics) {
+            // The topic box grows with the panel. At a fixed width it showed
+            // "any tc" and the difficulty box showed "...", which told the
+            // teacher nothing about what she had actually chosen.
             topic.setEditable(true);
             topic.setPromptText("any topic");
             topic.setItems(FXCollections.observableArrayList(availableTopics));
-            topic.setPrefWidth(130);
+            topic.setMinWidth(150);
+            topic.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(topic, Priority.ALWAYS);
 
             difficulty.setPromptText("any level");
             difficulty.setItems(FXCollections.observableArrayList(DifficultyLevel.values()));
-            difficulty.setPrefWidth(105);
+            difficulty.setMinWidth(135);
+            difficulty.setPrefWidth(135);
 
-            count.setPrefWidth(70);
+            count.setPrefWidth(92);
+            count.setMinWidth(92);
             count.valueProperty().addListener((o, a, b) -> updateQuotaTotal());
 
             // The row has to exist before the remove button's action can refer to

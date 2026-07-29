@@ -103,6 +103,13 @@ public class QuestionMgmtController extends GUIScreen {
 
         difficultyCombo.setItems(FXCollections.observableArrayList(DifficultyLevel.values()));
 
+        // Wrap, so a long question is readable in the list rather than cut off
+        // mid-sentence with no way to see the rest.
+        useWrappingCells(questionList, q ->
+                q.getQuestionId() + "  ·  v" + q.getVersion()
+              + "  ·  " + q.getTopic() + "  ·  " + q.getDifficulty().getDisplayName()
+              + "\n" + q.getText());
+
         courseCombo.valueProperty().addListener((obs, old, course) -> {
             if (course != null) {
                 loadCourse(course.getCourseCode());
