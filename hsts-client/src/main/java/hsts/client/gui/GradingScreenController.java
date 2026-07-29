@@ -11,6 +11,7 @@ import hsts.common.entity.StudentExam;
 import hsts.common.protocol.CommentRequest;
 import hsts.common.protocol.GradeChange;
 import hsts.common.protocol.MarkedExam;
+import hsts.common.protocol.PublishRequest;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
@@ -27,7 +28,10 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * SUC-9 / מתווה scenario 8: the teacher marking and publishing.
@@ -35,15 +39,28 @@ import java.util.List;
  * <p>The mark is worked out automatically. She reads the paper, may change the
  * mark with a compulsory reason, may leave comments, and approves - and only then
  * does the student see anything.</p>
+ *
+ * <h2>One button</h2>
+ *
+ * <p>Marking used to take four separate presses: save the mark, save the overall
+ * comment, save a comment beside each question, then approve. On a ten-question
+ * paper that is thirteen buttons, and it let a teacher publish a mark while a
+ * comment she had typed was still unsaved on screen.</p>
+ *
+ * <p><b>Approve and publish</b> now sends all of it at once, and the server writes
+ * nothing unless the whole request is acceptable. The compulsory reason of
+ * requirement 52 is unchanged - it is simply checked at that moment instead.</p>
+ *
+ * <p>The trade is written down rather than hidden: acceptance tests 3.3 and 3.4
+ * describe pressing "שמור" and expect a mark saved <em>without</em> approval, which
+ * this screen no longer offers. Both need rewording in Assignment 1 - see
+ * {@code docs/03_document_updates.md}.</p>
  */
 public class GradingScreenController extends GUIScreen {
 
     private static final String REQ_SITTINGS = "g.sittings";
     private static final String REQ_LIST     = "g.list";
     private static final String REQ_GET      = "g.get";
-    private static final String REQ_CHANGE   = "g.change";
-    private static final String REQ_COMMENT  = "g.comment";
-    private static final String REQ_QCOMMENT = "g.qcomment";
     private static final String REQ_APPROVE  = "g.approve";
     private static final String REQ_ALL      = "g.all";
     private static final String REQ_FACTOR   = "g.factor";
@@ -64,14 +81,22 @@ public class GradingScreenController extends GUIScreen {
     @FXML private VBox     questionBox;
     @FXML private Spinner<Integer> markSpinner;
     @FXML private TextField reasonField;
-    @FXML private Button   changeButton;
     @FXML private TextArea generalCommentArea;
-    @FXML private Button   commentButton;
     @FXML private Button   approveButton;
+    @FXML private Label    publishHintLabel;
     @FXML private Label    statusLabel;
 
     private ExamExecution sitting;
     private MarkedExam openPaper;
+
+    /**
+     * The comment box belonging to each question of the paper on screen.
+     *
+     * <p>Rebuilt every time a paper is opened, and read by "Approve and publish".
+     * Ordered, so the comments are sent in the order she sees them - which makes a
+     * failure easy to follow at the demo.</p>
+     */
+    private final Map<ExamQuestion, TextField> questionComments = new LinkedHashMap<>();
 
     @FXML
     private void initialize() {
@@ -131,44 +156,45 @@ public class GradingScreenController extends GUIScreen {
     //  Actions
     // -----------------------------------------------------------------
 
-    @FXML
-    private void onChangeMark() {
-        if (openPaper == null) {
-            showError("Open a paper first.");
-            return;
-        }
-        String reason = reasonField.getText();
-        if (reason == null || reason.trim().isEmpty()) {
-            // Checked here for speed; the server refuses it too, and that is the
-            // check that counts (requirement 52).
-            showError("Changing a mark by hand needs a reason. It is kept with the mark.");
-            reasonField.requestFocus();
-            return;
-        }
-        send(RequestType.GRADING_CHANGE, GradeChange.forOne(
-                openPaper.getAttempt().getSubmissionId(),
-                markSpinner.getValue(), reason.trim()), REQ_CHANGE);
-    }
-
-    @FXML
-    private void onSaveComment() {
-        if (openPaper == null) {
-            showError("Open a paper first.");
-            return;
-        }
-        send(RequestType.GRADING_GENERAL_COMMENT, CommentRequest.general(
-                openPaper.getAttempt().getSubmissionId(),
-                generalCommentArea.getText()), REQ_COMMENT);
-    }
-
+    /**
+     * The one button. Sends the mark, the reason, and every comment together.
+     *
+     * <p>There were four presses here - save the mark, save the overall comment,
+     * save each question's comment, approve - which meant a teacher could publish a
+     * mark while a comment she had typed was still sitting unsaved on screen.</p>
+     */
     @FXML
     private void onApprove() {
         if (openPaper == null) {
             showError("Open a paper first.");
             return;
         }
+
+        int submissionId = openPaper.getAttempt().getSubmissionId();
+        String reason = reasonField.getText();
+
+        // Checked here so she gets an answer without a round trip. The server
+        // refuses it too and writes nothing, and that is the check that counts
+        // (requirement 52, acceptance test 3.4).
+        if (markSpinner.getValue() != openPaper.getGrade().getFinalGrade()
+                && (reason == null || reason.trim().isEmpty())) {
+            showError("You changed the mark from " + openPaper.getGrade().getFinalGrade()
+                    + " to " + markSpinner.getValue() + ", so a reason is needed. "
+                    + "Nothing has been published.");
+            reasonField.requestFocus();
+            return;
+        }
+
+        List<CommentRequest> perQuestion = new ArrayList<>();
+        for (var entry : questionComments.entrySet()) {
+            perQuestion.add(new CommentRequest(submissionId, entry.getKey().getQuestionId(),
+                    entry.getKey().getQuestionVersion(), entry.getValue().getText()));
+        }
+
         approveButton.setDisable(true);
-        send(RequestType.GRADING_APPROVE, openPaper.getAttempt().getSubmissionId(), REQ_APPROVE);
+        send(RequestType.GRADING_PUBLISH, new PublishRequest(submissionId,
+                markSpinner.getValue(), reason, generalCommentArea.getText(),
+                perQuestion), REQ_APPROVE);
     }
 
     @FXML
@@ -236,10 +262,6 @@ public class GradingScreenController extends GUIScreen {
                 }
             }
             case REQ_GET -> showPaper((MarkedExam) response.getPayload());
-            case REQ_CHANGE, REQ_COMMENT, REQ_QCOMMENT -> {
-                showSuccess(response.getMessage());
-                refreshCurrent();
-            }
             case REQ_APPROVE -> {
                 approveButton.setDisable(false);
                 showSuccess(response.getMessage());
@@ -314,8 +336,10 @@ public class GradingScreenController extends GUIScreen {
         paperMetaLabel.setText("Pick a sitting, then a student.");
         markLabel.setText("");
         questionBox.getChildren().clear();
+        questionComments.clear();
         generalCommentArea.clear();
         reasonField.clear();
+        publishHintLabel.setText("");
     }
 
     private void showPaper(MarkedExam marked) {
@@ -340,10 +364,17 @@ public class GradingScreenController extends GUIScreen {
         reasonField.clear();
 
         questionBox.getChildren().clear();
+        questionComments.clear();          // rebuilt below, for this paper only
         int number = 1;
         for (ExamQuestion eq : attempt.getQuestions()) {
             questionBox.getChildren().add(buildQuestion(number++, eq, attempt, grade));
         }
+
+        approveButton.setText(grade.isApproved() ? "Update and publish" : "Approve and publish");
+        publishHintLabel.setText(grade.isApproved()
+                ? "She has already been told her mark. Publishing again sends her the new one."
+                : "Sends the mark and every comment on this page to "
+                  + attempt.getStudentName() + " in one go.");
         clearMessage();
     }
 
@@ -397,18 +428,16 @@ public class GradingScreenController extends GUIScreen {
             }
         }
 
+        // No Save button beside each question any more. What she types is collected
+        // by "Approve and publish", so a comment cannot be left behind unsaved.
         TextField comment = new TextField(
                 feedback != null && feedback.getComment() != null ? feedback.getComment() : "");
         comment.setPromptText("A comment for her on this question (optional)");
         HBox.setHgrow(comment, Priority.ALWAYS);
         comment.setMaxWidth(Double.MAX_VALUE);
+        questionComments.put(eq, comment);
 
-        Button save = new Button("Save");
-        save.setOnAction(e -> send(RequestType.GRADING_QUESTION_COMMENT,
-                new CommentRequest(attempt.getSubmissionId(), eq.getQuestionId(),
-                        eq.getQuestionVersion(), comment.getText()), REQ_QCOMMENT));
-
-        block.getChildren().add(new HBox(8, comment, save));
+        block.getChildren().add(new HBox(8, comment));
         return block;
     }
 

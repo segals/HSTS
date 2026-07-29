@@ -6,7 +6,9 @@ import hsts.common.entity.Grade;
 import hsts.common.entity.StudentExam;
 import hsts.common.entity.Teacher;
 import hsts.common.entity.User;
+import hsts.common.protocol.CommentRequest;
 import hsts.common.protocol.MarkedExam;
+import hsts.common.protocol.PublishRequest;
 import hsts.common.protocol.PushEvent;
 import hsts.common.protocol.PushType;
 import hsts.common.protocol.Response;
@@ -277,6 +279,102 @@ public class GradingController {
                     + " can now see her mark and her marked paper.");
         } catch (SQLException e) {
             return Response.error("Could not approve: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Saves everything the teacher settled on for one paper, then publishes it.
+     *
+     * <p>This is what the marking screen's single <b>Approve and publish</b> button
+     * sends. It replaces four separate presses - save the mark, save the overall
+     * comment, save each question's comment, approve - which between them let a
+     * teacher publish a mark while a comment she had typed was still unsaved.</p>
+     *
+     * <p><b>Nothing is written until everything has been checked.</b> Requirement 52
+     * and acceptance test 3.4 make an explanation compulsory when a mark is moved by
+     * hand; if it is missing, the whole request is refused and the paper is left
+     * exactly as it was - not published, and with her typing still on screen to
+     * correct. Acceptance test 3.6 rejects a mark outside 0-100 the same way.</p>
+     *
+     * <p>Pressing it again on a paper that is already published is how acceptance
+     * test 3.12 works: the new mark is saved and the student is told again.</p>
+     */
+    public Response publish(User user, PublishRequest request) {
+        if (!(user instanceof Teacher)) {
+            return Response.error("Only a teacher marks exams.");
+        }
+        if (request == null) {
+            return Response.error("Nothing to publish.");
+        }
+        try {
+            StudentExam attempt = submissionDAO.findById(request.getSubmissionId());
+            if (attempt == null) {
+                return Response.error("That paper does not exist.");
+            }
+            String refusal = refuseIfNotHers(user, attempt.getExecutionId());
+            if (refusal != null) {
+                return Response.error(refusal);
+            }
+            if (attempt.isInProgress()) {
+                // Acceptance test 3.11.
+                return Response.error(attempt.getStudentName()
+                        + " is still sitting this exam. It cannot be marked yet.");
+            }
+
+            // Makes sure a mark exists to compare against, and is safe to repeat.
+            gradeDAO.autoGrade(request.getSubmissionId());
+            Grade before = gradeDAO.findBySubmission(request.getSubmissionId());
+
+            Integer wanted = request.getFinalGrade();
+            boolean markMoved = wanted != null && wanted != before.getFinalGrade();
+
+            // ---- check everything first, write nothing yet ----
+            if (markMoved) {
+                if (wanted < 0 || wanted > 100) {
+                    return Response.error("The mark must be a whole number between 0 and 100.");
+                }
+                if (request.getReason() == null || request.getReason().trim().isEmpty()) {
+                    return Response.error("You changed the mark from " + before.getFinalGrade()
+                            + " to " + wanted + ", so a reason is needed. It is kept with the "
+                            + "mark so the change can be accounted for. Nothing has been "
+                            + "published.");
+                }
+            }
+
+            // ---- now write ----
+            if (markMoved) {
+                gradeDAO.changeFinalGrade(request.getSubmissionId(), wanted,
+                        request.getReason().trim(), user.getUserId());
+            }
+
+            String general = request.getGeneralComment();
+            gradeDAO.setGeneralComment(request.getSubmissionId(),
+                    (general == null || general.isBlank()) ? null : general.trim());
+
+            for (CommentRequest c : request.getQuestionComments()) {
+                gradeDAO.setQuestionComment(request.getSubmissionId(), c.getQuestionId(),
+                        c.getQuestionVersion(),
+                        (c.getComment() == null || c.getComment().isBlank())
+                                ? null : c.getComment().trim());
+            }
+
+            boolean wasAlreadyOut = before.isApproved();
+            gradeDAO.approve(request.getSubmissionId(), user.getUserId());
+
+            Grade grade = gradeDAO.findBySubmission(request.getSubmissionId());
+            notifyStudent(grade, wasAlreadyOut
+                    ? "Your mark for exam " + grade.getExamId()
+                      + " has been updated to " + grade.getFinalGrade() + "."
+                    : "Your mark for exam " + grade.getExamId()
+                      + " is ready: " + grade.getFinalGrade() + ".");
+
+            return Response.ok(grade, (wasAlreadyOut ? "Updated and published. " : "Published. ")
+                    + grade.getStudentName() + " can now see "
+                    + (markMoved ? "the mark of " + grade.getFinalGrade() : "her mark")
+                    + " and her marked paper.");
+
+        } catch (SQLException e) {
+            return Response.error("Could not publish: " + e.getMessage());
         }
     }
 

@@ -1138,3 +1138,89 @@ silent no-op cannot masquerade as a passing test again.
 | Screens | 14/14 load |
 
 Run **twice back to back with no database reset**, identical both times.
+
+---
+
+## Change — one button on the marking screen, not four
+
+**Asked for:** *"there are the save mark, save comment, and publish buttons: do we
+need all of them? I think it is best if we just have the publish button and it
+will publish the mark and the comment (if there is one). is it according to the
+directions?"*
+
+### The honest answer to "is it according to the directions?"
+
+**Partly.** The מתווה is loose — scenario 8 lists only three things (the system
+marks, the teacher approves, the teacher may change with a reason) and never
+mentions buttons. It does not mention comments at all.
+
+The **acceptance tests are specific, and they do name a Save button**:
+
+- **3.3** — *"...presses **שמור**"*, and the expected end state is only that the
+  mark and reason are stored. No approval.
+- **3.4** — same flow with the reason box empty, again pressing **שמור**.
+- **3.2** — separately *"אשר ציון סופי"*.
+- **3.5** — *"שומרת ומאשרת"* — saves **and** approves, two verbs.
+
+So the submitted document does describe Save as a step distinct from Approve.
+This was put to the customer with that cost stated, and the decision was **one
+button**. Acceptance tests 3.3, 3.4 and 3.5 are redlined in
+`docs/03_document_updates.md`.
+
+### What was wrong with four buttons
+
+A ten-question paper carried **thirteen** buttons: one per question, plus save the
+mark, save the comment, and approve. Worse than clutter — a teacher could press
+Approve while a comment she had typed sat unsaved on screen, and the student would
+be told her mark without it.
+
+### What replaced them
+
+One `PublishRequest` carrying the mark, the reason, the overall comment and a
+comment per question. `GradingController.publish` **checks everything before
+writing anything**, so a refused publish leaves the paper exactly as it was.
+
+That property is the reason the merge is safe, and it is what `M10Test` §2 exists
+to prove: after a mark is moved with no reason, the mark is still 50, it is not
+published, and the comment that arrived with the bad request was **not** stored.
+
+Requirement 52 is untouched — the explanation is still compulsory when the mark
+moves, just checked at the moment of publishing. `GRADING_CHANGE`,
+`GRADING_GENERAL_COMMENT` and `GRADING_QUESTION_COMMENT` remain on the server as
+single-step operations; the screen no longer uses them.
+
+The button reads **"Approve and publish"**, or **"Update and publish"** on a paper
+already published — which is acceptance test 3.12.
+
+### A check of mine that asserted nothing
+
+`M10Test` §5 originally read:
+
+```java
+check("she is NOT shown the reason for the change",
+        x.getManualChangeExplanation() == null || !x.getManualChangeExplanation().isEmpty());
+```
+
+`null || not-empty` is true for very nearly every value, so it passed regardless.
+Its label was also wrong: the student **does** receive the reason once the mark is
+approved — her screen simply does not print it. No requirement says to hide it,
+and requirement 52 keeps it precisely so a change can be accounted for. The check
+now asserts what is actually true rather than inventing a rule.
+
+### Verified — 43 new checks
+
+| Group | Result |
+|---|---|
+| **Test 3.2: publish as marked, no reason needed, none invented** | 4/4 |
+| **Test 3.4: mark moved with no reason refused, and NOTHING written** | 6/6 |
+| **Test 3.6: 105, −5, 101 refused; mark still 50 and unpublished** | 5/5 |
+| **One press stores mark + reason + overall comment + all 4 question comments** | 7/7 |
+| The student sees all of it from that one press | 4/4 |
+| **Test 3.12: publishing again says "updated" and tells her** | 5/5 |
+| Blanking a comment clears it; the mark and reason survive | 4/4 |
+| Permissions: another teacher, and the student herself | 3/3 |
+| **Test 3.11: a paper still being sat cannot be published** | 2/2 |
+| A paper that does not exist; an empty request | 2/2 |
+
+Regression: **438 checks** across the project, run **twice back to back with no
+database reset**, identical both times. 14/14 screens load.

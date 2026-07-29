@@ -13,6 +13,7 @@ import hsts.common.protocol.AnswerChoice;
 import hsts.common.protocol.ExamReleaseRequest;
 import hsts.common.protocol.StartExamRequest;
 import hsts.common.protocol.TimeChangeRequest;
+import hsts.common.protocol.PublishRequest;
 import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
@@ -270,6 +271,8 @@ public class HSTSServer extends AbstractServer {
                     });
                 case GRADING_APPROVE     -> withUser(client, u ->
                         gradingController.approve(u, (Integer) request.getPayload()));
+                case GRADING_PUBLISH     -> withUser(client, u ->
+                        gradingController.publish(u, (PublishRequest) request.getPayload()));
                 case GRADING_APPROVE_ALL -> withUser(client, u ->
                         gradingController.approveAll(u, (Integer) request.getPayload()));
                 case GRADING_FACTOR      -> withUser(client, u -> {

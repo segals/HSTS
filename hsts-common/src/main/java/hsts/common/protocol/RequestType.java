@@ -153,6 +153,14 @@ public enum RequestType {
     /** Publishes one mark. Payload is the submission id. */
     GRADING_APPROVE,
 
+    /**
+     * Saves the mark, the reason, every comment, and publishes - in one action.
+     * Payload is a {@link PublishRequest}. This is what the marking screen's single
+     * button sends; the separate save types above remain for anything that needs
+     * one step on its own.
+     */
+    GRADING_PUBLISH,
+
     /** Publishes every unapproved mark in a sitting. Payload is the execution id. */
     GRADING_APPROVE_ALL,
 

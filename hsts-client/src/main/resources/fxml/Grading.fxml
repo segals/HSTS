@@ -10,6 +10,16 @@
     Requirement 52 makes the reason compulsory. Requirement 53 means nothing
     reaches the student until Approve is pressed. Requirement 55 keeps the
     statistics on this screen and off hers.
+
+    ONE button, not four. The screen used to have "Save mark", "Save comment",
+    a "Save" beside every question, and "Approve and publish" - thirteen buttons
+    on a ten-question paper, and a teacher could publish a mark while a comment
+    she had typed sat unsaved. "Approve and publish" now sends the mark, the
+    reason, and every comment together.
+
+    The cost is recorded honestly: acceptance tests 3.3 and 3.4 describe pressing
+    "שמור" and expect the mark saved WITHOUT approval. Those two tests need
+    rewording in Assignment 1 - see docs/03_document_updates.md.
 -->
 
 <?import javafx.geometry.Insets?>
@@ -82,26 +92,24 @@
             <VBox spacing="8">
                 <padding><Insets top="12" right="0" bottom="0" left="0"/></padding>
 
-                <Label text="CHANGE THE MARK  ·  A REASON IS REQUIRED"
+                <Label text="MARK  ·  A REASON IS NEEDED ONLY IF YOU CHANGE IT"
                        styleClass="section-title" wrapText="true"/>
                 <HBox spacing="8" alignment="CENTER_LEFT">
                     <Spinner fx:id="markSpinner" editable="true" prefWidth="90"/>
-                    <TextField fx:id="reasonField" promptText="Why is the mark being changed?"
+                    <TextField fx:id="reasonField" promptText="Why are you changing the mark?"
                                HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                    <Button fx:id="changeButton" text="Save mark" onAction="#onChangeMark"/>
                 </HBox>
 
-                <Label text="COMMENT FOR THE STUDENT" styleClass="section-title" wrapText="true"/>
-                <HBox spacing="8" alignment="CENTER_LEFT">
-                    <TextArea fx:id="generalCommentArea" prefRowCount="2" wrapText="true"
-                              HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                    <Button fx:id="commentButton" text="Save comment" onAction="#onSaveComment"/>
-                </HBox>
+                <Label text="COMMENT FOR THE STUDENT ON THE WHOLE PAPER"
+                       styleClass="section-title" wrapText="true"/>
+                <TextArea fx:id="generalCommentArea" prefRowCount="2" wrapText="true"
+                          maxWidth="Infinity"/>
 
-                <HBox spacing="10" alignment="CENTER_LEFT">
+                <HBox spacing="12" alignment="CENTER_LEFT">
                     <Button fx:id="approveButton" text="Approve and publish" onAction="#onApprove"
                             styleClass="primary" prefWidth="180"/>
-                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="publishHintLabel" styleClass="caption" wrapText="true"
+                           HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
                 </HBox>
 
                 <Label fx:id="statusLabel" wrapText="true" text=" "
