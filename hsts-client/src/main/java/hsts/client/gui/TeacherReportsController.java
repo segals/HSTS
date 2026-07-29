@@ -4,6 +4,8 @@ import hsts.common.entity.Exam;
 import hsts.common.entity.ExamExecution;
 import hsts.common.entity.ExamStatistics;
 import hsts.common.entity.Grade;
+import hsts.common.protocol.PushEvent;
+import hsts.common.protocol.PushType;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
@@ -165,6 +167,27 @@ public class TeacherReportsController extends GUIScreen {
     @FXML
     private void onBack() {
         switchTo("/fxml/MainMenu.fxml", true);
+    }
+
+    /**
+     * A mark was approved, changed or factored somewhere. NFR 18.
+     *
+     * <p>Requirement 59 gives her the results of exams she wrote even when another
+     * teacher ran them - so the marks on this screen can change without her doing
+     * anything at all. The figures follow rather than going quietly stale.</p>
+     */
+    @Override
+    protected void onPush(PushEvent event) {
+        if (event.getType() != PushType.RESULTS_CHANGED) {
+            super.onPush(event);
+            return;
+        }
+        showMessage(event.getMessage());
+        send(RequestType.TEACHER_REPORT_EXAMS, null, REQ_EXAMS);
+        SittingRow row = sittingList.getSelectionModel().getSelectedItem();
+        if (chosenExam != null && row != null) {
+            askForResults(row);          // redraw the table and the histogram
+        }
     }
 
     // -----------------------------------------------------------------

@@ -148,6 +148,47 @@ public class UserDAO implements IDAO<User, String> {
         return findCourseCodes("SELECT course_code FROM course_student WHERE user_id = ?", userId);
     }
 
+    /**
+     * Usernames of everybody teaching one course.
+     *
+     * <p>Usernames rather than ids because that is what {@code PushService} keys
+     * sessions by. NFR 18 forbids a Refresh button, so when one teacher changes
+     * something her colleagues on the course have to be told - and this is who
+     * "her colleagues" means.</p>
+     */
+    public List<String> findUsernamesTeaching(String courseCode) throws SQLException {
+        return findUsernames("""
+            SELECT u.username FROM users u
+            JOIN course_teacher ct ON ct.user_id = u.user_id
+            WHERE ct.course_code = ?""", courseCode);
+    }
+
+    /** Usernames of every student enrolled in one course. */
+    public List<String> findUsernamesEnrolledIn(String courseCode) throws SQLException {
+        return findUsernames("""
+            SELECT u.username FROM users u
+            JOIN course_student cs ON cs.user_id = u.user_id
+            WHERE cs.course_code = ?""", courseCode);
+    }
+
+    /** Usernames of everybody with one role - the principals, typically. */
+    public List<String> findUsernamesWithRole(UserRole role) throws SQLException {
+        return findUsernames("SELECT username FROM users WHERE role = ?", role.name());
+    }
+
+    private List<String> findUsernames(String sql, String parameter) throws SQLException {
+        List<String> names = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setString(1, parameter);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    names.add(rs.getString(1));
+                }
+            }
+        }
+        return names;
+    }
+
     private List<String> findCourseCodes(String sql, String userId) throws SQLException {
         List<String> codes = new ArrayList<>();
         try (PreparedStatement ps = conn().prepareStatement(sql)) {

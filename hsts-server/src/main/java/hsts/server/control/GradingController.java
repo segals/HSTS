@@ -192,6 +192,8 @@ public class GradingController {
                 notifyStudent(grade, "Your mark for exam " + grade.getExamId()
                         + " has been updated to " + grade.getFinalGrade() + ".");
             }
+            notifyResultsChanged(attempt.getExecutionId(),
+                    "A mark was changed by hand on exam " + grade.getExamId() + ".");
             return Response.ok(grade, "Mark changed to " + newGrade
                     + ". The explanation was saved with it.");
         } catch (SQLException e) {
@@ -275,6 +277,8 @@ public class GradingController {
             notifyStudent(grade, "Your mark for exam " + grade.getExamId()
                     + " is ready: " + grade.getFinalGrade() + ".");
 
+            notifyResultsChanged(attempt.getExecutionId(),
+                    "A mark was approved for exam " + grade.getExamId() + ".");
             return Response.ok(grade, "Approved. " + grade.getStudentName()
                     + " can now see her mark and her marked paper.");
         } catch (SQLException e) {
@@ -368,6 +372,8 @@ public class GradingController {
                     : "Your mark for exam " + grade.getExamId()
                       + " is ready: " + grade.getFinalGrade() + ".");
 
+            notifyResultsChanged(attempt.getExecutionId(),
+                    "A mark was published for exam " + grade.getExamId() + ".");
             return Response.ok(grade, (wasAlreadyOut ? "Updated and published. " : "Published. ")
                     + grade.getStudentName() + " can now see "
                     + (markMoved ? "the mark of " + grade.getFinalGrade() : "her mark")
@@ -398,6 +404,10 @@ public class GradingController {
                             + " is ready: " + grade.getFinalGrade() + ".");
                 }
             }
+            if (published > 0) {
+                notifyResultsChanged(executionId, published
+                        + " mark(s) were approved at once.");
+            }
             return Response.ok(published, published == 0
                     ? "Every mark in this sitting was already approved."
                     : published + " mark(s) approved and published.");
@@ -424,6 +434,8 @@ public class GradingController {
         }
         try {
             int changed = gradeDAO.applyFactor(executionId, delta, user.getUserId());
+            notifyResultsChanged(executionId, "A factor of "
+                    + (delta > 0 ? "+" : "") + delta + " was applied.");
             return Response.ok(changed, (delta > 0 ? "Added " : "Took away ")
                     + Math.abs(delta) + " points for " + changed + " student(s). "
                     + "Marks stay between 0 and 100.");
@@ -465,6 +477,43 @@ public class GradingController {
             grade.setFeedback(gradeDAO.findFeedback(attempt.getSubmissionId()));
         }
         return new MarkedExam(attempt, grade);
+    }
+
+    /**
+     * Tells everybody whose figures just changed - NFR 18, the other direction.
+     *
+     * <p>{@link #notifyStudent} tells the girl her mark is ready. This tells the
+     * people looking at the <em>statistics</em>: the exam's author (requirement 59
+     * gives her the results of exams she wrote, even when somebody else ran them),
+     * the teacher who released the sitting, and the principal (requirement 62).</p>
+     *
+     * <p>Without it a teacher with the histogram open would watch a colleague
+     * approve marks and see nothing move.</p>
+     */
+    private void notifyResultsChanged(int executionId, String what) {
+        try {
+            ExamExecution execution = executionDAO.findById(executionId);
+            if (execution == null) {
+                return;
+            }
+            java.util.Set<String> tell = new java.util.LinkedHashSet<>();
+            for (Exam version : examDAO.findAllVersions(execution.getExamId())) {
+                User author = userDAO.findById(version.getAuthorId());
+                if (author != null) {
+                    tell.add(author.getUsername());
+                }
+            }
+            User releaser = userDAO.findById(execution.getReleasedBy());
+            if (releaser != null) {
+                tell.add(releaser.getUsername());
+            }
+            tell.addAll(userDAO.findUsernamesWithRole(hsts.common.enums.UserRole.PRINCIPAL));
+
+            pushService.toUsernames(tell, new PushEvent(PushType.RESULTS_CHANGED,
+                    execution.getExamId(), what));
+        } catch (SQLException e) {
+            System.err.println("Could not announce the results change: " + e.getMessage());
+        }
     }
 
     private void notifyStudent(Grade grade, String message) {

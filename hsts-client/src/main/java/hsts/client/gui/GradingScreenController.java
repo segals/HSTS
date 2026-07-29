@@ -12,6 +12,8 @@ import hsts.common.protocol.CommentRequest;
 import hsts.common.protocol.GradeChange;
 import hsts.common.protocol.MarkedExam;
 import hsts.common.protocol.PublishRequest;
+import hsts.common.protocol.PushEvent;
+import hsts.common.protocol.PushType;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
@@ -219,6 +221,22 @@ public class GradingScreenController extends GUIScreen {
     @FXML
     private void onBack() {
         switchTo("/fxml/MainMenu.fxml", true);
+    }
+
+    /**
+     * A student started or handed in, so the marking list is out of date. NFR 18.
+     *
+     * <p>Without this a teacher watching the list would see "still sitting" against
+     * a girl who handed in a minute ago, and would have to leave the screen and come
+     * back before she could mark it.</p>
+     */
+    @Override
+    protected void onPush(PushEvent event) {
+        if (event.getType() == PushType.EXAM_LIVE_STATUS) {
+            refreshCurrent();
+        } else {
+            super.onPush(event);
+        }
     }
 
     // -----------------------------------------------------------------

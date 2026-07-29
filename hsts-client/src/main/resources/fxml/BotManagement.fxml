@@ -24,6 +24,7 @@
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
@@ -165,21 +166,49 @@
                                     answers is unreadable, and she is scanning for
                                     what was asked, not reading every reply.
                                 -->
-                                <VBox fx:id="fullExchangeBox" styleClass="card" spacing="6"
+                                <!--
+                                    One section, two clearly bounded halves.
+
+                                    The first version put the question in an h3 and
+                                    the answer straight underneath in plain text, so
+                                    a long answer read as a continuation of the
+                                    question and there was no telling where either
+                                    ended. Each half now has its own labelled,
+                                    tinted block with a rule between them.
+                                -->
+                                <VBox fx:id="fullExchangeBox" styleClass="card" spacing="0"
                                       visible="false" managed="false">
                                     <HBox alignment="CENTER_LEFT" spacing="8">
+                                        <padding><Insets bottom="10"/></padding>
                                         <Label text="THE FULL EXCHANGE"
                                                styleClass="section-title" wrapText="true"/>
                                         <Region HBox.hgrow="ALWAYS"/>
                                         <Label fx:id="exchangeWhenLabel" styleClass="caption"
                                                wrapText="true"/>
                                     </HBox>
-                                    <Label fx:id="exchangeQuestionLabel" styleClass="h3"
-                                           wrapText="true" maxWidth="Infinity"/>
-                                    <Label fx:id="exchangeAnswerLabel" wrapText="true"
-                                           maxWidth="Infinity"/>
+
+                                    <VBox styleClass="exchange-question" spacing="4">
+                                        <Label text="THE STUDENT ASKED" styleClass="exchange-role"
+                                               wrapText="true"/>
+                                        <Label fx:id="exchangeQuestionLabel" wrapText="true"
+                                               maxWidth="Infinity"/>
+                                    </VBox>
+
+                                    <Separator>
+                                        <VBox.margin><Insets top="10" bottom="10"/></VBox.margin>
+                                    </Separator>
+
+                                    <VBox styleClass="exchange-answer" spacing="4">
+                                        <Label text="THE BOT ANSWERED" styleClass="exchange-role"
+                                               wrapText="true"/>
+                                        <Label fx:id="exchangeAnswerLabel" wrapText="true"
+                                               maxWidth="Infinity"/>
+                                    </VBox>
+
                                     <Label text="No name is shown because none is sent - the server strips it (requirement 75)."
-                                           styleClass="caption" wrapText="true"/>
+                                           styleClass="caption" wrapText="true">
+                                        <VBox.margin><Insets top="10"/></VBox.margin>
+                                    </Label>
                                 </VBox>
                             </VBox>
                         </VBox>

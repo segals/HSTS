@@ -1796,3 +1796,110 @@ rather than deleted: what survives is that two bots cannot share a name.
 
 Run **twice back to back with no database reset**, identical both times, and M14
 alone three times running to confirm the non-determinism is gone.
+
+---
+
+## Milestone 14, follow-up 3 — a readable exchange, and nothing waits for a click
+
+### 1. The question and the answer were running together
+
+The teacher's exchange panel put the question in a heading and the answer straight
+underneath in plain text. With answers running past twenty lines, the reader could
+not see where the question ended and the answer began — it read as one continuing
+block.
+
+Both halves are still in **one section**, because she is reading a single exchange.
+Each half now has its own labelled, tinted block with a coloured left rule and a
+divider between them: **THE STUDENT ASKED** on a grey block, **THE BOT ANSWERED** on
+a blue one. The boundary is visible without splitting them into two cards.
+
+### 2. Nothing waits for a click any more
+
+NFR 18 forbids manual refresh. Five screens had no push handling at all, so a
+change made elsewhere sat invisible until the user left the screen and came back.
+
+Three new push types, and the fan-out is by **course membership**:
+
+| Event | Who is told | Why |
+|---|---|---|
+| `BOT_CHANGED` | the course's **teachers** | requirement 67 lets a colleague edit the bot, so two teachers can have it open at once |
+| `BOT_AVAILABILITY_CHANGED` | the course's **students** | requirement 60 flips requirement 70 under them |
+| `RESULTS_CHANGED` | the exam's **author**, the **releasing** teacher, the **principal** | requirements 59 and 62 give all three the figures |
+
+Every bot change pushes: created, material added or removed, switched on or off,
+deleted — **and a student asking a question**, because that moves the usage figures
+her teacher is looking at.
+
+**That last one never names her.** Requirement 75 reaches into the push itself: the
+message is *"A new question was asked of 'Mechanics helper'."* and the test asserts
+the student's name and id appear in neither.
+
+Screens that now follow by themselves: bot management, ask-the-bot, marking,
+teacher results, principal browse. Each keeps the user's place across a reload —
+the selected bot, the open exchange, the chosen sitting — so a colleague's edit does
+not throw away what she was reading.
+
+**No polling anywhere.** The server speaks when something changes; the only wait in
+the whole system is the exam clock, which has to tick.
+
+### Faults found, and every one was the test
+
+Five, and the product was right each time. That is worth saying plainly: the system
+refused things it was supposed to refuse, and the checks were written against
+assumptions that had quietly stopped holding.
+
+**1. Two accounts, one session.** The push test opened a second connection for
+`teacher1` and a second for `principal` — both already signed in by the suite. NFR
+16 forbids the same user being connected twice, so both logins were refused, the
+publish failed as "not signed in", and no push was ever sent. The check failed while
+the push worked perfectly. It now reuses the connection it already holds.
+
+**2. The password suffix follows the role.** The same test guessed `"!T"` for
+whoever released a sitting, and the Algebra sitting was released by
+**coordinator1**, whose password ends `"!C"`.
+
+**3. Section 2 asserted the rule that had just been changed** — one bot per course.
+Rewritten rather than deleted: what survives is that two bots cannot share a name.
+
+**4. Course 01 hit 99 exams.** `M10Test` died with a bare `NullPointerException`.
+The cause was the documented ceiling of the 6-digit exam id format working exactly
+as designed — `generateExamId` throws past 99, `saveExam` returned null, and the
+test dereferenced it. Both `M9Test` and `M10Test` now say so in words and name the
+remedy. **The suites accumulate; the demo data needs resetting periodically, and
+that is what `resetAndSeed` is for.**
+
+**5. One unreproduced flake.** `M7Test` failed once, in one sequence run, and could
+not be reproduced in nine further attempts. The only genuinely time-dependent wait
+in the project is the twelve seconds it allows for the exam clock to close an exam
+by itself. It is reported honestly rather than dismissed: the wait is now thirty
+seconds, and — more usefully — a miss no longer takes the rest of the suite with it.
+It used to cast a null payload straight into a `StudentExam`, so one late push hid
+the seventeen checks behind it behind a single "harness threw".
+
+### A real product weakness the accumulation exposed
+
+Chasing the M14 failure found something worth fixing on its own account.
+
+`buildContext` filled the 30,000-character budget **in order and stopped**. Course
+01's bank had grown to 328 questions — about 33,000 characters by itself — so the
+teacher's own notes, her colleague's notes and her uploaded document reached the bot
+as **nothing at all**, silently. The answers would simply have been worse, with
+nothing on any screen to say why.
+
+Every source now gets a share: if the material does not fit, each is allotted an
+equal portion and whatever the small ones do not use is handed back to the large
+ones. Nothing is starved out, and each shortened source says so in the text.
+
+This would happen on a real course, not only on a debris-filled test database — a
+school with a few hundred banked questions is entirely ordinary.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| M2–M11, M13 | unchanged, all passing |
+| **M14** | **153/153** (was 133; 20 new on pushes and context sharing) |
+| **Total** | **731 checks** |
+| Screens | 19/19 load |
+
+Run **three times back to back with no database reset**, identical each time.

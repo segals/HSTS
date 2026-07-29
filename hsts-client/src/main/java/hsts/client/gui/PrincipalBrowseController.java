@@ -8,6 +8,8 @@ import hsts.common.entity.ExamStatistics;
 import hsts.common.entity.Grade;
 import hsts.common.entity.Question;
 import hsts.common.protocol.ExamRef;
+import hsts.common.protocol.PushEvent;
+import hsts.common.protocol.PushType;
 import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
@@ -198,6 +200,27 @@ public class PrincipalBrowseController extends GUIScreen {
     @FXML
     private void onBack() {
         switchTo("/fxml/MainMenu.fxml", true);
+    }
+
+    /**
+     * A mark changed anywhere in the school. NFR 18.
+     *
+     * <p>Requirement 62 gives her everything, which means her figures go stale for
+     * reasons that have nothing to do with her. Only the results tab is redrawn -
+     * reloading the question bank because somebody approved a mark would throw away
+     * her search for no reason.</p>
+     */
+    @Override
+    protected void onPush(PushEvent event) {
+        if (event.getType() != PushType.RESULTS_CHANGED) {
+            super.onPush(event);
+            return;
+        }
+        showMessage(event.getMessage());
+        SittingRow row = resultSittingList.getSelectionModel().getSelectedItem();
+        if (chosenResultExam != null && row != null) {
+            askForResults(row);
+        }
     }
 
     // -----------------------------------------------------------------

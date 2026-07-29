@@ -11,6 +11,8 @@ import hsts.common.entity.User;
 import hsts.common.enums.BotStatus;
 import hsts.common.enums.KnowledgeSourceType;
 import hsts.common.protocol.BotQuestion;
+import hsts.common.protocol.PushEvent;
+import hsts.common.protocol.PushType;
 import hsts.common.protocol.Response;
 import hsts.common.protocol.SourceRequest;
 import hsts.server.boundary.IStudyBotService;
@@ -18,6 +20,8 @@ import hsts.server.dao.BotDAO;
 import hsts.server.dao.CourseDAO;
 import hsts.server.dao.QuestionDAO;
 import hsts.server.dao.SubmissionDAO;
+import hsts.server.dao.UserDAO;
+import hsts.server.push.PushService;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -35,8 +39,8 @@ import java.util.List;
  *   <li><b>65</b> a teacher may create a bot for a course <em>she teaches</em>;</li>
  *   <li><b>66, 68</b> its knowledge is the question bank, uploaded PDF or Word, or
  *       typed text;</li>
- *   <li><b>67</b> a second teacher on the same course adds to the <em>existing</em>
- *       bot - which the UNIQUE key on {@code bot.course_code} guarantees;</li>
+ *   <li><b>67</b> a second teacher on the same course adds to an <em>existing</em>
+ *       bot, and may switch it on or delete it;</li>
  *   <li><b>60</b> she turns it on and off;</li>
  *   <li><b>70</b> a student may use it only if enrolled <em>and</em> it is on;</li>
  *   <li><b>71</b> and not while she is sitting an exam in that course;</li>
@@ -47,6 +51,21 @@ import java.util.List;
  *
  * <p>The external service sits behind {@link IStudyBotService} (requirement 69), so
  * every rule above can be tested without the network or an API key.</p>
+ *
+ * <h2>A course may have several bots, one of them active</h2>
+ *
+ * <p>Asked for by the customer. It began as one per course, enforced by a UNIQUE
+ * key on {@code bot.course_code}; that key is gone and the "only one active" rule
+ * lives here instead - it is a condition on a subset of rows, which no index can
+ * express, and in code it can explain itself when it displaces another bot.</p>
+ *
+ * <h2>Nobody presses Refresh</h2>
+ *
+ * <p>NFR 18. Every change here pushes: the course's teachers are told so their
+ * lists and usage figures follow a colleague's edit, and the course's students are
+ * told when a bot becomes usable or stops being usable. Even a student asking a
+ * question pushes, because it moves the usage figures - and that message
+ * <b>never names her</b> (requirement 75).</p>
  */
 public class BotController {
 
@@ -65,15 +84,54 @@ public class BotController {
     private final CourseDAO courseDAO;
     private final QuestionDAO questionDAO;
     private final SubmissionDAO submissionDAO;
+    private final UserDAO userDAO;
     private final IStudyBotService botService;
+    private final PushService pushService;
 
     public BotController(BotDAO botDAO, CourseDAO courseDAO, QuestionDAO questionDAO,
-                         SubmissionDAO submissionDAO, IStudyBotService botService) {
+                         SubmissionDAO submissionDAO, UserDAO userDAO,
+                         IStudyBotService botService, PushService pushService) {
         this.botDAO = botDAO;
         this.courseDAO = courseDAO;
         this.questionDAO = questionDAO;
         this.submissionDAO = submissionDAO;
+        this.userDAO = userDAO;
         this.botService = botService;
+        this.pushService = pushService;
+    }
+
+    // -----------------------------------------------------------------
+    //  Telling everybody, so nobody has to press Refresh (NFR 18)
+    // -----------------------------------------------------------------
+
+    /**
+     * Tells the course's teachers that something about its bots changed.
+     *
+     * <p>Quietly: a push that fails must never break the operation that caused it,
+     * so a failure here is logged and swallowed.</p>
+     *
+     * <p><b>The message never names a student</b>, even when the change is that one
+     * asked a question - requirement 75.</p>
+     */
+    private void tellTeachers(String courseCode, String message) {
+        try {
+            pushService.toUsernames(userDAO.findUsernamesTeaching(courseCode),
+                    new PushEvent(PushType.BOT_CHANGED, courseCode, message));
+        } catch (SQLException e) {
+            System.err.println("Could not tell the teachers of " + courseCode
+                             + ": " + e.getMessage());
+        }
+    }
+
+    /** Tells the course's students that what they can use has changed. */
+    private void tellStudents(String courseCode, String message) {
+        try {
+            pushService.toUsernames(userDAO.findUsernamesEnrolledIn(courseCode),
+                    new PushEvent(PushType.BOT_AVAILABILITY_CHANGED, courseCode, message));
+        } catch (SQLException e) {
+            System.err.println("Could not tell the students of " + courseCode
+                             + ": " + e.getMessage());
+        }
     }
 
     // =================================================================
@@ -156,6 +214,8 @@ public class BotController {
                 }
             }
             Bot bot = botDAO.insertBot(courseCode, name.trim(), user.getUserId());
+            tellTeachers(courseCode, user.getFullName() + " created a bot called \""
+                    + bot.getName() + "\" on " + bot.getCourseName() + ".");
             return Response.ok(bot, existing.isEmpty()
                     ? "Bot created. It is not active yet - add some material for it to "
                       + "read, then turn it on."
@@ -210,6 +270,18 @@ public class BotController {
 
             botDAO.setStatus(botId, status);
             Bot updated = botDAO.findById(botId);
+
+            // Requirement 60 flips availability, so both audiences are told at once:
+            // her colleagues, whose bot lists have changed, and the students, whose
+            // Ask button has just become usable or stopped being so (requirement 70).
+            tellTeachers(bot.getCourseCode(), user.getFullName()
+                    + (status == BotStatus.ACTIVE ? " switched on \"" : " switched off \"")
+                    + bot.getName() + "\".");
+            tellStudents(bot.getCourseCode(), status == BotStatus.ACTIVE
+                    ? "\"" + bot.getName() + "\" is now available for "
+                      + bot.getCourseName() + "."
+                    : "The " + bot.getCourseName() + " bot has been switched off.");
+
             return Response.ok(updated, status == BotStatus.ACTIVE
                     ? "\"" + bot.getName() + "\" is on. Students on "
                       + bot.getCourseName() + " can use it now." + alsoOff
@@ -239,7 +311,15 @@ public class BotController {
             if (refusal != null) {
                 return Response.error(refusal);
             }
+            boolean wasActive = bot.isActive();
             int lost = botDAO.deleteBotAndHistory(botId);
+
+            tellTeachers(bot.getCourseCode(), user.getFullName() + " deleted the bot \""
+                    + bot.getName() + "\" from " + bot.getCourseName() + ".");
+            if (wasActive) {
+                tellStudents(bot.getCourseCode(), "The " + bot.getCourseName()
+                        + " bot is no longer available.");
+            }
             return Response.ok(bot.getCourseCode(),
                     "Deleted \"" + bot.getName() + "\"."
                   + (lost == 0 ? " It had never been used."
@@ -335,6 +415,9 @@ public class BotController {
             botDAO.insertSource(request.getBotId(), request.getType(), title,
                     content, user.getUserId());
             Bot updated = botDAO.findById(request.getBotId());
+            // Requirement 67: a colleague may add material, so the others must see it.
+            tellTeachers(bot.getCourseCode(), user.getFullName() + " added \"" + title
+                    + "\" to \"" + bot.getName() + "\".");
             return Response.ok(updated, "Added \"" + title + "\" - "
                     + content.length() + " characters of material.");
 
@@ -365,7 +448,11 @@ public class BotController {
                 botDAO.setStatus(updated.getBotId(), BotStatus.INACTIVE);
                 updated = botDAO.findById(bot.getBotId());
                 extra = " It has nothing left to read, so it has been turned off.";
+                tellStudents(bot.getCourseCode(), "The " + bot.getCourseName()
+                        + " bot has been switched off.");
             }
+            tellTeachers(bot.getCourseCode(), user.getFullName() + " removed \""
+                    + source.getTitle() + "\" from \"" + bot.getName() + "\".");
             return Response.ok(updated, "Removed \"" + source.getTitle() + "\"." + extra);
         } catch (SQLException e) {
             return Response.error("Could not remove that material: " + e.getMessage());
@@ -500,6 +587,11 @@ public class BotController {
             // Requirement 73: both sides are kept.
             botDAO.insertConversation(bot.getBotId(), user.getUserId(), question, answer);
 
+            // Her teachers' usage screens are now out of date. Requirement 75: the
+            // message says a question was asked, never who asked it.
+            tellTeachers(bot.getCourseCode(),
+                    "A new question was asked of \"" + bot.getName() + "\".");
+
             BotConversation conversation = new BotConversation();
             conversation.setBotId(bot.getBotId());
             conversation.setCourseName(bot.getCourseName());
@@ -556,26 +648,76 @@ public class BotController {
     /**
      * Joins the bot's material into the text sent with a question.
      *
-     * <p>Cut to {@link #CONTEXT_LIMIT}. Without the cut, a large upload would push
-     * the question itself past whatever the service will read, and the failure
-     * would look like the bot being stupid rather than the request being too big.</p>
+     * <p>Capped at {@link #CONTEXT_LIMIT}. Without a cap a large upload would push
+     * the question itself past whatever the service will read, and the failure would
+     * look like the bot being stupid rather than the request being too big.</p>
+     *
+     * <h2>Every source gets a share</h2>
+     *
+     * <p>This used to fill the budget in order and stop, which meant one bulky
+     * source starved everything after it. A course bank of three hundred questions
+     * is 30,000 characters on its own, so the teacher's own notes - the most
+     * specific and useful material she has - reached the bot as nothing at all, and
+     * silently. The answers would simply have been worse, with nothing to show why.</p>
+     *
+     * <p>So when the material does not fit, each source is given an equal share, and
+     * whatever the small ones do not use is handed back to the large ones. Every
+     * source contributes something, and each truncation says so in the text.</p>
      */
     String buildContext(Bot bot) {
-        StringBuilder out = new StringBuilder();
-        for (KnowledgeSource source : bot.getSources()) {
-            String piece = "--- " + source.getTitle() + " ("
-                         + source.getType().getDisplayName() + ") ---\n"
-                         + source.getContent() + "\n\n";
-            if (out.length() + piece.length() > CONTEXT_LIMIT) {
-                int room = CONTEXT_LIMIT - out.length();
-                if (room > 200) {
-                    out.append(piece, 0, room).append("\n[material truncated]");
-                }
-                break;
+        List<KnowledgeSource> sources = bot.getSources();
+        if (sources.isEmpty()) {
+            return "";
+        }
+
+        int total = 0;
+        for (KnowledgeSource source : sources) {
+            total += headingFor(source).length() + source.getLength() + 2;
+        }
+        if (total <= CONTEXT_LIMIT) {
+            StringBuilder all = new StringBuilder();
+            for (KnowledgeSource source : sources) {
+                all.append(headingFor(source)).append(source.getContent()).append("\n\n");
             }
-            out.append(piece);
+            return all.toString().trim();
+        }
+
+        // Too much. Work out a fair share, then give the small sources what they
+        // need and split what is left between the ones that are over.
+        int share = CONTEXT_LIMIT / sources.size();
+        int slack = 0;
+        int over = 0;
+        for (KnowledgeSource source : sources) {
+            int needs = headingFor(source).length() + source.getLength() + 2;
+            if (needs <= share) {
+                slack += share - needs;
+            } else {
+                over++;
+            }
+        }
+        int bonus = (over == 0) ? 0 : slack / over;
+
+        StringBuilder out = new StringBuilder();
+        for (KnowledgeSource source : sources) {
+            String heading = headingFor(source);
+            String content = source.getContent() == null ? "" : source.getContent();
+            int allowed = share + bonus - heading.length() - 2;
+
+            out.append(heading);
+            if (content.length() <= allowed) {
+                out.append(content);
+            } else {
+                out.append(content, 0, Math.max(0, allowed))
+                   .append("\n[...this source was shortened to fit...]");
+            }
+            out.append("\n\n");
         }
         return out.toString().trim();
+    }
+
+    private String headingFor(KnowledgeSource source) {
+        return "--- " + source.getTitle() + " ("
+             + source.getType().getDisplayName() + ") ---\n";
     }
 
     /**

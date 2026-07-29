@@ -9,6 +9,8 @@ import hsts.common.enums.KnowledgeSourceType;
 import hsts.common.protocol.BotCreateRequest;
 import hsts.common.protocol.BotStatusRequest;
 import hsts.common.protocol.BotUsage;
+import hsts.common.protocol.PushEvent;
+import hsts.common.protocol.PushType;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
@@ -354,6 +356,30 @@ public class BotManagementController extends GUIScreen {
         switchTo("/fxml/MainMenu.fxml", true);
     }
 
+    /**
+     * A colleague changed something, or a student asked a question. NFR 18.
+     *
+     * <p>Requirement 67 lets any teacher of the course edit the bot, so two
+     * teachers can have this screen open at once - and a student asking moves the
+     * usage figures under her while she watches. Both arrive here and reload.</p>
+     *
+     * <p>The selected bot and the open exchange are kept where they can be, so a
+     * reload does not throw away what she was reading.</p>
+     */
+    @Override
+    protected void onPush(PushEvent event) {
+        if (event.getType() != PushType.BOT_CHANGED) {
+            super.onPush(event);
+            return;
+        }
+        showMessage(event.getMessage());
+        send(RequestType.BOT_LIST_MINE, null, REQ_BOTS);
+        send(RequestType.BOT_COURSES_FREE, null, REQ_COURSES);
+        if (chosenBot != null) {
+            send(RequestType.BOT_USAGE, chosenBot.getBotId(), REQ_USAGE);
+        }
+    }
+
     // -----------------------------------------------------------------
     //  Replies
     // -----------------------------------------------------------------
@@ -376,6 +402,8 @@ public class BotManagementController extends GUIScreen {
                 for (Bot b : bots) {
                     if (b.getBotId() == keep) {
                         botList.getSelectionModel().select(b);
+                        chosenBot = b;          // the reloaded copy, not the stale one
+                        showBot(b);
                         break;
                     }
                 }
@@ -494,6 +522,10 @@ public class BotManagementController extends GUIScreen {
     }
 
     private void showUsage(BotUsage usage) {
+        // Which exchange she was reading, so a reload triggered by somebody else
+        // does not close it under her.
+        BotConversation wasReading = recentList.getSelectionModel().getSelectedItem();
+
         usageStatsRow.getChildren().setAll(
                 statTile("Questions asked", String.valueOf(usage.getTotalQuestions())),
                 statTile("Students using it", String.valueOf(usage.getDistinctStudents())),
@@ -501,6 +533,15 @@ public class BotManagementController extends GUIScreen {
                         String.valueOf(usage.getCommonQuestions().size())));
         commonList.setItems(FXCollections.observableArrayList(usage.getCommonQuestions()));
         recentList.setItems(FXCollections.observableArrayList(usage.getRecent()));
+
+        if (wasReading != null) {
+            for (BotConversation c : usage.getRecent()) {
+                if (c.getConvId() == wasReading.getConvId()) {
+                    recentList.getSelectionModel().select(c);
+                    break;
+                }
+            }
+        }
         if (usage.getTotalQuestions() == 0) {
             commonList.setPlaceholder(new Label("Nobody has asked it anything yet."));
             recentList.setPlaceholder(new Label("Nothing to show yet."));

@@ -3,6 +3,8 @@ package hsts.client.gui;
 import hsts.common.entity.Bot;
 import hsts.common.entity.BotConversation;
 import hsts.common.protocol.BotQuestion;
+import hsts.common.protocol.PushEvent;
+import hsts.common.protocol.PushType;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
@@ -111,6 +113,24 @@ public class AskBotController extends GUIScreen {
         switchTo("/fxml/MainMenu.fxml", true);
     }
 
+    /**
+     * Her teacher switched a bot on or off, or deleted one. NFR 18.
+     *
+     * <p>Requirement 60 lets the teacher flip availability at any moment, and
+     * requirement 70 makes that the difference between being able to ask and not.
+     * Without this she would sit looking at "not switched on" after it had been
+     * switched on, and there is no Refresh button to press.</p>
+     */
+    @Override
+    protected void onPush(PushEvent event) {
+        if (event.getType() != PushType.BOT_AVAILABILITY_CHANGED) {
+            super.onPush(event);
+            return;
+        }
+        showMessage(event.getMessage());
+        send(RequestType.BOT_AVAILABLE, null, REQ_BOTS);
+    }
+
     // -----------------------------------------------------------------
 
     @SuppressWarnings("unchecked")
@@ -129,10 +149,25 @@ public class AskBotController extends GUIScreen {
         switch (id) {
             case REQ_BOTS -> {
                 List<Bot> bots = (List<Bot>) response.getPayload();
+                // Which course she was on. Kept by COURSE, not by bot id: her
+                // teacher may have switched to a different bot on the same course,
+                // and she should follow it rather than lose her place.
+                String wasOn = (chosenBot == null) ? null : chosenBot.getCourseCode();
+
                 botList.setItems(FXCollections.observableArrayList(bots));
                 botList.setPlaceholder(new Label("None of your courses has a study bot."));
+
                 if (bots.isEmpty()) {
+                    showNoBot();
                     showMessage(response.getMessage());
+                } else if (wasOn != null) {
+                    for (Bot b : bots) {
+                        if (wasOn.equals(b.getCourseCode())) {
+                            botList.getSelectionModel().select(b);
+                            chooseBot(b);       // status may have flipped
+                            break;
+                        }
+                    }
                 } else if (bots.size() == 1) {
                     botList.getSelectionModel().select(0);
                 }

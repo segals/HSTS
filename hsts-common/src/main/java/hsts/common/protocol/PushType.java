@@ -71,5 +71,38 @@ public enum PushType {
      * NFR 18 means she should not have to keep checking. Payload is the
      * submission id.</p>
      */
-    GRADE_APPROVED
+    GRADE_APPROVED,
+
+    /**
+     * A mark was approved, changed or factored, so any results on screen are stale.
+     *
+     * <p>Sent to the exam's <b>author</b> (requirement 59 gives her the results of
+     * exams she wrote), to the teacher who <b>released</b> the sitting, and to the
+     * principal (requirement 62). {@code GRADE_APPROVED} tells the student; this
+     * tells everybody looking at the figures.</p>
+     */
+    RESULTS_CHANGED,
+
+    /**
+     * Something about a course's bots changed. Sent to the course's <b>teachers</b>.
+     *
+     * <p>Created, renamed, switched on or off, material added or removed, deleted -
+     * or a student asked it something, which changes the usage figures. Requirement
+     * 67 lets a colleague change a bot, so her colleagues' screens must follow
+     * without a Refresh button.</p>
+     *
+     * <p><b>Never carries a student's name</b>, even when a question is what
+     * changed - requirement 75.</p>
+     */
+    BOT_CHANGED,
+
+    /**
+     * A course's bot became usable, or stopped being usable. Sent to its students.
+     *
+     * <p>Requirement 70 makes the bot available only while it is switched on, and
+     * requirement 60 lets the teacher flip that at any moment. Without this a
+     * student would sit looking at "not switched on" after it had been switched
+     * on.</p>
+     */
+    BOT_AVAILABILITY_CHANGED
 }

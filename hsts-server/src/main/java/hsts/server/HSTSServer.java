@@ -133,13 +133,13 @@ public class HSTSServer extends AbstractServer {
      */
     private IStudyBotService botService = new GeminiStudyBotService();
     private BotController botController = new BotController(
-            botDAO, courseDAO, questionDAO, submissionDAO, botService);
+            botDAO, courseDAO, questionDAO, submissionDAO, userDAO, botService, pushService);
 
     /** Used by the tests to put a stub in place of the real Gemini call. */
     public void setStudyBotService(IStudyBotService service) {
         this.botService = service;
         this.botController = new BotController(
-                botDAO, courseDAO, questionDAO, submissionDAO, service);
+                botDAO, courseDAO, questionDAO, submissionDAO, userDAO, service, pushService);
     }
 
     public IStudyBotService getStudyBotService() {

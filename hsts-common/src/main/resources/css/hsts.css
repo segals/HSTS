@@ -447,3 +447,32 @@ Label { -fx-text-fill: -hsts-text; }
 .tab-pane > * > .tab-content-area {
     -fx-background-color: -hsts-bg;
 }
+
+/* ---------- one exchange, two clearly bounded halves ------------------ */
+/*
+   The teacher's usage screen shows a question and the answer it got. Both in
+   one section - she is reading a single exchange - but each half needs its own
+   visible boundary, or a long answer reads as a continuation of the question
+   and there is no telling where either ends.
+
+   Tint plus a left rule does that without splitting them into two cards.
+*/
+.exchange-role {
+    -fx-font-size: 10.5px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -hsts-text-muted;
+}
+.exchange-question {
+    -fx-background-color: -hsts-raised;
+    -fx-background-radius: 5;
+    -fx-border-color: transparent transparent transparent -hsts-border-firm;
+    -fx-border-width: 0 0 0 3;
+    -fx-padding: 9 12 9 12;
+}
+.exchange-answer {
+    -fx-background-color: -hsts-accent-soft;
+    -fx-background-radius: 5;
+    -fx-border-color: transparent transparent transparent -hsts-accent;
+    -fx-border-width: 0 0 0 3;
+    -fx-padding: 9 12 9 12;
+}
