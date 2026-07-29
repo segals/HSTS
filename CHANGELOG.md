@@ -668,3 +668,81 @@ first. A test now covers exactly that.
 every empty row as well. Now only `:filled` cells get a divider.
 
 Also fixed "1 questions" in two places.
+
+---
+
+## Milestone 6 — releasing an exam from the drawer · 2026-07-29
+
+**Covers:** SUC-6, מתווה scenario 5, requirements 34, 35, 36, 37.
+
+### What was built
+
+| Item | Notes |
+|---|---|
+| `ExecutionCode` | The 4-character code: validation, normalising, generation |
+| `ExamExecution` | One sitting — code, window, minutes, attempts |
+| `ExecutionDAO` | Insert, lookup by code, "is this exam out of the drawer" |
+| `ExamExecutionController` | SUC-6 and all its validation |
+| `ExamReleaseRequest` | Protocol |
+| `ExamRelease.fxml` + controller | Approved exams · the form · what is already out |
+
+### Decisions made, and why
+
+**The teacher releases, not the coordinator.** The submitted class diagram put
+`releaseFromDrawer` and `setExamDates` on `ExamApprovalController`. מתווה scenario
+5 says plainly "**המורה** מגדירה מועד... **המורה** מגדירה קוד ביצוע". The
+coordinator approves; the teacher decides when her class sits it.
+
+**Any teacher of the course may release, not only the author.** Decision 4 from
+planning, and it follows from decision 5: whoever releases it marks it. Tested —
+`teacher2` can release `teacher1`'s approved exam.
+
+**Only approved versions are even offered.** Requirement 35 forbids dates on an
+unapproved version, so `listReleasable` filters on `APPROVED`. Offering an exam
+and then refusing it would be worse than not offering it. Both are enforced.
+
+**An approved version stays releasable after it is superseded.** If v1 is approved
+and the teacher then edits it into a pending v2, v1 remains releasable and v2 does
+not. What matters is the status of the *version*, not whether it is current.
+
+**Codes are unique globally, case-insensitive, and avoid lookalikes.** A student
+types four characters and nothing else, so the code must identify one sitting on
+its own; 36⁴ is over 1.6 million, so global uniqueness costs nothing. Case is
+ignored because the teacher says the code out loud. Generated codes leave out
+`O`/`0` and `I`/`1`, which are indistinguishable when spoken — though a teacher
+may still type one deliberately.
+
+**A window that has already closed is refused.** Nobody could ever start, so it is
+always a mistake — usually a month typed wrong.
+
+**Times are truncated to whole seconds before storing.** A `LocalDateTime` carries
+nanoseconds; a MySQL `DATETIME` does not and rounds them away. Left alone, the
+object returned to the client would not match the row, and the confirmation
+message would name a moment a fraction of a second off from the one saved.
+
+**The unique constraint is the last line of defence.** Two teachers releasing the
+same code in the same instant would both pass the `isCodeTaken` check; the insert
+then fails and the message tells her to press Generate.
+
+### Verified — 76 automated checks, all passing
+
+| Group | Result |
+|---|---|
+| Only approved versions are offered; pending and rejected are not | 3/3 |
+| **Requirement 35: releasing an unapproved version is refused** | 3/3 |
+| Code format: 3 chars, 5 chars, empty, null, punctuation, embedded space | 6/6 |
+| Window: close before open, close equal to open, window already past | 3/3 |
+| Duration and attempts, including the 600 / 10 boundaries | 6/6 |
+| A successful release: upper-cased code, ids, durations, zeroed counts, pinned version | 9/9 |
+| **Codes unique whatever the case; lookup is case- and space-insensitive** | 6/6 |
+| **Requirement 36: the same exam released twice gives two sittings** | 4/4 |
+| **"In the drawer" = no execution open right now** | 4/4 |
+| Who may release: wrong course, student, and a colleague who may | 6/6 |
+| A teacher's own list excludes a colleague's releases | 3/3 |
+| Suggested codes are valid, unused and varied | 2/2 |
+| `ExecutionCode` itself, including both documents' wordings | 9/9 |
+| **An approved version stays releasable after a newer draft exists** | 4/4 |
+| **Window boundaries, and stored time matches the returned object exactly** | 8/8 |
+
+Regression: M2 **48/48**, M3 **34/34**, M4 **43/43**, M5 **32/32** — **233 checks**
+across the project. All 10 screens load.

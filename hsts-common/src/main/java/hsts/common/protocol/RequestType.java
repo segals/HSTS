@@ -86,5 +86,19 @@ public enum RequestType {
     EXAM_APPROVE,
 
     /** Rejects one exam version with a mandatory reason. Payload is an {@link ExamDecision}. */
-    EXAM_REJECT
+    EXAM_REJECT,
+
+    // ---- SUC-6: releasing an exam from the drawer (milestone 6) ----
+
+    /** Approved exam versions this teacher may release. No payload. */
+    EXECUTION_RELEASABLE_EXAMS,
+
+    /** A free 4-character code the teacher can use. No payload. */
+    EXECUTION_SUGGEST_CODE,
+
+    /** Takes an approved exam out of the drawer. Payload is an {@link ExamReleaseRequest}. */
+    EXECUTION_RELEASE,
+
+    /** Everything this teacher has released. No payload. */
+    EXECUTION_LIST_MINE
 }

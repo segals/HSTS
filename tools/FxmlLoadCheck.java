@@ -56,6 +56,7 @@ public class FxmlLoadCheck {
         "/fxml/VersionHistory.fxml",
         "/fxml/ExamBuilder.fxml",
         "/fxml/ExamApproval.fxml",
+        "/fxml/ExamRelease.fxml",
         "/fxml/ServerStartup.fxml",
         "/fxml/ServerConsole.fxml",
     };

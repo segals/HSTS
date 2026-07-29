@@ -7,6 +7,7 @@ import hsts.common.protocol.Credentials;
 import hsts.common.protocol.ExamBuildCriteria;
 import hsts.common.protocol.ExamDecision;
 import hsts.common.protocol.ExamRef;
+import hsts.common.protocol.ExamReleaseRequest;
 import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
@@ -15,11 +16,13 @@ import hsts.server.boundary.IUserManagementSystem;
 import hsts.server.boundary.LocalUserManagementAdapter;
 import hsts.server.control.ExamApprovalController;
 import hsts.server.control.ExamBuilderController;
+import hsts.server.control.ExamExecutionController;
 import hsts.server.control.LoginController;
 import hsts.server.control.QuestionController;
 import hsts.server.dao.CourseDAO;
 import hsts.server.dao.DBController;
 import hsts.server.dao.ExamDAO;
+import hsts.server.dao.ExecutionDAO;
 import hsts.server.dao.QuestionDAO;
 import hsts.server.dao.UserDAO;
 import hsts.server.push.PushService;
@@ -71,6 +74,9 @@ public class HSTSServer extends AbstractServer {
             new ExamBuilderController(examDAO, questionDAO, courseDAO);
     private final ExamApprovalController examApprovalController =
             new ExamApprovalController(examDAO, userDAO, pushService);
+    private final ExecutionDAO executionDAO = new ExecutionDAO();
+    private final ExamExecutionController examExecutionController =
+            new ExamExecutionController(executionDAO, examDAO);
 
     private HSTSServer(int port) {
         super(port);
@@ -184,6 +190,17 @@ public class HSTSServer extends AbstractServer {
                         examApprovalController.approve(u, (ExamDecision) request.getPayload()));
                 case EXAM_REJECT  -> withUser(client, u ->
                         examApprovalController.reject(u, (ExamDecision) request.getPayload()));
+
+                // ---- SUC-6: releasing an exam from the drawer ----
+                case EXECUTION_RELEASABLE_EXAMS -> withUser(client, u ->
+                        examExecutionController.listReleasable(u));
+                case EXECUTION_SUGGEST_CODE     -> withUser(client, u ->
+                        examExecutionController.suggestCode(u));
+                case EXECUTION_RELEASE          -> withUser(client, u ->
+                        examExecutionController.release(u,
+                                (ExamReleaseRequest) request.getPayload()));
+                case EXECUTION_LIST_MINE        -> withUser(client, u ->
+                        examExecutionController.listMyExecutions(u));
             };
 
             // A newly saved exam goes straight into a coordinator's queue, so tell
