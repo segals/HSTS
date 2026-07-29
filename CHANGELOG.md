@@ -1437,3 +1437,139 @@ Run **twice back to back with no database reset**, identical both times. The
 factory is tested directly as well as through the screen — every `ReportType` has a
 strategy, and each strategy is checked to claim the type it is registered under, so
 a crossed wiring cannot pass as merely "not null".
+
+---
+
+## Milestone 14 — the course study bot
+
+SUC-13, SUC-14 and SUC-15 / מתווה scenarios 13 and 14. Three use cases, because
+they are one feature: a teacher builds the bot, a student uses it, and both look at
+what was asked.
+
+### The API key is not in this repository, and cannot be
+
+Read from `%USERPROFILE%\.hsts\config.properties` — outside the project folder, so
+no `git add -A` can publish it and no `.gitignore` mistake can expose it. The key is
+never logged, never put in an exception message, and never sent to a client. The
+failure messages deliberately name the endpoint **without** its query string,
+because that is what carries the key.
+
+**The key is not set yet.** `gemini.api.key` is missing from the file, so the bot
+answers with *"The study bot is not set up on the server yet"* until it is added.
+That message is deliberately distinct from *"the bot had no answer"* — one is the
+school's problem and the other is the question's.
+
+### Requirement 69 as a boundary, which is what makes it testable
+
+*"הבוט יממש API חיצוני קיים... אין צורך לפתח בוט חדש"* — use an existing external
+API. So the whole of the outside world sits behind `IStudyBotService`, exactly as
+`IUserManagementSystem` does for the user directory.
+
+That is not architecture for its own sake. **All 81 checks run with a stub in place
+of Gemini**, so every rule — who may ask, when the bot is unavailable, what is
+stored, what a teacher may see — is verified without the network, without a key, and
+without spending anything. A suite that calls a paid API is a suite nobody runs
+twice, and running twice is how this project catches order-dependence.
+
+The stub can also be told to *fail*, which is the only honest way to test
+requirement 72's "no suitable answer" message.
+
+The real adapter is not left untested either: its JSON escaping, request shape and
+reply reading are checked directly, because those are the parts that break silently
+— a subtly malformed body comes back as a 400 that looks exactly like a bad key.
+
+### Word is read properly. PDF is best-effort and says so.
+
+Requirement 68 allows PDF, Word or typed text. A bot is given **text**, so a file
+has to become text — and it happens when the file is *added*, so an unreadable one
+is refused while the teacher is still looking at the screen.
+
+- **`.docx`** is a ZIP with the text in `word/document.xml`, so it is read exactly
+  with nothing but `java.util.zip`. A `.doc` is refused by name with advice, because
+  it is not a ZIP and guessing would produce nonsense.
+- **PDF** text is normally Flate-compressed with its own font encodings, and reading
+  that properly needs a library such as PDFBox. This project has three dependencies
+  and a fourth was judged not worth it for one requirement. So the uncompressed text
+  operators are read, and when that yields nothing the file is **refused** with
+  *"paste the text in as free text, or upload a .docx version instead"*.
+
+A PDF accepted and stored as gibberish would make the bot worse while looking like
+it worked. The limit is written down rather than hidden.
+
+### Requirement 71, and why it is scoped to the course
+
+*"בזמן ביצוע בחינה פעילה, הבוט לא יהיה זמין לתלמידות הנבחנות באותו קורס"* — so a
+girl halfway through a geometry paper cannot ask the geometry bot. The poetry bot is
+no help to her and no threat, and the requirement says *"באותו קורס"*.
+
+Derived from the live `student_exam` rows rather than from a flag somebody has to
+remember to clear, so it **lifts by itself** the moment she hands in — and also if
+the clock closes her exam, or the server restarts. Tested both ways: refused while
+inside, allowed immediately after submitting.
+
+### Requirement 75: anonymised on the server, not on the screen
+
+The teacher sees how many questions, how many students *as a count*, which wordings
+repeat, and the recent questions and answers. `BotConversation.anonymise()` is
+called in the **DAO**, before the object goes onto the wire. A screen that simply
+does not draw the name would leave it sitting in the client's memory, which is not
+the same as the teacher not having it. The test asserts every row comes back with a
+null name **and** a null id.
+
+### Small decisions worth defending
+
+- A bot **starts switched off** and **cannot be switched on with nothing to read** —
+  requirement 70 would otherwise let a student interrogate a bot that knows nothing.
+- Removing the last piece of material **switches the bot off by itself**, for the
+  same reason.
+- One bot per course, enforced by a UNIQUE key on `bot.course_code`. That is
+  requirement 67 in the data model: a second teacher must add to the existing bot,
+  so there must not be a second bot for her to add to instead. The refusal names the
+  existing bot and who made it.
+- The material list shows **who added each piece**, which is how requirement 67
+  becomes visible rather than merely permitted.
+- Context sent to the model is capped at 30,000 characters. Without the cap a large
+  upload would push the question itself out of the request, and the failure would
+  look like the bot being stupid rather than the request being too big.
+
+### The validation loop caught one fault — in the test, and the product was right
+
+`M14Test` passed 81/81 alone and failed three checks when run after the other
+suites. The cause: M7 and M8 deliberately leave students **mid-exam in course 01** to
+test the still-sitting state, and this suite picked "the first few enrolled
+students" — which was one of them. Requirement 71 then blocked her from the bot,
+**correctly**, and three checks failed for a reason that had nothing to do with what
+they were testing.
+
+The product behaved exactly as specified. The helper now asks for students who are
+enrolled *and not currently inside one of that course's exams*, and throws a clear
+error rather than a `NullPointerException` if it cannot find enough.
+
+This is the third time this project has hit the same shape of mistake: a test
+assuming a clean database. The first was M6/M7/M8's hard-coded execution codes, the
+second was M9's "not enrolled here means has sat nothing".
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| M2 | 48/48 |
+| M3 | 34/34 |
+| M4 | 43/43 |
+| M5 | 32/32 |
+| M6 | 76/76 |
+| M7 | 55/55 |
+| M8 | 33/33 |
+| M9 | 75/75 |
+| M10 | 43/43 |
+| M11 | 57/57 |
+| M13 | 82/82 |
+| **M14 (new)** | **81/81** |
+| **Total** | **659 checks** |
+| Screens | 19/19 load |
+
+Run **twice back to back with no database reset**, identical both times.
+
+**Still to do before this milestone can be demonstrated live:** the Gemini API key
+must be added to `%USERPROFILE%\.hsts\config.properties` as `gemini.api.key=...`.
+Everything else works now.

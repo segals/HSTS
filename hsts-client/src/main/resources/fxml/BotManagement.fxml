@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    SUC-13 / SUC-15 (teacher's half) / מתווה scenarios 13 and 14.
+
+      13: "מורה יכולה ליצור בוט לימוד עבור קורס ולהגדיר לו מקורות מידע.
+           ניתן לערוך את מקורות המידע.
+           מורים אחרים בקורס יכולים לערוך את מקורות המידע."
+      14 item 3: "מורה יכולה לצפות בהיסטוריה הכללית של השאלות ללא זיהוי המשתמשים."
+
+    Requirement 66 fixes what a bot is defined by: a name, a course, and its
+    knowledge sources. Requirement 68 fixes the sources: the question bank,
+    a PDF, a Word document, or typed text.
+
+    Requirement 60 is the on/off switch. A bot with no material cannot be
+    switched on - the server refuses it, because a bot that knows nothing is
+    worse than one that is honestly off.
+
+    The USAGE tab is requirement 75, and there is nowhere on it for a name.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.BotManagementController"
+      spacing="0" prefWidth="1240" prefHeight="800" minWidth="1000" minHeight="640">
+
+    <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="Course study bot" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
+        </VBox>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
+    </HBox>
+
+    <HBox spacing="14" VBox.vgrow="ALWAYS">
+        <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
+
+        <!-- ===================== left: the bots ===================== -->
+        <VBox spacing="12" prefWidth="330" minWidth="290">
+            <VBox styleClass="card" spacing="8" VBox.vgrow="ALWAYS">
+                <Label text="BOTS ON YOUR COURSES" styleClass="section-title" wrapText="true"/>
+                <ListView fx:id="botList" VBox.vgrow="ALWAYS"/>
+                <HBox spacing="7">
+                    <Button fx:id="onButton" text="Turn on" onAction="#onActivate"
+                            styleClass="primary" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="offButton" text="Turn off" onAction="#onDeactivate"
+                            maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                </HBox>
+            </VBox>
+
+            <VBox styleClass="card" spacing="8">
+                <Label text="CREATE A BOT" styleClass="section-title" wrapText="true"/>
+                <ComboBox fx:id="courseBox" maxWidth="Infinity"
+                          promptText="A course of yours with no bot yet"/>
+                <TextField fx:id="botNameField" promptText="What the bot is called"/>
+                <Button fx:id="createButton" text="Create" onAction="#onCreate"
+                        maxWidth="Infinity"/>
+                <Label text="A new bot starts switched off. Give it something to read first."
+                       styleClass="caption" wrapText="true"/>
+            </VBox>
+        </VBox>
+
+        <!-- ===================== right: sources and usage ===================== -->
+        <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS" minWidth="560">
+            <VBox spacing="3">
+                <Label fx:id="botTitleLabel" styleClass="h3" wrapText="true"
+                       maxWidth="Infinity"/>
+                <Label fx:id="botMetaLabel" styleClass="caption" wrapText="true"
+                       maxWidth="Infinity"/>
+            </VBox>
+
+            <TabPane fx:id="tabs" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
+
+                <Tab text="What it reads">
+                    <VBox spacing="12">
+                        <padding><Insets top="12" right="4" bottom="4" left="4"/></padding>
+
+                        <VBox spacing="6">
+                            <HBox alignment="CENTER_LEFT" spacing="8">
+                                <Label text="MATERIAL" styleClass="section-title"
+                                       wrapText="true"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Button fx:id="removeSourceButton" text="Remove selected"
+                                        onAction="#onRemoveSource" styleClass="quiet"/>
+                            </HBox>
+                            <ListView fx:id="sourceList" prefHeight="220"/>
+                        </VBox>
+
+                        <VBox spacing="7">
+                            <Label text="ADD MATERIAL" styleClass="section-title"
+                                   wrapText="true"/>
+                            <HBox spacing="8" alignment="CENTER_LEFT">
+                                <Button fx:id="addBankButton" text="The course question bank"
+                                        onAction="#onAddQuestionBank"/>
+                                <Button fx:id="addWordButton" text="A Word file..."
+                                        onAction="#onAddWord"/>
+                                <Button fx:id="addPdfButton" text="A PDF file..."
+                                        onAction="#onAddPdf"/>
+                            </HBox>
+
+                            <Label text="OR TYPE IT IN" styleClass="section-title"
+                                   wrapText="true"/>
+                            <TextField fx:id="textTitleField"
+                                       promptText="A title for this text"/>
+                            <TextArea fx:id="textArea" prefRowCount="5" wrapText="true"
+                                      promptText="Notes, a summary, key formulas - anything the bot should know"/>
+                            <HBox spacing="8" alignment="CENTER_LEFT">
+                                <Button fx:id="addTextButton" text="Add this text"
+                                        onAction="#onAddText"/>
+                                <Label fx:id="uploadNoteLabel" styleClass="caption"
+                                       wrapText="true" HBox.hgrow="ALWAYS"
+                                       maxWidth="Infinity"/>
+                            </HBox>
+                        </VBox>
+                    </VBox>
+                </Tab>
+
+                <Tab text="How it is used">
+                    <ScrollPane fitToWidth="true">
+                        <VBox spacing="14">
+                            <padding><Insets top="12" right="10" bottom="10" left="4"/></padding>
+
+                            <Label text="Requirement 75: how many questions and which are common. No names, and none are sent to this screen."
+                                   styleClass="caption" wrapText="true"/>
+
+                            <HBox fx:id="usageStatsRow" spacing="10"/>
+
+                            <VBox spacing="6">
+                                <Label text="MOST-ASKED QUESTIONS" styleClass="section-title"
+                                       wrapText="true"/>
+                                <ListView fx:id="commonList" prefHeight="170"/>
+                            </VBox>
+
+                            <VBox spacing="6">
+                                <Label text="RECENT QUESTIONS AND ANSWERS"
+                                       styleClass="section-title" wrapText="true"/>
+                                <ListView fx:id="recentList" prefHeight="230"/>
+                            </VBox>
+                        </VBox>
+                    </ScrollPane>
+                </Tab>
+            </TabPane>
+
+            <Label fx:id="statusLabel" wrapText="true" text=" "
+                   styleClass="status" maxWidth="Infinity"/>
+        </VBox>
+    </HBox>
+
+</VBox>

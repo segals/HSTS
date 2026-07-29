@@ -218,5 +218,39 @@ public enum RequestType {
     REPORT_SUBJECTS,
 
     /** Builds one report. Payload is a {@link ReportRequest}. */
-    REPORT_GENERATE
+    REPORT_GENERATE,
+
+    // ---- SUC-13: the teacher builds a course bot (milestone 14) ----
+
+    /** The bots of the courses she teaches. No payload. */
+    BOT_LIST_MINE,
+
+    /** Courses she teaches that have no bot yet. No payload. */
+    BOT_COURSES_FREE,
+
+    /** Creates a bot. Payload is a {@link BotCreateRequest}. */
+    BOT_CREATE,
+
+    /** Turns a bot on or off. Payload is a {@link BotStatusRequest}. */
+    BOT_SET_STATUS,
+
+    /** Adds material for the bot to read. Payload is a {@link SourceRequest}. */
+    BOT_ADD_SOURCE,
+
+    /** Removes one piece of material. Payload is the source id. */
+    BOT_REMOVE_SOURCE,
+
+    /** Usage figures, with no identities. Payload is the bot id. */
+    BOT_USAGE,
+
+    // ---- SUC-14 / SUC-15: the student uses it (milestone 14) ----
+
+    /** The bots of the courses she is enrolled in. No payload. */
+    BOT_AVAILABLE,
+
+    /** Asks a question. Payload is a {@link BotQuestion}. */
+    BOT_ASK,
+
+    /** Her own question history. No payload. */
+    BOT_MY_HISTORY
 }

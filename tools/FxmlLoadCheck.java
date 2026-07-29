@@ -64,6 +64,8 @@ public class FxmlLoadCheck {
         "/fxml/TeacherReports.fxml",
         "/fxml/PrincipalBrowse.fxml",
         "/fxml/Reports.fxml",
+        "/fxml/BotManagement.fxml",
+        "/fxml/AskBot.fxml",
         "/fxml/ServerStartup.fxml",
         "/fxml/ServerConsole.fxml",
     };

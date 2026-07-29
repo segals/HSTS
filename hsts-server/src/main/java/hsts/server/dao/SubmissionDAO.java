@@ -189,6 +189,35 @@ public class SubmissionDAO implements IDAO<StudentExam, Integer> {
         }
     }
 
+    /**
+     * True while this student is inside an exam belonging to that course.
+     *
+     * <p>Requirement 71: <i>"בזמן ביצוע בחינה פעילה, הבוט לא יהיה זמין לתלמידות
+     * הנבחנות באותו קורס"</i> - the bot is unavailable to a student sitting an exam
+     * <b>in that course</b>. Scoped to the course because that is what the
+     * requirement says: a girl halfway through a geometry paper must not be able to
+     * ask the geometry bot, but the poetry bot is no help to her and no threat.</p>
+     *
+     * <p>Derived from the live rows rather than from a flag somebody has to
+     * remember to clear. A student whose exam was closed by the clock, or by the
+     * server restarting, is no longer in progress and the bot comes back by itself.</p>
+     */
+    public boolean isSittingAnExamIn(String studentId, String courseCode)
+            throws SQLException {
+        String sql = """
+            SELECT COUNT(*) FROM student_exam s
+            JOIN exam_execution x ON x.execution_id = s.execution_id
+            JOIN exam e ON e.exam_id = x.exam_id AND e.version = x.exam_version
+            WHERE s.student_id = ? AND s.status = 'IN_PROGRESS' AND e.course_code = ?""";
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            ps.setString(2, courseCode);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
     /** Every attempt still running - what the clock service watches. */
     public List<StudentExam> findAllInProgress() throws SQLException {
         List<StudentExam> list = new ArrayList<>();

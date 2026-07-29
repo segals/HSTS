@@ -18,9 +18,15 @@ import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
+import hsts.common.protocol.BotCreateRequest;
+import hsts.common.protocol.BotQuestion;
+import hsts.common.protocol.BotStatusRequest;
 import hsts.common.protocol.ReportRequest;
+import hsts.common.protocol.SourceRequest;
 import hsts.common.protocol.ResultsQuery;
 import hsts.common.enums.ReportType;
+import hsts.server.boundary.GeminiStudyBotService;
+import hsts.server.boundary.IStudyBotService;
 import hsts.server.boundary.IUserManagementSystem;
 import hsts.server.boundary.LocalUserManagementAdapter;
 import hsts.server.control.ExamApprovalController;
@@ -28,6 +34,7 @@ import hsts.server.control.ExamBuilderController;
 import hsts.server.control.ExamExecutionController;
 import hsts.server.control.GradingController;
 import hsts.server.control.LiveExamController;
+import hsts.server.control.BotController;
 import hsts.server.control.PrincipalController;
 import hsts.server.control.ReportController;
 import hsts.server.control.ResultsViewController;
@@ -41,6 +48,7 @@ import hsts.server.dao.DBController;
 import hsts.server.dao.ExamDAO;
 import hsts.server.dao.ExecutionDAO;
 import hsts.server.dao.GradeDAO;
+import hsts.server.dao.BotDAO;
 import hsts.server.dao.SubmissionDAO;
 import hsts.server.dao.QuestionDAO;
 import hsts.server.dao.UserDAO;
@@ -115,6 +123,28 @@ public class HSTSServer extends AbstractServer {
     private final ReportFactory reportFactory =
             new ReportFactory(examDAO, gradeDAO, userDAO, courseDAO);
     private final ReportController reportController = new ReportController(reportFactory);
+    private final BotDAO botDAO = new BotDAO();
+
+    /**
+     * Requirement 69: the external answering service, behind a boundary interface.
+     *
+     * <p>Swappable so the automated suites can run every bot rule without the
+     * network or an API key - see {@link IStudyBotService}.</p>
+     */
+    private IStudyBotService botService = new GeminiStudyBotService();
+    private BotController botController = new BotController(
+            botDAO, courseDAO, questionDAO, submissionDAO, botService);
+
+    /** Used by the tests to put a stub in place of the real Gemini call. */
+    public void setStudyBotService(IStudyBotService service) {
+        this.botService = service;
+        this.botController = new BotController(
+                botDAO, courseDAO, questionDAO, submissionDAO, service);
+    }
+
+    public IStudyBotService getStudyBotService() {
+        return botService;
+    }
 
     private HSTSServer(int port) {
         super(port);
@@ -333,6 +363,32 @@ public class HSTSServer extends AbstractServer {
                         reportController.listSubjects(u, (ReportType) request.getPayload()));
                 case REPORT_GENERATE -> withUser(client, u ->
                         reportController.generate(u, (ReportRequest) request.getPayload()));
+
+                // ---- SUC-13 / SUC-14 / SUC-15: the course study bot ----
+                case BOT_LIST_MINE     -> withUser(client, u ->
+                        botController.listMyBots(u));
+                case BOT_COURSES_FREE  -> withUser(client, u ->
+                        botController.listCoursesWithoutBot(u));
+                case BOT_CREATE        -> withUser(client, u -> {
+                        BotCreateRequest c = (BotCreateRequest) request.getPayload();
+                        return botController.createBot(u, c.getCourseCode(), c.getName());
+                    });
+                case BOT_SET_STATUS    -> withUser(client, u -> {
+                        BotStatusRequest c = (BotStatusRequest) request.getPayload();
+                        return botController.setStatus(u, c.getBotId(), c.getStatus());
+                    });
+                case BOT_ADD_SOURCE    -> withUser(client, u ->
+                        botController.addSource(u, (SourceRequest) request.getPayload()));
+                case BOT_REMOVE_SOURCE -> withUser(client, u ->
+                        botController.removeSource(u, (Integer) request.getPayload()));
+                case BOT_USAGE         -> withUser(client, u ->
+                        botController.getUsage(u, (Integer) request.getPayload()));
+                case BOT_AVAILABLE     -> withUser(client, u ->
+                        botController.listAvailableBots(u));
+                case BOT_ASK           -> withUser(client, u ->
+                        botController.ask(u, (BotQuestion) request.getPayload()));
+                case BOT_MY_HISTORY    -> withUser(client, u ->
+                        botController.myHistory(u));
             };
 
             // A newly saved exam goes straight into a coordinator's queue, so tell

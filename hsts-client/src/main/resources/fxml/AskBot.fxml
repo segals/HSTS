@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    SUC-14 and the student's half of SUC-15 / מתווה scenario 14.
+
+      "תלמידה יכולה להשתמש בבוט של הקורס רק אם היא רשומה לקורס והבוט זמין.
+       תלמידה יכולה לצפות בהיסטוריית השאלות שלה."
+      note: "הבוט אינו זמין בזמן ביצוע בחינה."
+
+    One screen for both, because asking and reading back what you asked are the
+    same activity. Requirement 74 wants the question, the answer and the time,
+    and all three are in the history list.
+
+    Requirement 70 (enrolled AND active) and requirement 71 (not while she is
+    sitting that course's exam) are enforced on the SERVER. This screen shows
+    which bots exist and reports whatever refusal comes back - it does not
+    decide anything itself.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.AskBotController"
+      spacing="0" prefWidth="1120" prefHeight="760" minWidth="900" minHeight="600">
+
+    <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="Course study bot" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
+        </VBox>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
+    </HBox>
+
+    <HBox spacing="14" VBox.vgrow="ALWAYS">
+        <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
+
+        <VBox spacing="12" prefWidth="310" minWidth="270">
+            <VBox styleClass="card" spacing="8">
+                <Label text="YOUR COURSE BOTS" styleClass="section-title" wrapText="true"/>
+                <ListView fx:id="botList" prefHeight="200"/>
+            </VBox>
+            <VBox styleClass="card" spacing="8" VBox.vgrow="ALWAYS">
+                <Label text="WHAT YOU HAVE ASKED" styleClass="section-title" wrapText="true"/>
+                <ListView fx:id="historyList" VBox.vgrow="ALWAYS"/>
+                <Label text="Only you can see this. Your teacher sees how many questions were asked, not who asked them."
+                       styleClass="caption" wrapText="true"/>
+            </VBox>
+        </VBox>
+
+        <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS" minWidth="520">
+            <VBox spacing="3">
+                <Label fx:id="botTitleLabel" styleClass="h3" wrapText="true"
+                       maxWidth="Infinity"/>
+                <Label fx:id="botMetaLabel" styleClass="caption" wrapText="true"
+                       maxWidth="Infinity"/>
+            </VBox>
+
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                <VBox fx:id="answerBox" spacing="10">
+                    <padding><Insets top="12" right="10" bottom="12" left="0"/></padding>
+                </VBox>
+            </ScrollPane>
+
+            <VBox spacing="8">
+                <padding><Insets top="10"/></padding>
+                <Label text="YOUR QUESTION" styleClass="section-title" wrapText="true"/>
+                <TextArea fx:id="questionArea" prefRowCount="3" wrapText="true"
+                          promptText="Ask about anything on the course"
+                          maxWidth="Infinity"/>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Button fx:id="askButton" text="Ask" onAction="#onAsk"
+                            styleClass="primary" prefWidth="140"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="hintLabel" styleClass="caption" wrapText="true"/>
+                </HBox>
+                <Label fx:id="statusLabel" wrapText="true" text=" "
+                       styleClass="status" maxWidth="Infinity"/>
+            </VBox>
+        </VBox>
+    </HBox>
+
+</VBox>

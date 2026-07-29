@@ -138,7 +138,8 @@ public class MainMenuController extends GUIScreen {
                                       "/fxml/TeacherReports.fxml"));
             entries.add(new MenuEntry("My reports",              "milestone 13",
                                       "/fxml/Reports.fxml"));
-            entries.add(new MenuEntry("Course study bot",        "milestone 14", null));
+            entries.add(new MenuEntry("Course study bot",        "milestone 14",
+                                      "/fxml/BotManagement.fxml"));
         }
 
         if (user instanceof SubjectCoordinator) {
@@ -149,8 +150,10 @@ public class MainMenuController extends GUIScreen {
         if (user instanceof Student) {
             entries.add(new MenuEntry("Take an exam",            "milestone 7",  "/fxml/TakeExam.fxml"));
             entries.add(new MenuEntry("My grades",               "milestone 10", "/fxml/StudentResults.fxml"));
-            entries.add(new MenuEntry("Ask the course bot",      "milestone 14", null));
-            entries.add(new MenuEntry("My bot history",          "milestone 14", null));
+            // SUC-14 and SUC-15 are one screen for a student: asking and reading
+            // back what she asked are the same activity, and the history is on it.
+            entries.add(new MenuEntry("Course study bot",        "milestone 14",
+                                      "/fxml/AskBot.fxml"));
         }
 
         if (user instanceof Principal) {
