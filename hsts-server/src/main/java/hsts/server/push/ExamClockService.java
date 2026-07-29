@@ -49,6 +49,9 @@ public class ExamClockService {
     private ScheduledExecutorService ticker;
     private Consumer<String> logSink = message -> { };
 
+    /** Told (executionId, description) whenever the clock closes somebody's exam. */
+    private java.util.function.BiConsumer<Integer, String> onExamClosed = (id, what) -> { };
+
     public ExamClockService(SubmissionDAO submissionDAO, PushService pushService) {
         this.submissionDAO = submissionDAO;
         this.pushService = pushService;
@@ -56,6 +59,11 @@ public class ExamClockService {
 
     public void setLogSink(Consumer<String> sink) {
         this.logSink = (sink == null) ? message -> { } : sink;
+    }
+
+    /** Registers who to tell when an exam is closed automatically. */
+    public void setOnExamClosed(java.util.function.BiConsumer<Integer, String> listener) {
+        this.onExamClosed = (listener == null) ? (id, what) -> { } : listener;
     }
 
     /** Starts ticking. Safe to call twice. */
@@ -139,6 +147,9 @@ public class ExamClockService {
         logSink.accept("Time up: " + attempt.getStudentName()
                      + " on exam " + attempt.getExamId()
                      + " (attempt " + attempt.getAttemptNo() + ") - closed automatically.");
+
+        onExamClosed.accept(attempt.getExecutionId(),
+                attempt.getStudentName() + " ran out of time.");
 
         pushService.toUsername(attempt.getStudentUsername(), new PushEvent(
                 PushType.EXAM_AUTO_SUBMITTED,

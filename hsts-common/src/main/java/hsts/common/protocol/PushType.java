@@ -45,5 +45,22 @@ public enum PushType {
      * <p>Requirement 45 and acceptance test 2.6: whatever she had entered is
      * saved and the paper is closed for her.</p>
      */
-    EXAM_AUTO_SUBMITTED
+    EXAM_AUTO_SUBMITTED,
+
+    /**
+     * The teacher changed how long this sitting is allowed to run.
+     *
+     * <p>Acceptance test 2.7: the student's countdown moves <em>by itself</em>.
+     * Payload is the new seconds remaining, so the screen does not have to work
+     * anything out - it is told.</p>
+     */
+    EXAM_TIME_CHANGED,
+
+    /**
+     * Somebody started or handed in, so the teacher's live view is out of date.
+     *
+     * <p>Sent to the teacher who released the sitting. NFR 18 forbids a Refresh
+     * button on her screen just as much as on a student's.</p>
+     */
+    EXAM_LIVE_STATUS
 }

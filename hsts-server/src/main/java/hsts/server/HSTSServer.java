@@ -10,6 +10,7 @@ import hsts.common.protocol.ExamRef;
 import hsts.common.protocol.AnswerChoice;
 import hsts.common.protocol.ExamReleaseRequest;
 import hsts.common.protocol.StartExamRequest;
+import hsts.common.protocol.TimeChangeRequest;
 import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
@@ -19,6 +20,7 @@ import hsts.server.boundary.LocalUserManagementAdapter;
 import hsts.server.control.ExamApprovalController;
 import hsts.server.control.ExamBuilderController;
 import hsts.server.control.ExamExecutionController;
+import hsts.server.control.LiveExamController;
 import hsts.server.control.TakeExamController;
 import hsts.server.control.LoginController;
 import hsts.server.control.QuestionController;
@@ -86,6 +88,8 @@ public class HSTSServer extends AbstractServer {
     private final TakeExamController takeExamController =
             new TakeExamController(executionDAO, submissionDAO, examDAO);
     private final ExamClockService examClock = new ExamClockService(submissionDAO, pushService);
+    private final LiveExamController liveExamController =
+            new LiveExamController(executionDAO, submissionDAO, userDAO, pushService);
 
     private HSTSServer(int port) {
         super(port);
@@ -223,6 +227,14 @@ public class HSTSServer extends AbstractServer {
                         takeExamController.submitExam(u, (Integer) request.getPayload()));
                 case TAKE_RESUME        -> withUser(client, u ->
                         takeExamController.resumeInProgress(u, (Integer) request.getPayload()));
+
+                // ---- SUC-8: managing a sitting while it runs ----
+                case LIVE_RUNNING_NOW -> withUser(client, u ->
+                        liveExamController.listRunningNow(u));
+                case LIVE_STATUS      -> withUser(client, u ->
+                        liveExamController.getLiveStatus(u, (Integer) request.getPayload()));
+                case LIVE_CHANGE_TIME -> withUser(client, u ->
+                        liveExamController.changeTime(u, (TimeChangeRequest) request.getPayload()));
             };
 
             // A newly saved exam goes straight into a coordinator's queue, so tell
@@ -232,6 +244,18 @@ public class HSTSServer extends AbstractServer {
             if (request.getType() == RequestType.EXAM_SAVE
                     && response.isOk() && response.getPayload() instanceof Exam saved) {
                 examApprovalController.notifyCoordinatorOfNewExam(saved);
+            }
+
+            // A student starting or handing in changes what the teacher's live
+            // view should show, so tell her rather than leaving her to refresh.
+            if (response.isOk()
+                    && (request.getType() == RequestType.TAKE_START
+                     || request.getType() == RequestType.TAKE_SUBMIT)
+                    && response.getPayload() instanceof hsts.common.entity.StudentExam attempt) {
+                liveExamController.notifyTeacherOfActivity(attempt.getExecutionId(),
+                        attempt.getStudentName() + " "
+                        + (request.getType() == RequestType.TAKE_START
+                           ? "started the exam." : "handed in."));
             }
         } catch (Exception e) {
             log("FAILED to handle " + request.getType() + ": " + e);
@@ -344,6 +368,7 @@ public class HSTSServer extends AbstractServer {
         // The clock has to run whenever the server does: a student's exam must
         // close on time even if nobody happens to be looking at a screen.
         examClock.setLogSink(this::log);
+        examClock.setOnExamClosed(liveExamController::notifyTeacherOfActivity);
         examClock.start();
     }
 

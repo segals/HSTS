@@ -876,3 +876,79 @@ have described a window ending before it started.
 | Requirement 48: started / finished / timed-out counts | 3/3 |
 
 Regression: **287 checks** across the project, 11/11 screens load.
+
+---
+
+## Milestone 8 — managing a sitting while it runs · 2026-07-29
+
+**Covers:** SUC-8, מתווה scenario 7, requirements 47 and 48, **acceptance test 2.7**.
+
+### What was built
+
+| Item | Notes |
+|---|---|
+| `LiveExamController` | Watch a sitting; change its time mid-exam |
+| `TimeChangeRequest` | A *delta*, not a new total |
+| `PushType.EXAM_TIME_CHANGED` | The student's countdown moves by itself |
+| `PushType.EXAM_LIVE_STATUS` | The teacher's view updates by itself |
+| `TeacherLiveExam.fxml` + controller | Running sittings · time controls · who is inside |
+| `ExamClockService.setOnExamClosed` | An automatic close also updates the teacher |
+
+### Acceptance test 2.7, working
+
+> *"מורה מגדירה תוספת של 15 דקות... תצוגת הטיימר אצל התלמידה קופצת אוטומטית"*
+
+Two machines, nobody pressing anything on the student's, and her countdown jumps.
+The test asserts the push arrives, that it carries her **new** remaining seconds,
+and that her deadline really moved by exactly 15 minutes in the database.
+
+### Decisions worth defending
+
+**The change is a delta, not a new total.** A teacher thinks "give them another
+quarter of an hour", not "make it 105 minutes". More importantly, students start
+at different moments — moving each one's *own* deadline by the same amount is the
+only change that treats them alike. A new total would silently give a late starter
+more than an early one, or less.
+
+**Requirement 47 is honoured exactly: the exam itself is untouched.** The change
+lands on `exam_execution.allocated_duration` and on each running student's
+deadline. `exam.duration_minutes` is unchanged, so the next class to sit the same
+paper is unaffected — "השינוי הוא זמני ותקף רק לביצוע הנוכחי". There is a test
+that reads the exam row back and asserts it still says 60.
+
+**Taking time away is allowed, but not enough to end somebody instantly.**
+Requirement 47 says *change*, not only *extend*. But a reduction that pushes a
+student's deadline into the past would close her exam on the very next tick, with
+no warning and no chance to hand in. That is refused, and the message names the
+student it would have affected.
+
+**A sitting stays on the teacher's screen while anyone is still inside**, even
+after its window has closed. That follows directly from decision 8: a student who
+started near the end keeps her full time, so the teacher must keep seeing her —
+and must still be able to give her more.
+
+**The teacher's view has no Refresh button either.** NFR 18 applies to her screen
+just as much as to a student's, so starting and handing in are pushed to her — as
+is an automatic close, via a callback from the clock service.
+
+**Her selection survives a reload.** The list refreshes whenever any student acts;
+losing the selected sitting each time would make the screen unusable in a room of
+thirty.
+
+### Verified — 33 automated checks, all passing
+
+| Group | Result |
+|---|---|
+| Permissions: student, and a teacher who did not release it | 4/4 |
+| The running list and the student list | 3/3 |
+| Rejected changes: zero, absurd, and more than she has left | 3/3 |
+| **Acceptance test 2.7: the push arrives with her new seconds** | 4/4 |
+| **Her deadline moved by exactly 15 minutes in the database** | 1/1 |
+| **Requirement 47: the allowance changed, the exam did not** | 4/4 |
+| A student starting afterwards gets the new allowance | 1/1 |
+| Taking time back, also pushed | 4/4 |
+| **The teacher is told when a student starts and hands in** | 2/2 |
+| Counts: started / still working / finished | 3/3 |
+| A closed window stays visible while somebody is inside | 2/2 |
+
+Regression: **320 checks** across the project, 12/12 screens load.

@@ -132,7 +132,7 @@ public class MainMenuController extends GUIScreen {
             entries.add(new MenuEntry("Question bank",           "milestone 3",  "/fxml/QuestionMgmt.fxml"));
             entries.add(new MenuEntry("Build an exam",           "milestone 4",  "/fxml/ExamBuilder.fxml"));
             entries.add(new MenuEntry("Release an exam",         "milestone 6",  "/fxml/ExamRelease.fxml"));
-            entries.add(new MenuEntry("Exams running now",       "milestone 8",  null));
+            entries.add(new MenuEntry("Exams running now",       "milestone 8",  "/fxml/TeacherLiveExam.fxml"));
             entries.add(new MenuEntry("Mark and approve grades", "milestone 9",  null));
             entries.add(new MenuEntry("Results and histogram",   "milestone 11", null));
             entries.add(new MenuEntry("My reports",              "milestone 13", null));

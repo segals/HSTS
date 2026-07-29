@@ -117,5 +117,16 @@ public enum RequestType {
     TAKE_SUBMIT,
 
     /** Reloads an attempt still in progress. Payload is the submission id. */
-    TAKE_RESUME
+    TAKE_RESUME,
+
+    // ---- SUC-8: managing a sitting while it runs (milestone 8) ----
+
+    /** The teacher's sittings that are open right now. No payload. */
+    LIVE_RUNNING_NOW,
+
+    /** Who is sitting one execution and how far they have got. Payload is the execution id. */
+    LIVE_STATUS,
+
+    /** Changes the time allowed, mid-exam. Payload is a {@link TimeChangeRequest}. */
+    LIVE_CHANGE_TIME
 }

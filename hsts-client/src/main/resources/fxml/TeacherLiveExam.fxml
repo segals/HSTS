@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    SUC-8 / מתווה scenario 7: watching a sitting and changing its time while it runs.
+
+    Requirement 47 lets a teacher change the time allowed "לביצוע הנוכחי בלבד" -
+    for this sitting only. Acceptance test 2.7 then requires every student's
+    countdown to move BY ITSELF.
+
+    There is no Refresh button on this screen. Students starting and handing in
+    arrive as pushes, which is what NFR 18 asks for.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.TeacherLiveExamController"
+      spacing="0" prefWidth="1060" prefHeight="700" minWidth="880" minHeight="560">
+
+    <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="Exams running now" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
+        </VBox>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
+    </HBox>
+
+    <HBox spacing="16" VBox.vgrow="ALWAYS">
+        <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
+
+        <VBox styleClass="card" spacing="10" prefWidth="330" minWidth="280">
+            <Label text="RUNNING NOW" styleClass="section-title" wrapText="true"/>
+            <ListView fx:id="executionList" VBox.vgrow="ALWAYS"/>
+            <Label text="A sitting stays here while anyone is still inside it, even after its window has closed."
+                   styleClass="caption" wrapText="true"/>
+        </VBox>
+
+        <VBox styleClass="card" spacing="12" HBox.hgrow="ALWAYS" minWidth="440">
+            <VBox spacing="3">
+                <Label fx:id="chosenLabel" styleClass="h3" wrapText="true"/>
+                <Label fx:id="chosenMetaLabel" styleClass="caption" wrapText="true"/>
+            </VBox>
+
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="CHANGE THE TIME ALLOWED" styleClass="section-title" wrapText="true"/>
+            </HBox>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Spinner fx:id="minutesSpinner" editable="true" prefWidth="110"/>
+                <Label text="minutes" wrapText="true"/>
+                <Button fx:id="addButton" text="Give extra time" onAction="#onAddTime"
+                        styleClass="primary"/>
+                <Button fx:id="removeButton" text="Take time away" onAction="#onRemoveTime"
+                        styleClass="danger"/>
+                <Region HBox.hgrow="ALWAYS"/>
+            </HBox>
+            <Label text="This applies to this sitting only - the exam itself is not changed. Every student already inside sees her own timer move at once."
+                   styleClass="caption" wrapText="true"/>
+
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="STUDENTS" styleClass="section-title" wrapText="true"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="countsLabel" styleClass="caption" wrapText="true"/>
+            </HBox>
+            <ListView fx:id="studentList" VBox.vgrow="ALWAYS"/>
+
+            <Label fx:id="statusLabel" wrapText="true" text=" "
+                   styleClass="status" maxWidth="Infinity"/>
+        </VBox>
+    </HBox>
+
+</VBox>

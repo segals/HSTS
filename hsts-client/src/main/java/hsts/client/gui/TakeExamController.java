@@ -107,6 +107,14 @@ public class TakeExamController extends GUIScreen {
                     showRemaining(seconds);
                 }
             }
+            case EXAM_TIME_CHANGED -> {
+                // Acceptance test 2.7: the countdown moves by itself, with nobody
+                // pressing anything on this machine.
+                if (event.getPayload() instanceof Long seconds) {
+                    showRemaining(seconds);
+                }
+                showSuccess(event.getMessage());
+            }
             case EXAM_AUTO_SUBMITTED -> {
                 // Requirement 45 / acceptance test 2.6.
                 lockPaper();
