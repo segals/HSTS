@@ -120,7 +120,8 @@ public class ExamBuilderController extends GUIScreen {
 
         useWrappingCells(examList, e ->
                 e.getExamId() + "  ·  v" + e.getVersion() + "  ·  " + e.getStatus().getDisplayName()
-              + "\n" + e.getQuestionCount() + " questions  ·  " + e.getDurationMinutes() + " min");
+              + "\n" + e.getQuestionCount() + (e.getQuestionCount() == 1 ? " question" : " questions")
+              + "  ·  " + e.getDurationMinutes() + " min");
 
         modeGroup.selectedToggleProperty().addListener((obs, old, mode) -> {
             boolean automatic = mode == automaticRadio;

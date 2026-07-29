@@ -638,3 +638,33 @@ approval exists at all.
 | **A push to an offline user is harmless — the decision still succeeds** | 2/2 |
 
 Regression: M2 **48/48**, M3 **34/34**, M4 **43/43**. All 9 screens load.
+
+### Two bugs found by clicking through milestone 5
+
+**1. The coordinator could see an exam but not open it.**
+
+Selecting an exam in the approval queue left the detail pane empty, and pressing
+Approve then said "Select an exam from the list first."
+
+*Cause:* `EXAM_GET` checked "do you teach this course". A subject coordinator
+approves every exam in her **subject**, and does not necessarily teach the course
+it belongs to — coordinator 1 coordinates Mathematics and teaches Algebra, while
+the exam was for Plane Geometry. So the queue listed it correctly and the fetch
+refused it.
+
+*Fix:* a separate `refuseIfCannotViewExam` that accepts either the teacher of the
+course **or** the coordinator of the subject. The coordinator test has to come
+first, because `SubjectCoordinator` extends `Teacher` and the teacher branch would
+otherwise catch her and reject her on a course she does not teach.
+
+*Worth noting:* the automated suite passed throughout, because every test drove
+approval through `EXAM_PENDING_FOR_COORDINATOR` and the decision endpoints — none
+of them opened an exam **as the coordinator**, which is the one thing a human does
+first. A test now covers exactly that.
+
+**2. A list holding one item looked like a dozen blank ruled rows.**
+
+`.list-cell` was styled unconditionally, so the divider line was drawn under
+every empty row as well. Now only `:filled` cells get a divider.
+
+Also fixed "1 questions" in two places.

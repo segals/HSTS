@@ -4,6 +4,7 @@ import hsts.common.entity.Course;
 import hsts.common.entity.Exam;
 import hsts.common.entity.ExamQuestion;
 import hsts.common.entity.Question;
+import hsts.common.entity.SubjectCoordinator;
 import hsts.common.entity.Teacher;
 import hsts.common.entity.User;
 import hsts.common.protocol.ExamBuildCriteria;
@@ -232,7 +233,7 @@ public class ExamBuilderController {
             if (exam == null) {
                 return Response.error("No exam with id " + examId + ".");
             }
-            String refusal = refuseIfCannotUseCourse(user, exam.getCourseCode());
+            String refusal = refuseIfCannotViewExam(user, exam);
             if (refusal != null) {
                 return Response.error(refusal);
             }
@@ -248,7 +249,7 @@ public class ExamBuilderController {
             if (versions.isEmpty()) {
                 return Response.error("No exam with id " + examId + ".");
             }
-            String refusal = refuseIfCannotUseCourse(user, versions.get(0).getCourseCode());
+            String refusal = refuseIfCannotViewExam(user, versions.get(0));
             if (refusal != null) {
                 return Response.error(refusal);
             }
@@ -316,6 +317,35 @@ public class ExamBuilderController {
         for (ExamQuestion eq : exam.getQuestions()) {
             eq.setOrder(order++);
         }
+    }
+
+    /**
+     * May this user <em>read</em> this exam?
+     *
+     * <p>Wider than {@link #refuseIfCannotUseCourse}, and it has to be. Requirement
+     * 31 puts a subject coordinator in charge of approving every exam in her
+     * subject - but she does not necessarily <em>teach</em> the course it belongs
+     * to. Coordinator 1 coordinates Mathematics and teaches Algebra; an exam for
+     * Plane Geometry is hers to approve and not hers to teach.</p>
+     *
+     * <p>Checking only "do you teach this course" therefore let her see an exam in
+     * her approval queue and refused to open it - visible in the queue, impossible
+     * to read, and so impossible to decide on.</p>
+     *
+     * <p>The coordinator test comes first because {@code SubjectCoordinator}
+     * extends {@code Teacher}: the teacher branch would otherwise catch her and
+     * reject her on the course she does not teach.</p>
+     */
+    private String refuseIfCannotViewExam(User user, Exam exam) {
+        if (user instanceof SubjectCoordinator coordinator
+                && coordinator.coordinates(exam.getSubjectCode())) {
+            return null;
+        }
+        if (user instanceof Teacher teacher && teacher.teaches(exam.getCourseCode())) {
+            return null;
+        }
+        return "You may only view exams for courses you teach, or exams in a subject "
+             + "you coordinate.";
     }
 
     /** Requirement 20: a teacher builds exams only for courses she teaches. */

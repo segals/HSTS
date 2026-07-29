@@ -62,8 +62,9 @@ public class ExamApprovalScreenController extends GUIScreen {
 
         useWrappingCells(pendingList, e ->
                 e.getExamId() + "  ·  v" + e.getVersion() + "  ·  " + e.getCourseName()
-              + "\n" + e.getAuthorName() + "  ·  " + e.getQuestionCount() + " questions  ·  "
-              + e.getDurationMinutes() + " min");
+              + "\n" + e.getAuthorName()
+              + "  ·  " + plural(e.getQuestionCount(), "question")
+              + "  ·  " + e.getDurationMinutes() + " min");
 
         pendingList.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, exam) -> {
@@ -199,9 +200,9 @@ public class ExamApprovalScreenController extends GUIScreen {
 
         examTitleLabel.setText("Exam " + exam.getExamId() + "   ·   version " + exam.getVersion());
         examMetaLabel.setText(exam.getCourseName() + "   ·   written by " + exam.getAuthorName()
-                + "   ·   " + exam.getQuestionCount() + " questions   ·   "
-                + exam.getDurationMinutes() + " minutes   ·   "
-                + exam.getTotalPoints() + " points");
+                + "   ·   " + plural(exam.getQuestionCount(), "question")
+                + "   ·   " + exam.getDurationMinutes() + " minutes"
+                + "   ·   " + exam.getTotalPoints() + " points");
 
         instructionsLabel.setText(blankToDash(exam.getInstructionsForStudents()));
         teacherNotesLabel.setText(blankToDash(exam.getNotesForTeacher()));
@@ -264,5 +265,10 @@ public class ExamApprovalScreenController extends GUIScreen {
 
     private static String blankToDash(String s) {
         return (s == null || s.isBlank()) ? "—" : s;
+    }
+
+    /** "1 question" rather than "1 questions". */
+    private static String plural(int count, String noun) {
+        return count + " " + noun + (count == 1 ? "" : "s");
     }
 }

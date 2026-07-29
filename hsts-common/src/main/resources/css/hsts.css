@@ -266,11 +266,21 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-border-radius: 6;
     -fx-background-radius: 6;
 }
+/* Only FILLED cells get a divider. Styling .list-cell unconditionally draws a
+   line under every empty row too, so a list holding one item looked like a
+   dozen blank ruled rows waiting to be filled in. */
 .list-cell {
     -fx-padding: 9 12 9 12;
     -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.list-cell:filled {
     -fx-border-color: transparent transparent -hsts-border transparent;
     -fx-border-width: 0 0 1 0;
+}
+.list-cell:empty {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
 }
 .list-cell:filled:hover { -fx-background-color: #f4f6f9; }
 .list-cell:filled:selected {
