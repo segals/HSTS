@@ -7,29 +7,42 @@
    consistent, and consistency is far easier to keep in one file than
    in inline styles scattered through a dozen FXML files.
 
+   THEME: a school, not a start-up.
+
+     - warm paper background rather than cool grey, so it reads like a
+       printed page instead of a dashboard
+     - ink navy as the working colour, the traditional colour of school
+       stationery, with brass as the single accent
+     - serif headings (Georgia) over a sans body, which is how school
+       documents, certificates and textbooks are normally set
+     - flat fills only. No gradients, no glow, no translucency - those
+       date quickly and belong to a different kind of product
+
    Layout uses a 4px spacing grid: 4, 8, 12, 16, 24.
    ===================================================================== */
 
 /* ---------- palette ----------------------------------------------- */
 * {
-    -hsts-bg:          #f6f7f9;   /* window background      */
+    -hsts-bg:          #f2efe8;   /* warm paper             */
     -hsts-surface:     #ffffff;   /* panels and cards       */
-    -hsts-border:      #dfe3e8;   /* hairlines              */
-    -hsts-border-firm: #c4cbd4;   /* input outlines         */
+    -hsts-border:      #e2dcd1;   /* hairlines              */
+    -hsts-border-firm: #c8c0b1;   /* input outlines         */
 
-    -hsts-text:        #1f2933;   /* primary text           */
-    -hsts-text-muted:  #6b7280;   /* secondary text         */
-    -hsts-text-faint:  #9aa2ad;   /* hints, captions        */
+    -hsts-text:        #23303c;   /* ink                    */
+    -hsts-text-muted:  #5d6975;   /* secondary text         */
+    -hsts-text-faint:  #8b949f;   /* hints, captions        */
 
-    -hsts-accent:      #2563eb;   /* primary action         */
-    -hsts-accent-dark: #1d4ed8;
-    -hsts-accent-soft: #eff4ff;
+    -hsts-navy:        #23486e;   /* primary action         */
+    -hsts-navy-dark:   #1a3654;
+    -hsts-navy-soft:   #e9eef5;
 
-    -hsts-danger:      #b91c1c;
-    -hsts-danger-soft: #fef2f2;
-    -hsts-success:     #15803d;
-    -hsts-success-soft:#f0fdf4;
-    -hsts-warn:        #b45309;
+    -hsts-brass:       #9b6f24;   /* the single accent      */
+    -hsts-brass-soft:  #fbf3e2;
+
+    -hsts-danger:      #9b2c2c;
+    -hsts-danger-soft: #fbeeee;
+    -hsts-success:     #2f6b4f;
+    -hsts-success-soft:#ecf5f0;
 }
 
 /* ---------- base --------------------------------------------------- */
@@ -43,40 +56,52 @@
 Label { -fx-text-fill: -hsts-text; }
 
 /* ---------- typography --------------------------------------------- */
-.h1      { -fx-font-size: 21px; -fx-font-weight: bold; }
-.h2      { -fx-font-size: 16px; -fx-font-weight: bold; }
+/* Serif headings: the school-document look, and it separates titles
+   from body text far more clearly than weight alone would. */
+.h1 {
+    -fx-font-family: "Georgia", "Cambria", serif;
+    -fx-font-size: 23px;
+    -fx-text-fill: -hsts-navy;
+}
+.h2 {
+    -fx-font-family: "Georgia", "Cambria", serif;
+    -fx-font-size: 17px;
+    -fx-text-fill: -hsts-navy;
+}
 .h3      { -fx-font-size: 13px; -fx-font-weight: bold; }
 .muted   { -fx-text-fill: -hsts-text-muted; }
 .caption { -fx-text-fill: -hsts-text-faint; -fx-font-size: 11px; }
 .mono    { -fx-font-family: "Cascadia Mono", "Consolas", monospace; }
 
-/* A field label sitting above or beside an input. */
 .field-label {
     -fx-text-fill: -hsts-text-muted;
     -fx-font-size: 12px;
 }
 
+/* Small brass capitals above a group of controls - the section rules
+   used on school forms and registers. */
+.section-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -hsts-brass;
+}
+
 /* ---------- surfaces ----------------------------------------------- */
 .card {
     -fx-background-color: -hsts-surface;
-    -fx-background-radius: 8;
+    -fx-background-radius: 4;
     -fx-border-color: -hsts-border;
-    -fx-border-radius: 8;
+    -fx-border-radius: 4;
     -fx-padding: 16;
 }
 
-/* The strip across the top of a full screen. */
+/* The strip across the top of a full screen, ruled off in navy like the
+   header of a school letter. */
 .header-bar {
     -fx-background-color: -hsts-surface;
-    -fx-border-color: transparent transparent -hsts-border transparent;
-    -fx-border-width: 0 0 1 0;
-    -fx-padding: 12 18 12 18;
-}
-
-.section-title {
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-    -fx-text-fill: -hsts-text-muted;
+    -fx-border-color: transparent transparent -hsts-navy transparent;
+    -fx-border-width: 0 0 2 0;
+    -fx-padding: 13 18 13 18;
 }
 
 /* ---------- buttons ------------------------------------------------ */
@@ -84,51 +109,64 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-background-color: -hsts-surface;
     -fx-text-fill: -hsts-text;
     -fx-border-color: -hsts-border-firm;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
     -fx-padding: 7 14 7 14;
     -fx-cursor: hand;
 }
-.button:hover  { -fx-background-color: #f0f2f5; }
-.button:armed  { -fx-background-color: #e4e7eb; }
+.button:hover  { -fx-background-color: #f5f2ec; -fx-border-color: -hsts-navy; }
+.button:armed  { -fx-background-color: #e8e3d9; }
 .button:disabled { -fx-opacity: 0.45; -fx-cursor: default; }
 
 .button.primary {
-    -fx-background-color: -hsts-accent;
+    -fx-background-color: -hsts-navy;
     -fx-text-fill: white;
-    -fx-border-color: -hsts-accent;
+    -fx-border-color: -hsts-navy;
     -fx-font-weight: bold;
 }
-.button.primary:hover { -fx-background-color: -hsts-accent-dark; -fx-border-color: -hsts-accent-dark; }
+.button.primary:hover {
+    -fx-background-color: -hsts-navy-dark;
+    -fx-border-color: -hsts-navy-dark;
+}
 
-.button.danger { -fx-text-fill: -hsts-danger; -fx-border-color: #e6b8b8; }
-.button.danger:hover { -fx-background-color: -hsts-danger-soft; }
+.button.danger { -fx-text-fill: -hsts-danger; -fx-border-color: #d8b4b4; }
+.button.danger:hover { -fx-background-color: -hsts-danger-soft; -fx-border-color: -hsts-danger; }
 
-/* A borderless button for secondary navigation. */
 .button.quiet {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
-    -fx-text-fill: -hsts-accent;
+    -fx-text-fill: -hsts-navy;
 }
-.button.quiet:hover { -fx-background-color: -hsts-accent-soft; }
+.button.quiet:hover { -fx-background-color: -hsts-navy-soft; -fx-border-color: transparent; }
 
-/* Full-width left-aligned menu entry. */
+/* Full-width left-aligned menu entry, ruled in navy on the left edge
+   when live - like a tab on a register. */
 .menu-entry {
     -fx-alignment: CENTER-LEFT;
     -fx-padding: 11 14 11 14;
     -fx-font-size: 13px;
     -fx-background-color: -hsts-surface;
+    -fx-border-color: -hsts-border -hsts-border -hsts-border -hsts-brass;
+    -fx-border-width: 1 1 1 3;
 }
-.menu-entry:hover { -fx-background-color: -hsts-accent-soft; -fx-border-color: -hsts-accent; }
-.menu-entry:disabled { -fx-opacity: 1; -fx-text-fill: -hsts-text-faint;
-                       -fx-background-color: #fafbfc; -fx-border-color: -hsts-border; }
+.menu-entry:hover {
+    -fx-background-color: -hsts-navy-soft;
+    -fx-border-color: -hsts-border -hsts-border -hsts-border -hsts-navy;
+}
+.menu-entry:disabled {
+    -fx-opacity: 1;
+    -fx-text-fill: -hsts-text-faint;
+    -fx-background-color: #faf8f4;
+    -fx-border-color: -hsts-border;
+    -fx-border-width: 1;
+}
 
 /* ---------- inputs -------------------------------------------------- */
 .text-field, .password-field, .text-area, .combo-box-base {
     -fx-background-color: -hsts-surface;
     -fx-border-color: -hsts-border-firm;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
     -fx-padding: 6 9 6 9;
 }
 .text-area { -fx-padding: 0; }
@@ -136,21 +174,27 @@ Label { -fx-text-fill: -hsts-text; }
 
 .text-field:focused, .password-field:focused,
 .text-area:focused, .combo-box-base:focused {
-    -fx-border-color: -hsts-accent;
-    -fx-border-width: 1.4;
+    -fx-border-color: -hsts-navy;
+    -fx-border-width: 1.5;
 }
 
 .combo-box-base { -fx-padding: 3 6 3 6; }
 .combo-box .list-cell { -fx-padding: 5 8 5 8; }
 
 .radio-button, .check-box { -fx-cursor: hand; }
+.radio-button .radio { -fx-border-color: -hsts-border-firm; }
+.radio-button:selected .radio { -fx-border-color: -hsts-navy; }
+.radio-button:selected .dot { -fx-background-color: -hsts-navy; }
+.check-box .box { -fx-border-color: -hsts-border-firm; }
+.check-box:selected .box { -fx-background-color: -hsts-navy; -fx-border-color: -hsts-navy; }
+.check-box:selected .mark { -fx-background-color: white; }
 
 /* ---------- lists --------------------------------------------------- */
 .list-view {
     -fx-background-color: -hsts-surface;
     -fx-border-color: -hsts-border;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
 }
 .list-cell {
     -fx-padding: 8 10 8 10;
@@ -158,17 +202,21 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-border-color: transparent transparent -hsts-border transparent;
     -fx-border-width: 0 0 1 0;
 }
-.list-cell:filled:hover   { -fx-background-color: #f4f6f8; }
-.list-cell:filled:selected{ -fx-background-color: -hsts-accent-soft; -fx-text-fill: -hsts-text; }
+.list-cell:filled:hover    { -fx-background-color: #faf8f4; }
+.list-cell:filled:selected {
+    -fx-background-color: -hsts-navy-soft;
+    -fx-text-fill: -hsts-text;
+    -fx-border-color: transparent transparent -hsts-border transparent;
+}
 
 /* ---------- table ---------------------------------------------------- */
 .table-view {
     -fx-background-color: -hsts-surface;
     -fx-border-color: -hsts-border;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
 }
-.table-view .column-header-background { -fx-background-color: #f2f4f6; }
+.table-view .column-header-background { -fx-background-color: #f5f2ec; }
 .table-view .column-header {
     -fx-background-color: transparent;
     -fx-border-color: transparent -hsts-border transparent transparent;
@@ -176,41 +224,54 @@ Label { -fx-text-fill: -hsts-text; }
 }
 .table-view .column-header .label { -fx-text-fill: -hsts-text-muted; -fx-font-weight: bold; }
 .table-row-cell { -fx-border-color: transparent transparent -hsts-border transparent; }
-.table-row-cell:selected { -fx-background-color: -hsts-accent-soft; -fx-text-fill: -hsts-text; }
+.table-row-cell:selected { -fx-background-color: -hsts-navy-soft; -fx-text-fill: -hsts-text; }
 .table-row-cell:selected .text { -fx-fill: -hsts-text; }
 
-/* Marks the row that is the live version. */
 .row-current { -fx-background-color: -hsts-success-soft; }
 
 /* ---------- scroll --------------------------------------------------- */
 .scroll-pane { -fx-background-color: transparent; -fx-border-color: transparent; }
 .scroll-pane > .viewport { -fx-background-color: transparent; }
 .scroll-bar:vertical, .scroll-bar:horizontal { -fx-background-color: transparent; }
-.scroll-bar .thumb { -fx-background-color: #cbd2da; -fx-background-radius: 6; }
-.scroll-bar .thumb:hover { -fx-background-color: #aab3bd; }
+.scroll-bar .thumb { -fx-background-color: #cec7b8; -fx-background-radius: 4; }
+.scroll-bar .thumb:hover { -fx-background-color: #b3ab9a; }
 .scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-opacity: 0; -fx-padding: 0; }
 
 /* ---------- separators ----------------------------------------------- */
 .separator .line { -fx-border-color: -hsts-border; -fx-border-width: 1 0 0 0; }
 
 /* ---------- status messages ------------------------------------------ */
+/* Ruled down the left edge like a margin note, rather than a filled
+   banner - quieter, and it keeps the text easy to read. */
 .status {
     -fx-padding: 8 12 8 12;
-    -fx-background-radius: 6;
+    -fx-background-radius: 4;
     -fx-font-size: 12px;
 }
 .status-info    { -fx-text-fill: -hsts-text-muted; -fx-background-color: transparent; }
-.status-error   { -fx-text-fill: -hsts-danger;  -fx-background-color: -hsts-danger-soft;
-                  -fx-font-weight: bold; }
-.status-success { -fx-text-fill: -hsts-success; -fx-background-color: -hsts-success-soft; }
+.status-error   {
+    -fx-text-fill: -hsts-danger;
+    -fx-background-color: -hsts-danger-soft;
+    -fx-border-color: transparent transparent transparent -hsts-danger;
+    -fx-border-width: 0 0 0 3;
+    -fx-font-weight: bold;
+}
+.status-success {
+    -fx-text-fill: -hsts-success;
+    -fx-background-color: -hsts-success-soft;
+    -fx-border-color: transparent transparent transparent -hsts-success;
+    -fx-border-width: 0 0 0 3;
+}
 
 /* ---------- comparison view ------------------------------------------ */
-/* Used by the version-history window to mark what actually changed. */
+/* Used by the version-history window to mark what actually changed.
+   Brass rather than red, because a difference is an annotation, not an
+   error. */
 .diff-changed {
-    -fx-background-color: #fff7ed;
-    -fx-border-color: #fdba74;
-    -fx-border-radius: 5;
-    -fx-background-radius: 5;
+    -fx-background-color: -hsts-brass-soft;
+    -fx-border-color: #dcc08a;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
     -fx-padding: 6 8 6 8;
 }
 .diff-same {
@@ -218,12 +279,12 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-padding: 6 8 6 8;
 }
 .diff-badge {
-    -fx-background-color: -hsts-warn;
+    -fx-background-color: -hsts-brass;
     -fx-text-fill: white;
     -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-padding: 2 6 2 6;
-    -fx-background-radius: 10;
+    -fx-background-radius: 3;
 }
 .badge-current {
     -fx-background-color: -hsts-success;
@@ -231,27 +292,27 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-padding: 2 8 2 8;
-    -fx-background-radius: 10;
+    -fx-background-radius: 3;
 }
 .badge-old {
-    -fx-background-color: #e5e7eb;
+    -fx-background-color: #e6e1d6;
     -fx-text-fill: -hsts-text-muted;
     -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-padding: 2 8 2 8;
-    -fx-background-radius: 10;
+    -fx-background-radius: 3;
 }
 
 /* ---------- misc ------------------------------------------------------ */
 .image-frame {
     -fx-border-color: -hsts-border;
-    -fx-border-radius: 6;
-    -fx-background-color: #fbfcfd;
+    -fx-border-radius: 4;
+    -fx-background-color: #fbf9f5;
     -fx-padding: 8;
 }
 .tooltip {
-    -fx-background-color: #1f2933;
+    -fx-background-color: -hsts-text;
     -fx-text-fill: white;
     -fx-font-size: 12px;
-    -fx-background-radius: 6;
+    -fx-background-radius: 4;
 }
