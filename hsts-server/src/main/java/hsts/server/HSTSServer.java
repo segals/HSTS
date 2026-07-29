@@ -18,6 +18,7 @@ import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
+import hsts.common.protocol.ResultsQuery;
 import hsts.server.boundary.IUserManagementSystem;
 import hsts.server.boundary.LocalUserManagementAdapter;
 import hsts.server.control.ExamApprovalController;
@@ -25,7 +26,9 @@ import hsts.server.control.ExamBuilderController;
 import hsts.server.control.ExamExecutionController;
 import hsts.server.control.GradingController;
 import hsts.server.control.LiveExamController;
+import hsts.server.control.PrincipalController;
 import hsts.server.control.ResultsViewController;
+import hsts.server.control.TeacherReportController;
 import hsts.server.control.TakeExamController;
 import hsts.server.control.LoginController;
 import hsts.server.control.QuestionController;
@@ -101,6 +104,10 @@ public class HSTSServer extends AbstractServer {
             gradeDAO, submissionDAO, executionDAO, examDAO, userDAO, pushService);
     private final ResultsViewController resultsViewController =
             new ResultsViewController(gradeDAO, submissionDAO, executionDAO, examDAO);
+    private final TeacherReportController teacherReportController =
+            new TeacherReportController(examDAO, executionDAO, gradeDAO);
+    private final PrincipalController principalController =
+            new PrincipalController(questionDAO, examDAO, executionDAO, gradeDAO);
 
     private HSTSServer(int port) {
         super(port);
@@ -287,6 +294,30 @@ public class HSTSServer extends AbstractServer {
                         resultsViewController.listMyResults(u));
                 case RESULTS_MARKED_EXAM -> withUser(client, u ->
                         resultsViewController.getMyMarkedExam(u, (Integer) request.getPayload()));
+
+                // ---- SUC-11: a teacher's results and histogram ----
+                case TEACHER_REPORT_EXAMS    -> withUser(client, u ->
+                        teacherReportController.listMyExams(u));
+                case TEACHER_REPORT_SITTINGS -> withUser(client, u ->
+                        teacherReportController.listSittings(u, (String) request.getPayload()));
+                case TEACHER_REPORT_RESULTS  -> withUser(client, u ->
+                        teacherReportController.getResults(u,
+                                (ResultsQuery) request.getPayload()));
+
+                // ---- SUC-12: the principal's read-only browse ----
+                case PRINCIPAL_QUESTIONS -> withUser(client, u ->
+                        principalController.listQuestions(u));
+                case PRINCIPAL_QUESTION_GET -> withUser(client, u ->
+                        principalController.getQuestion(u,
+                                (QuestionRef) request.getPayload()));
+                case PRINCIPAL_EXAMS     -> withUser(client, u ->
+                        principalController.listExams(u));
+                case PRINCIPAL_EXAM_GET  -> withUser(client, u ->
+                        principalController.getExam(u, (ExamRef) request.getPayload()));
+                case PRINCIPAL_SITTINGS  -> withUser(client, u ->
+                        principalController.listSittings(u, (String) request.getPayload()));
+                case PRINCIPAL_RESULTS   -> withUser(client, u ->
+                        principalController.getResults(u, (ResultsQuery) request.getPayload()));
             };
 
             // A newly saved exam goes straight into a coordinator's queue, so tell

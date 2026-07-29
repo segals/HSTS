@@ -399,3 +399,51 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-background-radius: 6;
     -fx-padding: 6 10 6 10;
 }
+
+/* ---------- histogram (מתווה 10, requirement 54) ---------------------- */
+/*
+   Ten bars, drawn by hand rather than with a BarChart - see HistogramView for
+   why. An empty bucket keeps a hairline so ten columns are always visible;
+   "nobody scored 0-10" must not look like a broken chart.
+*/
+.histogram-bar {
+    -fx-background-color: -hsts-accent;
+    -fx-background-radius: 3 3 0 0;
+}
+.histogram-bar-empty {
+    -fx-background-color: -hsts-border-firm;
+    -fx-background-radius: 2;
+}
+
+/* ---------- tabs (the principal's three views in one window) ---------- */
+.tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: -hsts-bg;
+    -fx-border-color: transparent transparent -hsts-border transparent;
+}
+.tab-pane > .tab-header-area {
+    -fx-padding: 6 18 0 18;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6 6 0 0;
+    -fx-padding: 8 16 8 16;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: -hsts-surface;
+    -fx-border-color: -hsts-border -hsts-border transparent -hsts-border;
+    -fx-border-radius: 6 6 0 0;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab .tab-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: -hsts-text-muted;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab:selected .tab-label {
+    -fx-text-fill: -hsts-text;
+    -fx-font-weight: 600;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
+    -fx-border-color: transparent;
+}
+.tab-pane > * > .tab-content-area {
+    -fx-background-color: -hsts-bg;
+}

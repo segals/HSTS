@@ -176,5 +176,36 @@ public enum RequestType {
     RESULTS_MINE,
 
     /** One of her marked papers. Payload is the submission id. */
-    RESULTS_MARKED_EXAM
+    RESULTS_MARKED_EXAM,
+
+    // ---- SUC-11: a teacher's results and histogram (milestone 11) ----
+
+    /** Every exam she wrote, whoever ran it (requirement 59). No payload. */
+    TEACHER_REPORT_EXAMS,
+
+    /** The sittings of one of her exams. Payload is the exam id. */
+    TEACHER_REPORT_SITTINGS,
+
+    /** Marks and statistics together. Payload is a {@link ResultsQuery}. */
+    TEACHER_REPORT_RESULTS,
+
+    // ---- SUC-12: the principal's read-only browse (milestone 12) ----
+
+    /** The whole question bank, every course. No payload. Answers are NOT included. */
+    PRINCIPAL_QUESTIONS,
+
+    /** One question with its answers. Payload is a {@link QuestionRef}. */
+    PRINCIPAL_QUESTION_GET,
+
+    /** Every exam, whatever its state. No payload. */
+    PRINCIPAL_EXAMS,
+
+    /** One exam in full. Payload is an {@link ExamRef}. */
+    PRINCIPAL_EXAM_GET,
+
+    /** The sittings of one exam. Payload is the exam id. */
+    PRINCIPAL_SITTINGS,
+
+    /** Marks and statistics together. Payload is a {@link ResultsQuery}. */
+    PRINCIPAL_RESULTS
 }

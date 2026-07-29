@@ -134,7 +134,8 @@ public class MainMenuController extends GUIScreen {
             entries.add(new MenuEntry("Release an exam",         "milestone 6",  "/fxml/ExamRelease.fxml"));
             entries.add(new MenuEntry("Exams running now",       "milestone 8",  "/fxml/TeacherLiveExam.fxml"));
             entries.add(new MenuEntry("Mark and approve grades", "milestone 9",  "/fxml/Grading.fxml"));
-            entries.add(new MenuEntry("Results and histogram",   "milestone 11", null));
+            entries.add(new MenuEntry("Results and histogram",   "milestone 11",
+                                      "/fxml/TeacherReports.fxml"));
             entries.add(new MenuEntry("My reports",              "milestone 13", null));
             entries.add(new MenuEntry("Course study bot",        "milestone 14", null));
         }
@@ -152,9 +153,10 @@ public class MainMenuController extends GUIScreen {
         }
 
         if (user instanceof Principal) {
-            entries.add(new MenuEntry("Browse questions",        "milestone 12", null));
-            entries.add(new MenuEntry("Browse exams",            "milestone 12", null));
-            entries.add(new MenuEntry("Browse results",          "milestone 12", null));
+            // Requirement 62 names questions, exams and results together, and they
+            // are three tabs of one screen rather than three near-identical windows.
+            entries.add(new MenuEntry("Browse questions, exams and results", "milestone 12",
+                                      "/fxml/PrincipalBrowse.fxml"));
             entries.add(new MenuEntry("Statistical reports",     "milestone 13", null));
         }
 

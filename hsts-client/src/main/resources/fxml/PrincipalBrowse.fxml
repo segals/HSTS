@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    SUC-12 / מתווה scenario 11: the principal looking at everything.
+
+      "מנהלת יכולה לראות את מאגר השאלות, המבחנים ותוצאות המבחנים."
+
+    Requirement 62 grants read-only access to all three, so all three are here
+    as tabs of one screen rather than three menu entries that each open a
+    near-identical window.
+
+    There is no Save, Edit or Delete anywhere on this screen - and more to the
+    point, no request behind it that could write. The server has no principal
+    path to a write at all.
+
+    Requirement 63 - comparison reports across teachers, courses and students -
+    is a different job and arrives with the report factory in milestone 13.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import hsts.client.gui.HistogramView?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.PrincipalBrowseController"
+      spacing="0" prefWidth="1280" prefHeight="800" minWidth="1040" minHeight="640">
+
+    <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label text="Browse the school's data" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
+        </VBox>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
+    </HBox>
+
+    <TabPane fx:id="tabs" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
+
+        <!-- ===================== questions ===================== -->
+        <Tab text="Question bank">
+            <VBox spacing="12">
+                <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Course" styleClass="caption"/>
+                    <ComboBox fx:id="questionCourseBox" prefWidth="230"/>
+                    <TextField fx:id="questionSearchField" promptText="Search the text or topic"
+                               HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                    <Label fx:id="questionCountLabel" styleClass="caption" wrapText="true"/>
+                </HBox>
+
+                <HBox spacing="14" VBox.vgrow="ALWAYS">
+                    <VBox styleClass="card" spacing="8" prefWidth="430" minWidth="340">
+                        <Label text="QUESTIONS" styleClass="section-title" wrapText="true"/>
+                        <ListView fx:id="questionList" VBox.vgrow="ALWAYS"/>
+                    </VBox>
+                    <VBox styleClass="card" spacing="8" HBox.hgrow="ALWAYS" minWidth="420">
+                        <Label text="THE QUESTION AS IT STANDS" styleClass="section-title"
+                               wrapText="true"/>
+                        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                            <VBox fx:id="questionDetailBox" spacing="8">
+                                <padding><Insets right="10"/></padding>
+                            </VBox>
+                        </ScrollPane>
+                    </VBox>
+                </HBox>
+            </VBox>
+        </Tab>
+
+        <!-- ===================== exams ===================== -->
+        <Tab text="Exams">
+            <VBox spacing="12">
+                <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <TextField fx:id="examSearchField"
+                               promptText="Search by exam number, course, author or state"
+                               HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                    <Label fx:id="examCountLabel" styleClass="caption" wrapText="true"/>
+                </HBox>
+
+                <HBox spacing="14" VBox.vgrow="ALWAYS">
+                    <VBox styleClass="card" spacing="8" prefWidth="420" minWidth="330">
+                        <Label text="EVERY EXAM" styleClass="section-title" wrapText="true"/>
+                        <ListView fx:id="examList" VBox.vgrow="ALWAYS"/>
+                    </VBox>
+                    <VBox styleClass="card" spacing="8" HBox.hgrow="ALWAYS" minWidth="420">
+                        <Label text="THE PAPER" styleClass="section-title" wrapText="true"/>
+                        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                            <VBox fx:id="examDetailBox" spacing="8">
+                                <padding><Insets right="10"/></padding>
+                            </VBox>
+                        </ScrollPane>
+                    </VBox>
+                </HBox>
+            </VBox>
+        </Tab>
+
+        <!-- ===================== results ===================== -->
+        <Tab text="Results">
+            <HBox spacing="14">
+                <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
+
+                <VBox spacing="12" prefWidth="330" minWidth="290">
+                    <VBox styleClass="card" spacing="8" VBox.vgrow="ALWAYS">
+                        <Label text="EXAMS THAT WERE SAT" styleClass="section-title"
+                               wrapText="true"/>
+                        <ListView fx:id="resultExamList" VBox.vgrow="ALWAYS"/>
+                    </VBox>
+                    <VBox styleClass="card" spacing="8" VBox.vgrow="ALWAYS">
+                        <Label text="SITTINGS" styleClass="section-title" wrapText="true"/>
+                        <ListView fx:id="resultSittingList" VBox.vgrow="ALWAYS"/>
+                    </VBox>
+                </VBox>
+
+                <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS" minWidth="560">
+                    <VBox spacing="3">
+                        <Label fx:id="resultTitleLabel" styleClass="h3" wrapText="true"
+                               maxWidth="Infinity"/>
+                        <Label fx:id="resultMetaLabel" styleClass="caption" wrapText="true"
+                               maxWidth="Infinity"/>
+                    </VBox>
+
+                    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                        <VBox spacing="14">
+                            <padding><Insets top="12" right="10" bottom="6" left="0"/></padding>
+
+                            <HBox fx:id="resultStatsRow" spacing="10"/>
+
+                            <VBox spacing="6">
+                                <Label text="HOW THE MARKS ARE SPREAD"
+                                       styleClass="section-title" wrapText="true"/>
+                                <HistogramView fx:id="resultHistogram"/>
+                            </VBox>
+
+                            <VBox spacing="6">
+                                <HBox alignment="CENTER_LEFT" spacing="8">
+                                    <Label text="EVERY MARK" styleClass="section-title"
+                                           wrapText="true"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Label fx:id="resultNoteLabel" styleClass="caption"
+                                           wrapText="true"/>
+                                </HBox>
+                                <TableView fx:id="resultTable" prefHeight="260">
+                                    <columns>
+                                        <TableColumn fx:id="rName"     text="Student" prefWidth="200"/>
+                                        <TableColumn fx:id="rMark"     text="Mark"    prefWidth="70"/>
+                                        <TableColumn fx:id="rAuto"     text="System"  prefWidth="70"/>
+                                        <TableColumn fx:id="rCourse"   text="Course"  prefWidth="160"/>
+                                        <TableColumn fx:id="rDuration" text="Minutes" prefWidth="80"/>
+                                        <TableColumn fx:id="rStatus"   text="State"   prefWidth="130"/>
+                                    </columns>
+                                </TableView>
+                            </VBox>
+                        </VBox>
+                    </ScrollPane>
+                </VBox>
+            </HBox>
+        </Tab>
+    </TabPane>
+
+    <Label fx:id="statusLabel" wrapText="true" text=" " styleClass="status"
+           maxWidth="Infinity">
+        <padding><Insets top="6" right="18" bottom="10" left="18"/></padding>
+    </Label>
+
+</VBox>

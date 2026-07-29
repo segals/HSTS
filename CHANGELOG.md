@@ -1224,3 +1224,116 @@ now asserts what is actually true rather than inventing a rule.
 
 Regression: **438 checks** across the project, run **twice back to back with no
 database reset**, identical both times. 14/14 screens load.
+
+---
+
+## Milestones 11 and 12 — the teacher's histogram, and the principal's browse
+
+### First: there are no acceptance tests for either
+
+The submitted `סעיף 4 - בדיקות קבלה.docx` covers **SUC-3, SUC-7, SUC-9 and SUC-10
+only** — tests 1.x to 4.x. SUC-11 and SUC-12 have none. So unlike every milestone
+before it, there was nothing to satisfy except the מתווה and the numbered
+requirements, and those are what each check in `M11Test` is written against:
+
+| Source | What it says |
+|---|---|
+| מתווה 10 | *"מורה יכולה לצפות בתוצאות בחינות **שכתבה**... בטבלה וכן בצורת היסטוגרמה"* |
+| Requirement 59 | *"כל הבחינות שכתבה (**גם אם בוצעו על-ידי מורות אחרות**)"* |
+| Requirement 54 | average, median, decile distribution |
+| מתווה 11 | *"מנהלת יכולה לראות את מאגר השאלות, המבחנים ותוצאות המבחנים"* |
+| Requirement 62 | all data — questions, exams, results — **בקריאה בלבד** (read-only) |
+
+### Demo data first, because neither milestone could otherwise be shown
+
+`SeedRunner` creates people and courses and stops; an empty question bank is the
+honest starting point for a school. But a histogram of no marks is a blank box.
+
+`DemoContentSeeder` adds 80 real questions across all eight courses, 9 exams, 7
+sittings and 78 marked papers. **The marks are computed by the real
+`GradeDAO.autoGrade` from actual written answers**, not inserted — a hand-written
+mark would drift from the paper it claims to describe, and the first person to
+open one at the demo would see ticks that disagree with the number.
+
+The mid-term spread fills **nine of the ten deciles** (average 64.4, median 67.5,
+range 15–100), so the histogram is worth looking at rather than one tall bar.
+
+### Requirement 59 made demonstrable, not just implemented
+
+Noa Levi writes two Plane Geometry exams. She releases one; **Maya Cohen releases
+the other**. So:
+
+- Noa's report list is `010101, 020101, 040101` — all three hers.
+- Maya's is `020201, 030101, 050101` — no overlap.
+- Exam `020101` appears under Noa with *"released by Maya Cohen"* against it.
+
+That is the requirement in one line on screen, and `M11Test` asserts it rather
+than assuming the data happens to be shaped that way.
+
+### A different permission rule from marking, deliberately
+
+`GradingController` lets the teacher who **released** a sitting mark it — those are
+her students. `TeacherReportController` lets the **author** look — it is her paper.
+The two do not conflict because this path is entirely read-only. A teacher who
+neither wrote nor ran an exam is refused, and told which it is.
+
+### Read-only that does not depend on hiding buttons
+
+`PrincipalController` has no method that writes. `M11Test` §8 checks the principal
+is refused when she tries to add a question, save an exam, approve one, release
+one, list papers to mark, or publish a mark — six different ways in, all shut.
+It also checks a **student** cannot use the principal's requests to reach class
+statistics, which would otherwise be a way round requirement 55.
+
+### The histogram is drawn by hand
+
+JavaFX has a `BarChart`, but it brings axes, a legend, animation and its own
+stylesheet, and fighting all four into the look of the application costs more than
+ten rectangles are worth. An empty bucket keeps a hairline so ten columns are
+always visible — *"nobody scored 0–10"* must not look like a broken chart.
+
+### Three faults the validation loop caught — all in tests, one hiding a real bug
+
+**1. A tautological check that hid a real defect.** This passed either way:
+
+```java
+check("with the answers, so she can read the paper properly",
+        bank.stream().anyMatch(q -> !q.getAnswers().isEmpty())
+     || bank.get(0).getAnswers().isEmpty());
+```
+
+Chasing it found the defect: `QuestionDAO.findAll` deliberately omits answers, and
+the principal's detail pane drew that empty list — so **she saw a question with no
+options under it at all**. Fixed with `PRINCIPAL_QUESTION_GET`, which fetches one
+question complete, matching how the exams tab already worked. The check now
+asserts both halves: the list is light, and one question comes back with four
+answers of which exactly one is correct.
+
+**2. A padded literal the code sweep could not see.** `dao.findByCode("  k7m2  ")`
+— the earlier sweep that made execution codes per-run matched `"K7M2"` but not
+`"  k7m2  "`. It kept passing only while `K7M2` still happened to exist from an
+older run. Once the database was reset it failed correctly.
+
+**3. "Not enrolled here" is not "has sat nothing".** `M9Test` asked for a student
+not enrolled in its course and assumed she had no results. True on an empty
+database; false once the demo data gave her exams in her own courses. It now asks
+for a student with no attempt at any exam anywhere.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| M2 | 48/48 |
+| M3 | 34/34 |
+| M4 | 43/43 |
+| M5 | 32/32 |
+| M6 | 76/76 |
+| M7 | 55/55 |
+| M8 | 33/33 |
+| M9 | 75/75 |
+| M10 | 43/43 |
+| **M11 (new)** | **57/57** |
+| **Total** | **496 checks** |
+| Screens | 16/16 load |
+
+Run **twice back to back with no database reset**, identical both times.

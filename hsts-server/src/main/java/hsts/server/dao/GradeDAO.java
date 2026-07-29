@@ -398,12 +398,12 @@ public class GradeDAO implements IDAO<Grade, Integer> {
      * average reflecting a manual change immediately - is true by construction.</p>
      */
     public ExamStatistics computeStatistics(int executionId) throws SQLException {
-        List<Integer> marks = new ArrayList<>();
         String sql = """
             SELECT g.final_grade FROM grade g
             JOIN student_exam s ON s.submission_id = g.submission_id
             WHERE s.execution_id = ? AND g.is_approved = TRUE
             ORDER BY g.final_grade""";
+        List<Integer> marks = new ArrayList<>();
         try (PreparedStatement ps = conn().prepareStatement(sql)) {
             ps.setInt(1, executionId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -412,31 +412,84 @@ public class GradeDAO implements IDAO<Grade, Integer> {
                 }
             }
         }
-
-        ExamStatistics stats = new ExamStatistics();
+        ExamStatistics stats = statisticsOver(marks);
         stats.setExecutionId(executionId);
-        stats.setGradeCount(marks.size());
+        return stats;
+    }
+
+    /**
+     * The same figures over <b>every sitting</b> of one exam.
+     *
+     * <p>Requirement 59 asks for an analysis of an exam a teacher wrote, and an
+     * exam is handed out many times - a different class, a re-sit. Per-sitting
+     * numbers answer "how did this class do"; these answer "how does this paper
+     * behave", which is the question an author is actually asking.</p>
+     */
+    public ExamStatistics computeStatisticsForExam(String examId) throws SQLException {
+        String sql = """
+            SELECT g.final_grade FROM grade g
+            JOIN student_exam s   ON s.submission_id = g.submission_id
+            JOIN exam_execution x ON x.execution_id  = s.execution_id
+            WHERE x.exam_id = ? AND g.is_approved = TRUE
+            ORDER BY g.final_grade""";
+        List<Integer> marks = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setString(1, examId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    marks.add(rs.getInt(1));
+                }
+            }
+        }
+        return statisticsOver(marks);
+    }
+
+    /** Every mark of every sitting of one exam - the author's results table. */
+    public List<Grade> findByExam(String examId) throws SQLException {
+        List<Grade> list = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement(baseSelect()
+                + " WHERE x.exam_id = ? ORDER BY g.final_grade DESC, u.full_name")) {
+            ps.setString(1, examId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(readRow(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Average, median and deciles over a list of marks that is already sorted.
+     *
+     * <p>Shared by the per-sitting and per-exam figures so the two can never drift
+     * apart - a demo where the class average and the exam average are computed by
+     * two different pieces of arithmetic is a demo waiting to embarrass somebody.</p>
+     */
+    private ExamStatistics statisticsOver(List<Integer> sortedMarks) {
+        ExamStatistics stats = new ExamStatistics();
+        stats.setGradeCount(sortedMarks.size());
         stats.setComputedAt(LocalDateTime.now());
 
-        if (marks.isEmpty()) {
+        if (sortedMarks.isEmpty()) {
             return stats;
         }
 
         double sum = 0;
         int[] deciles = new int[ExamStatistics.DECILE_COUNT];
-        for (int mark : marks) {
+        for (int mark : sortedMarks) {
             sum += mark;
             deciles[ExamStatistics.bucketFor(mark)]++;
         }
-        stats.setAverage(sum / marks.size());
+        stats.setAverage(sum / sortedMarks.size());
         stats.setDeciles(deciles);
 
         // Odd count: the middle one. Even count: the mean of the middle two,
         // which is the ordinary definition and matches acceptance test 3.8.
-        int middle = marks.size() / 2;
-        stats.setMedian(marks.size() % 2 == 1
-                ? marks.get(middle)
-                : (marks.get(middle - 1) + marks.get(middle)) / 2.0);
+        int middle = sortedMarks.size() / 2;
+        stats.setMedian(sortedMarks.size() % 2 == 1
+                ? sortedMarks.get(middle)
+                : (sortedMarks.get(middle - 1) + sortedMarks.get(middle)) / 2.0);
 
         return stats;
     }
