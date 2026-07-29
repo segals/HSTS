@@ -145,7 +145,7 @@ public class MainMenuController extends GUIScreen {
         }
 
         if (user instanceof Student) {
-            entries.add(new MenuEntry("Take an exam",            "milestone 7",  null));
+            entries.add(new MenuEntry("Take an exam",            "milestone 7",  "/fxml/TakeExam.fxml"));
             entries.add(new MenuEntry("My grades",               "milestone 10", null));
             entries.add(new MenuEntry("Ask the course bot",      "milestone 14", null));
             entries.add(new MenuEntry("My bot history",          "milestone 14", null));

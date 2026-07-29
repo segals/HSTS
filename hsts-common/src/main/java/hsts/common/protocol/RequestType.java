@@ -100,5 +100,22 @@ public enum RequestType {
     EXECUTION_RELEASE,
 
     /** Everything this teacher has released. No payload. */
-    EXECUTION_LIST_MINE
+    EXECUTION_LIST_MINE,
+
+    // ---- SUC-7: sitting an exam (milestone 7) ----
+
+    /** Checks the code the teacher read out. Payload is the typed code. */
+    TAKE_VALIDATE_CODE,
+
+    /** Identifies the student and starts her clock. Payload is a {@link StartExamRequest}. */
+    TAKE_START,
+
+    /** Records one chosen answer. Payload is an {@link AnswerChoice}. */
+    TAKE_SAVE_ANSWER,
+
+    /** Hands the exam in. Payload is the submission id. */
+    TAKE_SUBMIT,
+
+    /** Reloads an attempt still in progress. Payload is the submission id. */
+    TAKE_RESUME
 }

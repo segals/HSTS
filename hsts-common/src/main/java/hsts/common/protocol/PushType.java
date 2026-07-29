@@ -28,5 +28,22 @@ public enum PushType {
     EXAM_REJECTED,
 
     /** A new exam is waiting. Sent to the coordinator of that subject. */
-    EXAM_AWAITING_APPROVAL
+    EXAM_AWAITING_APPROVAL,
+
+    /**
+     * How many seconds a student has left. Payload is a Long.
+     *
+     * <p>Sent by the server rather than counted by the client, so the clock
+     * cannot drift and cannot be tampered with. Acceptance test 2.11 requires
+     * the timer to be synchronised from the server.</p>
+     */
+    EXAM_TIME_TICK,
+
+    /**
+     * The student's time ran out and the server closed her exam.
+     *
+     * <p>Requirement 45 and acceptance test 2.6: whatever she had entered is
+     * saved and the paper is closed for her.</p>
+     */
+    EXAM_AUTO_SUBMITTED
 }

@@ -7,7 +7,9 @@ import hsts.common.protocol.Credentials;
 import hsts.common.protocol.ExamBuildCriteria;
 import hsts.common.protocol.ExamDecision;
 import hsts.common.protocol.ExamRef;
+import hsts.common.protocol.AnswerChoice;
 import hsts.common.protocol.ExamReleaseRequest;
+import hsts.common.protocol.StartExamRequest;
 import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
@@ -17,14 +19,17 @@ import hsts.server.boundary.LocalUserManagementAdapter;
 import hsts.server.control.ExamApprovalController;
 import hsts.server.control.ExamBuilderController;
 import hsts.server.control.ExamExecutionController;
+import hsts.server.control.TakeExamController;
 import hsts.server.control.LoginController;
 import hsts.server.control.QuestionController;
 import hsts.server.dao.CourseDAO;
 import hsts.server.dao.DBController;
 import hsts.server.dao.ExamDAO;
 import hsts.server.dao.ExecutionDAO;
+import hsts.server.dao.SubmissionDAO;
 import hsts.server.dao.QuestionDAO;
 import hsts.server.dao.UserDAO;
+import hsts.server.push.ExamClockService;
 import hsts.server.push.PushService;
 import hsts.server.push.SessionRegistry;
 import ocsf.server.AbstractServer;
@@ -77,6 +82,10 @@ public class HSTSServer extends AbstractServer {
     private final ExecutionDAO executionDAO = new ExecutionDAO();
     private final ExamExecutionController examExecutionController =
             new ExamExecutionController(executionDAO, examDAO);
+    private final SubmissionDAO submissionDAO = new SubmissionDAO();
+    private final TakeExamController takeExamController =
+            new TakeExamController(executionDAO, submissionDAO, examDAO);
+    private final ExamClockService examClock = new ExamClockService(submissionDAO, pushService);
 
     private HSTSServer(int port) {
         super(port);
@@ -98,6 +107,7 @@ public class HSTSServer extends AbstractServer {
         // Push failures are quiet by design - they must never break the operation
         // that caused them - but they should still be visible on the console.
         pushService.setLogSink(this::log);
+        examClock.setLogSink(this::log);
     }
 
     private void log(String text) {
@@ -201,6 +211,18 @@ public class HSTSServer extends AbstractServer {
                                 (ExamReleaseRequest) request.getPayload()));
                 case EXECUTION_LIST_MINE        -> withUser(client, u ->
                         examExecutionController.listMyExecutions(u));
+
+                // ---- SUC-7: sitting an exam ----
+                case TAKE_VALIDATE_CODE -> withUser(client, u ->
+                        takeExamController.validateCode(u, (String) request.getPayload()));
+                case TAKE_START         -> withUser(client, u ->
+                        takeExamController.startExam(u, (StartExamRequest) request.getPayload()));
+                case TAKE_SAVE_ANSWER   -> withUser(client, u ->
+                        takeExamController.saveAnswer(u, (AnswerChoice) request.getPayload()));
+                case TAKE_SUBMIT        -> withUser(client, u ->
+                        takeExamController.submitExam(u, (Integer) request.getPayload()));
+                case TAKE_RESUME        -> withUser(client, u ->
+                        takeExamController.resumeInProgress(u, (Integer) request.getPayload()));
             };
 
             // A newly saved exam goes straight into a coordinator's queue, so tell
@@ -319,10 +341,15 @@ public class HSTSServer extends AbstractServer {
     @Override
     protected void serverStarted() {
         log("Listening on port " + getPort());
+        // The clock has to run whenever the server does: a student's exam must
+        // close on time even if nobody happens to be looking at a screen.
+        examClock.setLogSink(this::log);
+        examClock.start();
     }
 
     @Override
     protected void serverStopped() {
+        examClock.stop();
         log("Stopped listening.");
     }
 

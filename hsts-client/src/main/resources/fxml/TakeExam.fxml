@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    SUC-7 / מתווה scenario 6: sitting an exam.
+
+      1. the student types the code the teacher read out
+      2. she types her ID number, and the clock starts
+      3. she answers on the computer, and hands in
+
+    The countdown is sent by the SERVER once a second. The client displays it
+    and decides nothing - acceptance test 2.11 requires the timer to be
+    synchronised from the server, and it means a frozen or altered client
+    cannot award anybody extra time.
+
+    Three panes share this window: code, identity, and the paper. Only one is
+    visible at a time.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.TakeExamController"
+      spacing="0" prefWidth="900" prefHeight="720" minWidth="700" minHeight="520">
+
+    <!-- ===================== header ===================== -->
+    <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label fx:id="titleLabel" text="Take an exam" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
+        </VBox>
+        <VBox fx:id="timerBox" spacing="0" alignment="CENTER_RIGHT"
+              visible="false" managed="false">
+            <Label text="TIME LEFT" styleClass="section-title" wrapText="true"/>
+            <Label fx:id="timerLabel" text="--:--"
+                   style="-fx-font-size: 26px; -fx-font-weight: 600;" wrapText="true"/>
+        </VBox>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
+    </HBox>
+
+    <!-- ===================== body ===================== -->
+    <VBox VBox.vgrow="ALWAYS" spacing="0">
+        <padding><Insets top="18" right="24" bottom="18" left="24"/></padding>
+
+        <!-- ===== step 1: the code ===== -->
+        <VBox fx:id="codePane" styleClass="card" spacing="14" maxWidth="520">
+            <Label text="ENTER THE EXAM CODE" styleClass="section-title" wrapText="true"/>
+            <Label text="Your teacher will read out a 4-character code. Capitals do not matter."
+                   styleClass="caption" wrapText="true"/>
+            <TextField fx:id="codeField" promptText="e.g. K7M2" prefWidth="180"/>
+            <HBox spacing="10">
+                <Button fx:id="codeButton" text="Continue" onAction="#onCheckCode"
+                        styleClass="primary" prefWidth="140" defaultButton="true"/>
+                <Region HBox.hgrow="ALWAYS"/>
+            </HBox>
+        </VBox>
+
+        <!-- ===== step 2: identify ===== -->
+        <VBox fx:id="idPane" styleClass="card" spacing="14" maxWidth="520"
+              visible="false" managed="false">
+            <Label text="ENTER YOUR ID NUMBER" styleClass="section-title" wrapText="true"/>
+            <Label fx:id="idExplainLabel" styleClass="caption" wrapText="true"
+                   text="Your time starts the moment you press Start, and runs until it is used up - even if the exam window closes before then."/>
+            <TextField fx:id="idField" promptText="9 digits" prefWidth="200"/>
+            <HBox spacing="10">
+                <Button fx:id="startButton" text="Start the exam" onAction="#onStart"
+                        styleClass="primary" prefWidth="160" defaultButton="true"/>
+                <Button fx:id="backToCodeButton" text="Back" onAction="#onBackToCode"
+                        styleClass="quiet"/>
+                <Region HBox.hgrow="ALWAYS"/>
+            </HBox>
+        </VBox>
+
+        <!-- ===== step 3: the paper ===== -->
+        <VBox fx:id="examPane" spacing="12" VBox.vgrow="ALWAYS"
+              visible="false" managed="false">
+
+            <VBox styleClass="card" spacing="5">
+                <Label text="INSTRUCTIONS" styleClass="section-title" wrapText="true"/>
+                <Label fx:id="instructionsLabel" wrapText="true"/>
+            </VBox>
+
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                <VBox fx:id="questionBox" spacing="12"/>
+            </ScrollPane>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Button fx:id="submitButton" text="Hand in the exam" onAction="#onSubmit"
+                        styleClass="primary" prefWidth="180"/>
+                <Label fx:id="progressLabel" styleClass="caption" wrapText="true"/>
+                <Region HBox.hgrow="ALWAYS"/>
+            </HBox>
+        </VBox>
+
+        <!-- ===== finished ===== -->
+        <VBox fx:id="donePane" styleClass="card" spacing="10" maxWidth="560"
+              visible="false" managed="false">
+            <Label fx:id="doneTitleLabel" styleClass="h2" wrapText="true"/>
+            <Label fx:id="doneDetailLabel" wrapText="true"/>
+            <HBox spacing="10">
+                <Button fx:id="doneButton" text="Back to menu" onAction="#onBack"
+                        styleClass="primary" prefWidth="150"/>
+                <Region HBox.hgrow="ALWAYS"/>
+            </HBox>
+        </VBox>
+
+        <Region VBox.vgrow="ALWAYS" fx:id="filler"/>
+
+        <Label fx:id="statusLabel" wrapText="true" text=" "
+               styleClass="status" maxWidth="Infinity"/>
+    </VBox>
+
+</VBox>

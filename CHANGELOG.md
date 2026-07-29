@@ -779,3 +779,100 @@ resized.
 
 Verified: 10/10 screens load, and M2 **48/48**, M3 **34/34**, M4 **43/43**,
 M5 **32/32**, M6 **76/76** — 233 checks, no regressions.
+
+---
+
+## Milestone 7 — sitting an exam · 2026-07-29
+
+**Covers:** SUC-7, מתווה scenario 6, requirements 21, 38, 40, 41, 44, 45, 46, 48.
+
+### What was built
+
+| Item | Notes |
+|---|---|
+| `StudentExam`, `StudentAnswer`, `SubmissionStatus` | Entities |
+| `SubmissionDAO` | Attempts, answers, finishing, deadline moves |
+| `TakeExamController` | Code → identity → paper → hand in |
+| **`ExamClockService`** | The one clock: ticks every second, closes expired exams |
+| `TakeExam.fxml` + controller | Three panes in one window |
+
+### The clock is on the server, and that is the whole point
+
+A countdown running on the student's computer would decide when her exam ends.
+That is the wrong place three times over: the two laptops' clocks need not agree,
+a client that freezes quietly awards extra time, and anyone who cared to could
+stop it. So the server ticks once a second, sends the seconds remaining, and makes
+every judgement against the deadline **stored in the database**. Acceptance test
+2.11 already required the timer to be synchronised from the server.
+
+Because the deadline is a column rather than a countdown in memory, a student can
+close the client and reopen it — or the server can restart — and her remaining
+time is still exactly right.
+
+### Decisions worth defending
+
+**Decision 8 is now real.** Her deadline is written as *start + minutes allowed*.
+The sitting's closing moment governs only whether she may **begin**. Tested
+directly: a student starting shortly before the window shuts has a deadline
+**after** it, keeps her full time, and can still save answers once it has closed.
+
+**The answer key never reaches the student.** The exam object carries `isCorrect`
+on every option and would otherwise be serialised to her computer, where a
+modified client or anyone reading the traffic would have it. The paper is copied
+with every flag cleared before it leaves the server. Likewise the teacher's
+private notes are simply never put on the object that travels to a student.
+
+**Answers are saved as she chooses them**, not on submit. Requirement 45 keeps
+whatever she had entered when the time runs out, and a client that dies mid-exam
+must not take her work with it.
+
+**Blank answer rows are written up front**, so a question she never touches exists
+and is marked wrong rather than silently missing (acceptance test 2.12).
+
+**Submit and time-out cannot both win.** `finish` updates only where the status is
+still `IN_PROGRESS`, so whichever arrives second changes no rows. If her time ran
+out a moment before she pressed Submit, it is recorded as `TIMED_OUT` — the stored
+deadline decides, not the arrival time.
+
+**The recorded end time is her deadline, not the moment the tick noticed.**
+Otherwise her duration would include however long the tick took, and two students
+who ran out at the same instant would be recorded differently.
+
+### Found by the validation loop
+
+**1. A test that passed for the wrong reason.** Section 13 asserted that starting
+after the window shut is refused — and it was, but the message read *"You are not
+signed in"*. The helper had picked a student already logged in elsewhere, so
+requirement 4 blocked the login. The assertion now checks *why* it was refused.
+
+**2. The reply's shape depended on which branch produced it.** `submitExam`
+returned the attempt without its answers loaded. Worse, the early return for an
+already-closed exam did the same — so a student whose time ran out saw a screen
+saying her answers were saved, on an object that appeared to contain none. Both
+paths now load them.
+
+**3. The schema caught a bad update.** An attempt to push `close_time` into the
+past was rejected by `CHECK (close_time > open_time)` — correctly, since it would
+have described a window ending before it started.
+
+### Verified — 54 automated checks, all passing
+
+| Group | Result |
+|---|---|
+| Only a student may sit an exam | 1/1 |
+| The code: unknown, malformed, correct in lower case, no paper handed over yet | 4/4 |
+| **Requirement 21: a student not enrolled is refused** | 1/1 |
+| Identity: too short, letters, **wrong check digit**, valid but not hers | 4/4 |
+| Starting: paper, status, attempt number, **deadline = start + allowed**, blank rows | 5/5 |
+| **The answer key and the teacher's notes never reach the student** | 2/2 |
+| Answering, and out-of-range refused | 3/3 |
+| Resuming returns the same attempt with its answers | 4/4 |
+| **Another student cannot save, hand in, or even reload her paper** | 3/3 |
+| Handing in: status, duration, end time, no answering after, twice is harmless | 6/6 |
+| Acceptance test 2.8: one attempt means one attempt | 1/1 |
+| **Decision 8: her deadline outlives the window; full time; refused after it shuts** | 6/6 |
+| **The clock closes her exam by itself, and the answer survives in the database** | 4/4 |
+| The countdown is pushed unprompted | 2/2 |
+| Requirement 48: started / finished / timed-out counts | 3/3 |
+
+Regression: **287 checks** across the project, 11/11 screens load.
