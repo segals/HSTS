@@ -40,8 +40,21 @@ import java.util.Properties;
  */
 public class GeminiStudyBotService implements IStudyBotService {
 
-    /** Overridable in the config file, because model names change over time. */
-    private static final String DEFAULT_MODEL = "gemini-2.0-flash";
+    /**
+     * Overridable in the config file with {@code gemini.model}.
+     *
+     * <p><b>An alias, not a fixed version.</b> This was {@code gemini-2.0-flash} and
+     * it failed against a brand-new key with HTTP 429 and
+     * {@code "limit: 0"} - that model is no longer on the free tier for new keys.
+     * {@code gemini-2.5-flash} was worse: 404, <i>"no longer available to new
+     * users"</i>. Named versions age out, and a demo that stops working because a
+     * model was retired is a demo that fails for no reason of ours.</p>
+     *
+     * <p>{@code gemini-flash-latest} always points at the current flash model, so it
+     * keeps working. Whatever it resolves to is reported in the reply's
+     * {@code modelVersion}.</p>
+     */
+    private static final String DEFAULT_MODEL = "gemini-flash-latest";
 
     private static final String ENDPOINT =
             "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
@@ -49,14 +62,27 @@ public class GeminiStudyBotService implements IStudyBotService {
     /** A student is waiting at a screen; a call that hangs is worse than a refusal. */
     private static final Duration TIMEOUT = Duration.ofSeconds(25);
 
-    /** Gemini is given the material and told to stay inside it. */
+    /**
+     * Gemini is given the material, told to stay inside it, and told to write plainly.
+     *
+     * <p>The last part is not fussiness. The first real answer came back as
+     * {@code To solve $5x + 3 = 23$ ... **$x = 4$**} - LaTeX and markdown, which a
+     * JavaFX label draws literally, dollar signs and asterisks and all. A pupil would
+     * see punctuation where the maths should be. Formatting the client cannot render
+     * is worse than no formatting at all.</p>
+     */
     private static final String INSTRUCTIONS = """
             You are a study assistant for a high school course. Answer the student's \
             question using the course material below. Explain simply and briefly, as \
             to a school pupil. If the material does not cover the question, say so \
             plainly and give only general guidance. Never invent facts about the \
             course. Do not reveal exam answers if the question is asking you to do \
-            the student's exam for her.""";
+            the student's exam for her.
+
+            Write in PLAIN TEXT only. Do not use markdown: no asterisks for bold, no \
+            hash marks for headings, no backticks. Do not use LaTeX or dollar signs \
+            for mathematics - write equations plainly, like 5x + 3 = 23 and x = 4. \
+            For steps, use a simple numbered list with ordinary full stops.""";
 
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -137,6 +163,16 @@ public class GeminiStudyBotService implements IStudyBotService {
                   + "Set gemini.model in " + ConfigFile.path() + " to one that exists.");
         }
         if (response.statusCode() == 429) {
+            // Two very different things arrive as 429, and telling a student to
+            // "wait a moment" when the plan has no quota at all would leave her
+            // waiting for ever. A structural zero says so instead.
+            String body = response.body() == null ? "" : response.body();
+            if (body.contains("limit: 0")) {
+                throw new BotUnavailableException(
+                        "The study bot's account has no quota for the model \"" + model
+                      + "\". Set gemini.model in " + ConfigFile.path()
+                      + " to a model the key is allowed to use, or check the plan.");
+            }
             throw new BotUnavailableException(
                     "The study bot has been asked too many questions just now. "
                   + "Please wait a moment and try again.");
@@ -209,19 +245,65 @@ public class GeminiStudyBotService implements IStudyBotService {
         if (candidates < 0) {
             return null;
         }
-        int key = json.indexOf("\"text\"", candidates);
-        if (key < 0) {
-            return null;
+
+        // Take the first "text" that is NOT part of the model's private reasoning.
+        //
+        // The current flash models are thinking models. A live reply carried a
+        // "thoughtSignature" beside the answer, which is harmless - but the same
+        // family can return a separate part marked "thought": true whose "text" is
+        // the reasoning, and returning that to a pupil would be wrong in a way that
+        // no test of a static example would have caught.
+        int from = candidates;
+        while (true) {
+            int key = json.indexOf("\"text\"", from);
+            if (key < 0) {
+                return null;
+            }
+            int colon = json.indexOf(':', key + 6);
+            if (colon < 0) {
+                return null;
+            }
+            int open = json.indexOf('"', colon + 1);
+            if (open < 0) {
+                return null;
+            }
+            if (isThoughtPart(json, key)) {
+                from = open + 1;                 // skip it and look at the next part
+                continue;
+            }
+            return readJsonString(json, open + 1);
         }
-        int colon = json.indexOf(':', key + 6);
-        if (colon < 0) {
-            return null;
+    }
+
+    /**
+     * True when the object immediately containing {@code position} is a thought part.
+     *
+     * <p>Scans back to the {@code &#123;} that opens the enclosing part and looks for
+     * {@code "thought": true} inside it. Crude, but it is a targeted check against a
+     * shape that is documented and real, and it fails safe: if the brace cannot be
+     * found the part is treated as an ordinary answer.</p>
+     */
+    public static boolean isThoughtPart(String json, int position) {
+        int depth = 0;
+        int start = -1;
+        for (int i = position; i >= 0; i--) {
+            char c = json.charAt(i);
+            if (c == '}') {
+                depth++;
+            } else if (c == '{') {
+                if (depth == 0) {
+                    start = i;
+                    break;
+                }
+                depth--;
+            }
         }
-        int open = json.indexOf('"', colon + 1);
-        if (open < 0) {
-            return null;
+        if (start < 0) {
+            return false;
         }
-        return readJsonString(json, open + 1);
+        int end = json.indexOf('}', position);
+        String part = json.substring(start, end < 0 ? json.length() : end);
+        return part.replaceAll("\s+", "").contains("\"thought\":true");
     }
 
     /** Reads one JSON string body starting at {@code from}, honouring escapes. */

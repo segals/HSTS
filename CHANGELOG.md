@@ -1573,3 +1573,113 @@ Run **twice back to back with no database reset**, identical both times.
 **Still to do before this milestone can be demonstrated live:** the Gemini API key
 must be added to `%USERPROFILE%\.hsts\config.properties` as `gemini.api.key=...`.
 Everything else works now.
+
+---
+
+## Milestone 14, follow-up — testing the real API key
+
+The key was added to `%USERPROFILE%\.hsts\config.properties`. Testing it found three
+faults, none of them the key.
+
+### The key was fine. The model was wrong — twice.
+
+`GeminiProbe` made one real call and got **HTTP 429**, which
+`GeminiStudyBotService` reports to a student as *"asked too many questions just
+now"*. That wording is right for her and useless for diagnosis, so `GeminiDiag`
+printed the raw reply. (Safe to print: the key travels in the URL's query string,
+never in the body.)
+
+| Model | Result |
+|---|---|
+| `gemini-2.0-flash` | **429** — `"limit: 0"`, no free-tier quota for a new key |
+| `gemini-2.5-flash` | **404** — *"no longer available to new users"* |
+| `gemini-flash-latest` | **200** — answered, resolving to `gemini-3.6-flash` |
+
+The `models` listing returned **200**, which is what proved the key itself was
+valid and authenticated.
+
+**Fixed:** the default is now `gemini-flash-latest` — an alias, not a pinned
+version. Named versions age out, and a demo that stops working because a model was
+retired fails for no reason of ours. Still overridable with `gemini.model`.
+
+**Also fixed:** a 429 carrying `limit: 0` is a *structural* zero, not a busy
+moment. Telling a student to "wait a moment" would leave her waiting for ever, so
+that case now names the model and points at the config file.
+
+### A latent bug the live reply exposed
+
+The real response carried a `thoughtSignature` beside the answer — harmless here,
+but it showed that the current flash models are **thinking models**. The same family
+can return a separate part marked `"thought": true` whose `text` is the model's
+private reasoning, and `extractText` took the *first* `"text"` it found. On such a
+reply a pupil would have been shown the reasoning instead of the answer.
+
+`extractText` now skips thought parts. Four checks cover it, including the
+`thoughtSignature` shape that actually arrived. **No static example would have
+caught this** — it took a real call.
+
+### The answer was unreadable on a school screen
+
+The first working answer came back as:
+
+> To solve a linear equation like `$5x + 3 = 23$` … **`$x = 4$`**
+
+LaTeX and markdown. A JavaFX label draws that literally — dollar signs, asterisks
+and all — so a pupil would see punctuation where the maths should be. Formatting
+the client cannot render is worse than no formatting.
+
+The instructions now forbid markdown and LaTeX and ask for plain numbered steps.
+Verified by a second real call: plain text, correct working, and it still said
+*"This specific equation is not in the course material, but I can give you general
+guidance using the linear equation rule from the course"* — which is the prompt
+staying inside the teacher's material, as intended.
+
+### Twelve people shared a name
+
+Not a bot fault, found while reading the end-to-end output: it announced *"signed in
+as Noa Levi"* — a **student**, when `teacher1` is also Noa Levi.
+
+`SeedRunner.personName` computed `first[i % 20] + last[(i/20 + i) % 14]`, which
+collided for twelve of the 53 users, each time putting a member of staff and a pupil
+under one name. Harmless to the code and thoroughly confusing on screen: somebody
+reading a class list could not tell pupils from colleagues. Names are now handed out
+from a set, so nobody shares. Still reproducible — the same run makes the same
+people.
+
+### Two probes kept out of the regression, deliberately
+
+`GeminiProbe` and `BotE2E` make **real** API calls, so they are run by hand and are
+not part of the suite. `M14Test` still runs entirely against a stub: the regression
+must not need the network, a key, or any spend.
+
+`BotE2E` proves the wiring the stub cannot: teacher creates a bot, feeds it the
+question bank and her own notes, switches it on; a student on a client connection
+asks and gets a genuine answer that **follows her teacher's notes** — *"do the same
+thing to both sides… add or subtract first, then divide… check by putting the answer
+back in"*. Then requirement 74 reads it back, and requirement 75 shows the teacher
+the usage with no identity attached.
+
+### One more test fault, same family as before
+
+`M14Test` began failing on its exam step after being run a few times: `max_attempts`
+is 1, so a student who sat that sitting in an earlier run cannot start it again. The
+sitting is now worked out **before** the students are chosen, and the query excludes
+anybody who has already sat it — with a message saying so rather than a
+`NullPointerException`.
+
+That is the **fourth** time this project has hit a test assuming a clean database.
+The pattern is worth stating in the report: hard-coded execution codes, "not
+enrolled here means has sat nothing", "the first enrolled student is free to ask the
+bot", and now "she has an attempt left".
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| M2–M11, M13 | unchanged, all passing |
+| **M14** | **85/85** (was 81; 4 new on thought parts) |
+| **Total** | **663 checks** |
+| Screens | 19/19 load |
+
+Run **twice back to back with no database reset**, identical both times. The live
+API was exercised separately: `GeminiProbe` and `BotE2E` both succeed.

@@ -153,6 +153,10 @@ public final class SeedRunner {
     }
 
     private static String seedAll() throws SQLException {
+        // A fresh run hands out names afresh. Without this, a reset inside the same
+        // JVM would start from an already-full set and fall through to the suffix.
+        NAMES_USED.clear();
+
         Connection conn = DBController.getInstance().getConnection();
         UserDAO userDAO = new UserDAO();
 
@@ -294,9 +298,35 @@ public final class SeedRunner {
         return username + "!" + roleInitial;
     }
 
+    /** Every name handed out so far, so that nobody is issued one twice. */
+    private static final java.util.Set<String> NAMES_USED = new java.util.LinkedHashSet<>();
+
+    /**
+     * A name for one person, unique across everybody the seeder creates.
+     *
+     * <p>The arithmetic used to be {@code first[i % 20] + last[(i/20 + i) % 14]}, and it
+     * collided: twelve names ended up shared between a member of staff and a student,
+     * so "Noa Levi" was both a teacher and a girl in her class. Harmless to the code
+     * and thoroughly confusing on screen - somebody reading a class list could not
+     * tell whether he was seeing pupils or colleagues.</p>
+     *
+     * <p>Names now come from a set, so the first free combination is taken and nobody
+     * shares. Still not random: the same run produces the same people, which is what
+     * {@link #RANDOM_SEED} is for elsewhere.</p>
+     */
     private static String personName(int index) {
-        String first = FIRST_NAMES[Math.floorMod(index, FIRST_NAMES.length)];
-        String last  = LAST_NAMES[Math.floorMod(index / FIRST_NAMES.length + index, LAST_NAMES.length)];
-        return first + " " + last;
+        for (int attempt = 0; attempt < FIRST_NAMES.length * LAST_NAMES.length; attempt++) {
+            int spun = index + attempt;
+            String first = FIRST_NAMES[Math.floorMod(spun, FIRST_NAMES.length)];
+            String last  = LAST_NAMES[Math.floorMod(spun / FIRST_NAMES.length + spun,
+                                                    LAST_NAMES.length)];
+            String name = first + " " + last;
+            if (NAMES_USED.add(name)) {
+                return name;
+            }
+        }
+        // 20 x 14 = 280 combinations against ~53 people, so this is unreachable -
+        // but a silent duplicate would be worse than an obvious suffix.
+        return FIRST_NAMES[Math.floorMod(index, FIRST_NAMES.length)] + " #" + index;
     }
 }
