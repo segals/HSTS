@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    SUC-5 / מתווה scenario 4: the subject coordinator approves an exam.
+
+      1. every exam needs her approval before it can be sat
+      2. a rejection carries a written reason, which is SENT to the teacher
+         and stored (requirement 33)
+
+    She sees only exams in the subject she coordinates (requirement 31).
+
+    New exams appear in this list on their own - the server pushes them - so
+    there is no Refresh button anywhere, which is what NFR 18 requires.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.ExamApprovalScreenController"
+      spacing="0" prefWidth="1080" prefHeight="720" minWidth="900" minHeight="560">
+
+    <!-- ===================== header ===================== -->
+    <HBox styleClass="header-bar" spacing="14" alignment="CENTER_LEFT">
+        <VBox spacing="2">
+            <Label text="Exam approval" styleClass="h2"/>
+            <Label fx:id="subtitleLabel" styleClass="caption"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
+    </HBox>
+
+    <!-- ===================== body ===================== -->
+    <HBox spacing="16" VBox.vgrow="ALWAYS">
+        <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
+
+        <!-- ===== waiting list ===== -->
+        <VBox styleClass="card" spacing="10" prefWidth="340" minWidth="280" maxWidth="420">
+            <HBox alignment="CENTER_LEFT" spacing="8">
+                <Label text="WAITING FOR YOU" styleClass="section-title"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="pendingCountLabel" styleClass="caption"/>
+            </HBox>
+            <ListView fx:id="pendingList" VBox.vgrow="ALWAYS"/>
+            <Label text="This list updates by itself when a teacher submits an exam."
+                   styleClass="caption" wrapText="true"/>
+        </VBox>
+
+        <!-- ===== the exam under review ===== -->
+        <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS" minWidth="420">
+
+            <VBox spacing="3">
+                <Label fx:id="examTitleLabel" styleClass="h3"/>
+                <Label fx:id="examMetaLabel" styleClass="caption" wrapText="true"/>
+            </VBox>
+
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                <VBox spacing="12">
+                    <padding><Insets top="12" right="10" bottom="12" left="0"/></padding>
+
+                    <VBox spacing="5">
+                        <Label text="INSTRUCTIONS FOR THE STUDENTS" styleClass="section-title"/>
+                        <Label fx:id="instructionsLabel" wrapText="true"/>
+                    </VBox>
+
+                    <VBox spacing="5">
+                        <Label text="NOTES FROM THE TEACHER" styleClass="section-title"/>
+                        <Label fx:id="teacherNotesLabel" wrapText="true"/>
+                    </VBox>
+
+                    <VBox spacing="6">
+                        <Label text="QUESTIONS" styleClass="section-title"/>
+                        <VBox fx:id="questionBox" spacing="6"/>
+                    </VBox>
+                </VBox>
+            </ScrollPane>
+
+            <!-- pinned decision footer -->
+            <VBox spacing="8">
+                <padding><Insets top="12" right="0" bottom="0" left="0"/></padding>
+
+                <Label text="REASON  ·  REQUIRED IN ORDER TO REJECT" styleClass="section-title"/>
+                <TextArea fx:id="reasonArea" prefRowCount="2" wrapText="true"
+                          promptText="What does the teacher need to change?"/>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Button fx:id="approveButton" text="Approve" onAction="#onApprove"
+                            styleClass="primary" prefWidth="140"/>
+                    <Button fx:id="rejectButton" text="Reject" onAction="#onReject"
+                            styleClass="danger" prefWidth="140"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                </HBox>
+
+                <Label fx:id="statusLabel" wrapText="true" text=" "
+                       styleClass="status" maxWidth="Infinity"/>
+            </VBox>
+        </VBox>
+    </HBox>
+
+</VBox>

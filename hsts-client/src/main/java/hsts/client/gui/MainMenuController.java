@@ -140,7 +140,8 @@ public class MainMenuController extends GUIScreen {
         }
 
         if (user instanceof SubjectCoordinator) {
-            entries.add(new MenuEntry("Approve or reject exams", "milestone 5",  null));
+            entries.add(new MenuEntry("Approve or reject exams", "milestone 5",
+                                      "/fxml/ExamApproval.fxml"));
         }
 
         if (user instanceof Student) {

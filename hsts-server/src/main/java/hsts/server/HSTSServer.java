@@ -5,12 +5,15 @@ import hsts.common.entity.Question;
 import hsts.common.entity.User;
 import hsts.common.protocol.Credentials;
 import hsts.common.protocol.ExamBuildCriteria;
+import hsts.common.protocol.ExamDecision;
 import hsts.common.protocol.ExamRef;
 import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
+import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
 import hsts.server.boundary.IUserManagementSystem;
 import hsts.server.boundary.LocalUserManagementAdapter;
+import hsts.server.control.ExamApprovalController;
 import hsts.server.control.ExamBuilderController;
 import hsts.server.control.LoginController;
 import hsts.server.control.QuestionController;
@@ -19,6 +22,7 @@ import hsts.server.dao.DBController;
 import hsts.server.dao.ExamDAO;
 import hsts.server.dao.QuestionDAO;
 import hsts.server.dao.UserDAO;
+import hsts.server.push.PushService;
 import hsts.server.push.SessionRegistry;
 import ocsf.server.AbstractServer;
 import ocsf.server.ConnectionToClient;
@@ -60,10 +64,13 @@ public class HSTSServer extends AbstractServer {
     private final IUserManagementSystem userManagement = new LocalUserManagementAdapter(userDAO);
     private final LoginController loginController = new LoginController(userManagement, sessions);
     private final ExamDAO examDAO = new ExamDAO();
+    private final PushService pushService = new PushService(sessions);
     private final QuestionController questionController =
             new QuestionController(questionDAO, courseDAO);
     private final ExamBuilderController examBuilderController =
             new ExamBuilderController(examDAO, questionDAO, courseDAO);
+    private final ExamApprovalController examApprovalController =
+            new ExamApprovalController(examDAO, userDAO, pushService);
 
     private HSTSServer(int port) {
         super(port);
@@ -82,6 +89,9 @@ public class HSTSServer extends AbstractServer {
 
     public void setLogSink(Consumer<String> sink) {
         this.logSink = sink;
+        // Push failures are quiet by design - they must never break the operation
+        // that caused them - but they should still be visible on the console.
+        pushService.setLogSink(this::log);
     }
 
     private void log(String text) {
@@ -166,7 +176,24 @@ public class HSTSServer extends AbstractServer {
                         ExamRef ref = (ExamRef) request.getPayload();
                         return examBuilderController.listVersions(u, ref.getExamId());
                     });
+
+                // ---- SUC-5: approving exams ----
+                case EXAM_PENDING_FOR_COORDINATOR -> withUser(client, u ->
+                        examApprovalController.listPending(u));
+                case EXAM_APPROVE -> withUser(client, u ->
+                        examApprovalController.approve(u, (ExamDecision) request.getPayload()));
+                case EXAM_REJECT  -> withUser(client, u ->
+                        examApprovalController.reject(u, (ExamDecision) request.getPayload()));
             };
+
+            // A newly saved exam goes straight into a coordinator's queue, so tell
+            // her now rather than leaving her to discover it. Done here rather than
+            // inside the builder so the two controllers stay independent of each
+            // other - the builder does not need to know approval exists.
+            if (request.getType() == RequestType.EXAM_SAVE
+                    && response.isOk() && response.getPayload() instanceof Exam saved) {
+                examApprovalController.notifyCoordinatorOfNewExam(saved);
+            }
         } catch (Exception e) {
             log("FAILED to handle " + request.getType() + ": " + e);
             response = Response.error("Server error: " + e.getMessage());

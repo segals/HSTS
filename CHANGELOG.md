@@ -555,3 +555,86 @@ pre-rewrite tree, all nine commits preserved, zero trailers remaining on the
 remote. Every commit is authored solely by the project author.
 
 All 8 screens load.
+
+---
+
+## Milestone 5 — approval, and server push · 2026-07-29
+
+**Covers:** SUC-5, מתווה scenario 4, requirements 30, 31, 33, and **NFR 18**.
+
+### What was built
+
+| Item | Notes |
+|---|---|
+| `PushType`, `PushEvent` | Server-to-client messages nobody asked for |
+| `PushService` | Best-effort delivery through `SessionRegistry` |
+| `ExamApprovalController` | SUC-5 |
+| `ExamApproval.fxml` + controller | The coordinator's queue and decision screen |
+| `ExamDecision` | Names the exam *and the version* being decided |
+| `GUIScreen.onPush` | Every screen becomes the push listener automatically |
+| `SeedRunner.resetAndSeed` + console button | Wipe and re-seed, for after tests and before the demo |
+
+### Server push — the point of the milestone
+
+NFR 18 forbids a manual refresh. A client that only speaks when spoken to would
+need a Refresh button, or would have to poll — too slow and the screen is stale,
+too fast and every idle client hammers the server for nothing. So the server
+keeps the connection and speaks first. That is the **Observer** pattern from the
+submitted class diagram, finally doing real work.
+
+**`PushEvent` is a separate class from `Response`, deliberately.** A response
+answers a question this client asked and carries its `requestId`; a push answers
+nothing and can arrive at any moment — including while a screen is waiting for
+something else. One shared class would let an announcement be mistaken for the
+reply a screen was waiting for, which is exactly the sort of intermittent fault
+that only appears under load.
+
+**Every screen becomes the push listener as it opens**, wired inside
+`bindStatusLabel` so no screen can forget. A screen that forgot would silently
+swallow the announcements NFR 18 exists to deliver.
+
+**Delivery is best-effort and never throws.** A rejection is committed to the
+database before anyone is told; if the teacher is offline the event is dropped
+and she sees the decision next time she looks. A push must never be able to undo
+the operation that caused it — tested explicitly.
+
+### Decisions made, and why
+
+**Requirement 33 says the reason is *sent*, not just stored.** "סיבת הדחייה תישלח
+למורה ותישמר במערכת" — both halves. Storing alone would leave the teacher to go
+and look, which combined with NFR 18 is precisely what is forbidden. So a
+rejection is pushed to the author with the reason in it.
+
+**A rejection without a reason is refused.** A refusal the teacher cannot act on
+is not a rejection. Checked on the client for speed and on the server for real.
+
+**An already-decided exam cannot be decided again.** Two coordinators, or one
+stale screen, could otherwise overwrite each other's decision with neither
+noticing.
+
+**Editing a rejected exam clears the reason and returns it to pending.** Version 1
+keeps its REJECTED status and its reason forever; version 2 starts clean. The
+history of *why* it was rejected survives, which is the point of versioning.
+
+**The coordinator is told when a new exam arrives**, from `HSTSServer` rather than
+from inside `ExamBuilderController` — so the builder does not need to know that
+approval exists at all.
+
+### Verified — 31 automated checks, all passing
+
+| Group | Result |
+|---|---|
+| A teacher cannot approve, or even see the queue | 2/2 |
+| The coordinator sees her own subject's queue | 3/3 |
+| **Requirement 31: another subject's coordinator is refused, and sees nothing** | 3/3 |
+| **Requirement 33: a rejection without a reason is refused** | 2/2 |
+| **PUSH: the teacher is told unprompted, and the message carries the reason** | 4/4 |
+| The reason is also stored verbatim | 2/2 |
+| Approval pushes too | 3/3 |
+| A decided exam cannot be decided twice | 1/1 |
+| Decided exams leave the queue | 1/1 |
+| **PUSH the other way: a new exam reaches the coordinator unprompted** | 3/3 |
+| Editing a rejected exam returns it to pending; v1 keeps its reason | 5/5 |
+| **A push to an offline user is harmless — the decision still succeeds** | 2/2 |
+
+Regression: M2 **48/48**, M3 **34/34**, M4 **43/43**. All 9 screens load.

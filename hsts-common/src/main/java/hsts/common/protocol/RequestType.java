@@ -75,5 +75,16 @@ public enum RequestType {
     EXAM_GET,
 
     /** Every stored version of one exam. Payload is an {@link ExamRef}. */
-    EXAM_VERSIONS
+    EXAM_VERSIONS,
+
+    // ---- SUC-5: approving exams (milestone 5) ----
+
+    /** Exams awaiting a decision in the coordinator's own subject. No payload. */
+    EXAM_PENDING_FOR_COORDINATOR,
+
+    /** Approves one exam version. Payload is an {@link ExamDecision}. */
+    EXAM_APPROVE,
+
+    /** Rejects one exam version with a mandatory reason. Payload is an {@link ExamDecision}. */
+    EXAM_REJECT
 }

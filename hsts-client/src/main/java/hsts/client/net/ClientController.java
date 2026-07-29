@@ -1,6 +1,7 @@
 package hsts.client.net;
 
 import hsts.common.entity.User;
+import hsts.common.protocol.PushEvent;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.Response;
 import javafx.application.Platform;
@@ -33,6 +34,17 @@ public class ClientController {
     private HSTSClient client;
     private Consumer<Response> responseHandler = response -> { };
     private Consumer<String>   connectionLostHandler = message -> { };
+
+    /**
+     * Where unsolicited server messages go.
+     *
+     * <p>Separate from {@link #responseHandler} on purpose. A reply answers a
+     * question this client asked; a push answers nothing and can arrive at any
+     * moment, including while a screen is waiting for something else. Routing
+     * them through one handler would let an announcement be mistaken for the
+     * reply a screen was waiting for.</p>
+     */
+    private Consumer<PushEvent> pushHandler = event -> { };
 
     /**
      * Who is signed in on this client.
@@ -110,9 +122,16 @@ public class ClientController {
 
     // -----------------------------------------------------------------
 
+    /** The current screen registers here to receive server announcements. */
+    public void setPushHandler(Consumer<PushEvent> handler) {
+        this.pushHandler = (handler == null) ? event -> { } : handler;
+    }
+
     private void dispatch(Object message) {
         if (message instanceof Response response) {
             Platform.runLater(() -> responseHandler.accept(response));
+        } else if (message instanceof PushEvent event) {
+            Platform.runLater(() -> pushHandler.accept(event));
         } else {
             Platform.runLater(() -> responseHandler.accept(
                     Response.error("Unrecognised message from the server: "

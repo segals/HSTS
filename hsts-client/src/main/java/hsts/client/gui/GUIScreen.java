@@ -2,6 +2,8 @@ package hsts.client.gui;
 
 import hsts.client.HSTSApp;
 import hsts.client.net.ClientController;
+import hsts.common.protocol.PushEvent;
+import hsts.common.protocol.PushType;
 import javafx.application.Platform;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
@@ -48,6 +50,27 @@ public abstract class GUIScreen {
      */
     protected void bindStatusLabel(Label label) {
         this.statusLabel = label;
+
+        // Every screen becomes the current push listener as it opens. Doing it
+        // here rather than in each screen means no screen can forget - and a
+        // screen that forgot would silently swallow the announcements NFR 18
+        // exists to deliver.
+        controller.setPushHandler(this::onPush);
+    }
+
+    /**
+     * Something happened on the server that this user should know about.
+     *
+     * <p>The default is to show the message. A screen that displays data the
+     * event affects should override this, call {@code super.onPush(event)} and
+     * then reload - that is what "no manual refresh" means in practice.</p>
+     */
+    protected void onPush(PushEvent event) {
+        if (event.getType() == PushType.EXAM_REJECTED) {
+            showError(event.getMessage());
+        } else {
+            showSuccess(event.getMessage());
+        }
     }
 
     /** Shows a normal, informational message. */

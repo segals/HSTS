@@ -12,6 +12,7 @@ import hsts.server.dao.UserDAO;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -88,6 +89,62 @@ public final class SeedRunner {
             return "Test data already present (" + db.countRows("users") + " users) - not re-seeded.";
         }
         return seedAll();
+    }
+
+    /**
+     * Every table, ordered children-before-parents.
+     *
+     * <p>Kept in one place so a reset cannot miss a table as the schema grows -
+     * a forgotten table would leave orphaned rows that break the next seed with a
+     * foreign-key error nobody expects.</p>
+     */
+    private static final String[] ALL_TABLES = {
+        "bot_conversation", "knowledge_source", "bot",
+        "exam_statistics", "question_feedback", "grade",
+        "student_answer", "student_exam", "exam_execution",
+        "exam_question", "exam",
+        "answer", "question",
+        "code_attempt", "course_teacher", "course_student",
+        "users", "course", "subject",
+    };
+
+    /**
+     * Wipes every row and seeds again from scratch.
+     *
+     * <p>Two reasons this exists rather than being a hand-typed SQL command.</p>
+     *
+     * <p><b>Testing leaves debris.</b> Running the automated suites repeatedly
+     * fills the bank with things like "Algebra easy question 0" and half-built
+     * exams. Harmless, but it makes the screens hard to judge and hard to
+     * demonstrate.</p>
+     *
+     * <p><b>The demo needs fresh dates.</b> Later milestones need an exam that is
+     * open <em>at the moment of the demo</em>. Because the seeder computes every
+     * date relative to when it runs, re-running this shortly before the demo puts
+     * the data back into the right shape - which is exactly what the plan
+     * anticipated.</p>
+     *
+     * <p>{@code TRUNCATE} rather than {@code DELETE}: it also resets the
+     * auto-increment counters, so a fresh database produces the same ids every
+     * time and a bug found once can be reproduced.</p>
+     */
+    public static String resetAndSeed() throws SQLException {
+        Connection conn = DBController.getInstance().getConnection();
+
+        try (Statement st = conn.createStatement()) {
+            // The tables reference each other in a cycle of constraints that no
+            // single ordering satisfies for TRUNCATE, so the checks are lifted
+            // for the duration of the wipe and restored immediately after.
+            st.executeUpdate("SET FOREIGN_KEY_CHECKS = 0");
+            try {
+                for (String table : ALL_TABLES) {
+                    st.executeUpdate("TRUNCATE TABLE " + table);
+                }
+            } finally {
+                st.executeUpdate("SET FOREIGN_KEY_CHECKS = 1");
+            }
+        }
+        return "Test data reset. " + seedAll();
     }
 
     private static String seedAll() throws SQLException {

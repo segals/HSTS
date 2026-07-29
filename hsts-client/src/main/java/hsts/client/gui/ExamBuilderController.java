@@ -8,6 +8,8 @@ import hsts.common.entity.Question;
 import hsts.common.enums.DifficultyLevel;
 import hsts.common.protocol.ExamBuildCriteria;
 import hsts.common.protocol.ExamRef;
+import hsts.common.protocol.PushEvent;
+import hsts.common.protocol.PushType;
 import hsts.common.protocol.QuestionQuota;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
@@ -152,6 +154,27 @@ public class ExamBuilderController extends GUIScreen {
         startNewExam();
         send(RequestType.COURSE_LIST_MINE, null, REQ_COURSES);
         send(RequestType.EXAM_LIST_MINE, null, REQ_MY_EXAMS);
+    }
+
+    /**
+     * The coordinator decided on one of this teacher's exams.
+     *
+     * <p>Overridden so the exam list reloads and shows the new status, not just a
+     * message. NFR 18 means the data updates by itself - a message saying
+     * something changed, over a list still showing the old state, would be worse
+     * than a Refresh button.</p>
+     *
+     * <p>This is the visible proof of server push at the demo: the coordinator
+     * rejects on one machine, and this screen changes on the other without anyone
+     * touching it.</p>
+     */
+    @Override
+    protected void onPush(PushEvent event) {
+        super.onPush(event);
+        if (event.getType() == PushType.EXAM_APPROVED
+                || event.getType() == PushType.EXAM_REJECTED) {
+            send(RequestType.EXAM_LIST_MINE, null, REQ_MY_EXAMS);
+        }
     }
 
     // -----------------------------------------------------------------
