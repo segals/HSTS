@@ -60,12 +60,16 @@
                     <Button fx:id="offButton" text="Turn off" onAction="#onDeactivate"
                             maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
                 </HBox>
+                <Button fx:id="deleteButton" text="Delete this bot..." onAction="#onDelete"
+                        styleClass="danger" maxWidth="Infinity"/>
+                <Label text="A course can have several bots, but only one can be switched on at a time."
+                       styleClass="caption" wrapText="true"/>
             </VBox>
 
             <VBox styleClass="card" spacing="8">
                 <Label text="CREATE A BOT" styleClass="section-title" wrapText="true"/>
                 <ComboBox fx:id="courseBox" maxWidth="Infinity"
-                          promptText="A course of yours with no bot yet"/>
+                          promptText="Any course you teach"/>
                 <TextField fx:id="botNameField" promptText="What the bot is called"/>
                 <Button fx:id="createButton" text="Create" onAction="#onCreate"
                         maxWidth="Infinity"/>
@@ -146,9 +150,37 @@
                             </VBox>
 
                             <VBox spacing="6">
-                                <Label text="RECENT QUESTIONS AND ANSWERS"
-                                       styleClass="section-title" wrapText="true"/>
-                                <ListView fx:id="recentList" prefHeight="230"/>
+                                <HBox alignment="CENTER_LEFT" spacing="8">
+                                    <Label text="QUESTIONS ASKED"
+                                           styleClass="section-title" wrapText="true"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Label text="click one to read it in full"
+                                           styleClass="caption" wrapText="true"/>
+                                </HBox>
+                                <ListView fx:id="recentList" prefHeight="200"/>
+
+                                <!--
+                                    The full exchange, only once she has picked one.
+                                    Kept collapsed until then: a list of complete
+                                    answers is unreadable, and she is scanning for
+                                    what was asked, not reading every reply.
+                                -->
+                                <VBox fx:id="fullExchangeBox" styleClass="card" spacing="6"
+                                      visible="false" managed="false">
+                                    <HBox alignment="CENTER_LEFT" spacing="8">
+                                        <Label text="THE FULL EXCHANGE"
+                                               styleClass="section-title" wrapText="true"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="exchangeWhenLabel" styleClass="caption"
+                                               wrapText="true"/>
+                                    </HBox>
+                                    <Label fx:id="exchangeQuestionLabel" styleClass="h3"
+                                           wrapText="true" maxWidth="Infinity"/>
+                                    <Label fx:id="exchangeAnswerLabel" wrapText="true"
+                                           maxWidth="Infinity"/>
+                                    <Label text="No name is shown because none is sent - the server strips it (requirement 75)."
+                                           styleClass="caption" wrapText="true"/>
+                                </VBox>
                             </VBox>
                         </VBox>
                     </ScrollPane>

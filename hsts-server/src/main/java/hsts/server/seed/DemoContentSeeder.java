@@ -191,6 +191,7 @@ public final class DemoContentSeeder {
      * @return a one-line summary for the server console
      */
     public static String seed() throws SQLException {
+        askedCounter = 0;      // a fresh run stamps its conversations afresh
         Connection conn = conn();
         boolean previousAutoCommit = conn.getAutoCommit();
         conn.setAutoCommit(false);
@@ -274,15 +275,204 @@ public final class DemoContentSeeder {
                     "Three of these questions were on last term's paper. Please replace them.");
             exams += 2;
 
+            int bots = seedBots(staff, bankByCourse);
+
             conn.commit();
             return "Demo content seeded: " + BANK.length + " questions, " + exams
-                 + " exams, " + sittings + " sittings, " + papers + " marked papers.";
+                 + " exams, " + sittings + " sittings, " + papers + " marked papers, "
+                 + bots + " study bots.";
 
         } catch (SQLException e) {
             conn.rollback();
             throw e;
         } finally {
             conn.setAutoCommit(previousAutoCommit);
+        }
+    }
+
+    // -----------------------------------------------------------------
+    //  Study bots
+    // -----------------------------------------------------------------
+
+    /**
+     * Bots arranged to show the two things that are hard to see otherwise.
+     *
+     * <p><b>A teacher with more than one course.</b> Yael Peretz teaches Mechanics
+     * and Electricity, and has a bot on each - so her screen proves the list is per
+     * <em>teacher</em>, not per course.</p>
+     *
+     * <p><b>A course with more than one bot, only one of them on.</b> Mechanics has a
+     * general bot that is active and a revision bot that is not. Switching the second
+     * on will switch the first off, and say so.</p>
+     *
+     * <p>The Mechanics bot also has conversations against it - including one question
+     * asked twice - so the usage screen has something to rank and something to open.</p>
+     */
+    private static int seedBots(Map<String, String> staff,
+                               Map<String, List<String>> bankByCourse) throws SQLException {
+
+        String yael = staff.get("teacher4");        // teaches 03 Mechanics and 04 Electricity
+        String tamar = staff.get("teacher3");       // also teaches 03, for requirement 67
+
+        int mechanics = insertBot("03", "Mechanics helper", yael, "ACTIVE");
+        insertSource(mechanics, "QUESTION_BANK", "Mechanics question bank",
+                questionBankText("03"), yael);
+        insertSource(mechanics, "FREE_TEXT", "Newton's laws in plain words", """
+                First law: a thing stays still, or keeps moving the same way, until a \
+                force acts on it. Second law: force equals mass times acceleration, so \
+                a heavier thing needs more force to speed up the same amount. Third \
+                law: every force has an equal and opposite force back.
+
+                Speed is distance divided by time. Acceleration is the change in speed \
+                divided by the time it took.""", yael);
+        // Requirement 67: a colleague on the same course adds to the same bot.
+        insertSource(mechanics, "FREE_TEXT", "Tamar's note on energy", """
+                Kinetic energy is one half times mass times speed squared, so doubling \
+                the speed makes four times the energy. Work is done only when a force \
+                actually moves something - pushing a wall that does not move is no \
+                work at all.""", tamar);
+
+        // A second bot on the SAME course, deliberately left switched off.
+        int revision = insertBot("03", "Mechanics revision bot", tamar, "INACTIVE");
+        insertSource(revision, "FREE_TEXT", "Exam-style practice", """
+                For revision, work through past questions on motion, forces and \
+                energy. Draw the forces on a diagram before doing any arithmetic, and \
+                always write down the units.""", tamar);
+
+        int electricity = insertBot("04", "Electricity helper", yael, "ACTIVE");
+        insertSource(electricity, "QUESTION_BANK", "Electricity question bank",
+                questionBankText("04"), yael);
+        insertSource(electricity, "FREE_TEXT", "Ohm's law and circuits", """
+                Ohm's law: voltage equals current times resistance. In series, add the \
+                resistances. In parallel, add the reciprocals and take the reciprocal \
+                of the total. Power equals voltage times current.""", yael);
+
+        // Conversations, so the usage screen is not empty. One is asked twice, so the
+        // "most-asked" ranking has something real to put at the top.
+        List<String> students = studentsOf("03", 3);
+        if (students.size() >= 3) {
+            ask(mechanics, students.get(0),
+                "What is Newton's second law?",
+                "Newton's second law says force equals mass times acceleration. So if "
+              + "you push two things with the same force, the heavier one speeds up "
+              + "less. Written as a formula it is F = m a.");
+            ask(mechanics, students.get(1),
+                "What is Newton's second law?",
+                "Newton's second law says force equals mass times acceleration. It "
+              + "means the same force produces less acceleration on a heavier object. "
+              + "F = m a.");
+            ask(mechanics, students.get(2),
+                "Why does a heavier object need more force to speed up?",
+                "Because acceleration is force divided by mass. If the mass is bigger "
+              + "and you want the same acceleration, the force has to be bigger too. "
+              + "That follows straight from F = m a.");
+            ask(mechanics, students.get(0),
+                "How do I work out kinetic energy for a 2 kg ball at 3 m/s?",
+                "Kinetic energy is one half times mass times speed squared. So it is "
+              + "0.5 times 2 times 3 times 3, which is 9 joules.");
+            ask(electricity, students.get(0),
+                "Two 4 ohm resistors in parallel - what is the total?",
+                "In parallel you add the reciprocals: 1/4 plus 1/4 is 1/2. Then take "
+              + "the reciprocal of that, which gives 2 ohms. Two equal resistors in "
+              + "parallel always give half of one of them.");
+        }
+        return 3;
+    }
+
+    /**
+     * The course's questions as text, the same shape {@code BotController} builds.
+     *
+     * <p>Written here rather than borrowed from the controller because the seeder
+     * runs before any user is signed in, and the controller's version is behind a
+     * permission check that has no user to check.</p>
+     */
+    private static String questionBankText(String courseCode) throws SQLException {
+        StringBuilder out = new StringBuilder();
+        String sql = """
+            SELECT q.question_id, q.text, q.topic,
+                   a.answer_no, a.text AS answer_text, a.is_correct
+            FROM question q
+            JOIN answer a ON a.question_id = q.question_id
+                        AND a.question_version = q.version
+            WHERE q.course_code = ? AND q.is_current = TRUE AND q.is_deleted = FALSE
+            ORDER BY q.question_id, a.answer_no""";
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setString(1, courseCode);
+            try (ResultSet rs = ps.executeQuery()) {
+                String current = null;
+                while (rs.next()) {
+                    String id = rs.getString("question_id");
+                    if (!id.equals(current)) {
+                        if (current != null) {
+                            out.append('\n');
+                        }
+                        out.append("Q: ").append(rs.getString("text")).append('\n')
+                           .append("   topic: ").append(rs.getString("topic")).append('\n');
+                        current = id;
+                    }
+                    out.append("   ").append(rs.getInt("answer_no")).append(". ")
+                       .append(rs.getString("answer_text"))
+                       .append(rs.getBoolean("is_correct") ? "   [correct]" : "")
+                       .append('\n');
+                }
+            }
+        }
+        return out.toString().trim();
+    }
+
+    private static int insertBot(String courseCode, String name, String createdBy,
+                                 String status) throws SQLException {
+        String sql = """
+            INSERT INTO bot (course_code, name, status, created_by, created_at)
+            VALUES (?, ?, ?, ?, ?)""";
+        try (PreparedStatement ps = conn().prepareStatement(sql,
+                java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, courseCode);
+            ps.setString(2, name);
+            ps.setString(3, status);
+            ps.setString(4, createdBy);
+            ps.setTimestamp(5, Timestamp.valueOf(LocalDateTime.now().minusDays(14)));
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                keys.next();
+                return keys.getInt(1);
+            }
+        }
+    }
+
+    private static void insertSource(int botId, String type, String title,
+                                     String content, String addedBy) throws SQLException {
+        String sql = """
+            INSERT INTO knowledge_source (bot_id, type, title, content, added_by, added_at)
+            VALUES (?, ?, ?, ?, ?, ?)""";
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setInt(1, botId);
+            ps.setString(2, type);
+            ps.setString(3, title);
+            ps.setString(4, content);
+            ps.setString(5, addedBy);
+            ps.setTimestamp(6, Timestamp.valueOf(LocalDateTime.now().minusDays(13)));
+            ps.executeUpdate();
+        }
+    }
+
+    private static int askedCounter;
+
+    private static void ask(int botId, String studentId, String question, String answer)
+            throws SQLException {
+        String sql = """
+            INSERT INTO bot_conversation (bot_id, student_id, question_text,
+                                          answer_text, asked_at)
+            VALUES (?, ?, ?, ?, ?)""";
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setInt(1, botId);
+            ps.setString(2, studentId);
+            ps.setString(3, question);
+            ps.setString(4, answer);
+            // Spread over recent days so the "recent" list has a believable order.
+            ps.setTimestamp(5, Timestamp.valueOf(
+                    LocalDateTime.now().minusHours(6L * ++askedCounter).withNano(0)));
+            ps.executeUpdate();
         }
     }
 

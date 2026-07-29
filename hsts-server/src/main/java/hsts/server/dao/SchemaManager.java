@@ -265,11 +265,12 @@ public final class SchemaManager {
             st.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS bot (
                   bot_id      INT AUTO_INCREMENT PRIMARY KEY,
-                  course_code CHAR(2)      NOT NULL UNIQUE,
+                  course_code CHAR(2)      NOT NULL,
                   name        VARCHAR(100) NOT NULL,
                   status      ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT 'INACTIVE',
                   created_by  CHAR(9)      NOT NULL,
                   created_at  DATETIME     NOT NULL,
+                  INDEX idx_bot_course (course_code),
                   CONSTRAINT fk_bot_course FOREIGN KEY (course_code) REFERENCES course(course_code)
                 ) ENGINE=InnoDB""");
 
@@ -309,6 +310,52 @@ public final class SchemaManager {
             // ---------- clean up milestone 1 scaffolding ----------
             st.executeUpdate("DROP TABLE IF EXISTS m1_skeleton");
             st.executeUpdate("DROP TABLE IF EXISTS m1_skeleton_user");
+
+            migrate(conn, st);
+        }
+    }
+
+    /**
+     * Changes to tables that already exist on a running database.
+     *
+     * <p>{@code CREATE TABLE IF NOT EXISTS} does nothing to a table that is already
+     * there, so a changed definition would only reach a database created from
+     * scratch. Anything altered after the first release needs a step here, and each
+     * one must be safe to run on every start-up.</p>
+     */
+    private static void migrate(Connection conn, Statement st) throws SQLException {
+
+        // A course may now have several bots, with at most one of them active.
+        // It began as one bot per course, enforced by UNIQUE on course_code - which
+        // is exactly the constraint that has to go. The "only one active" half is a
+        // rule about a subset of rows, which MySQL cannot express as an index, so it
+        // lives in BotController where it can also explain itself to the teacher.
+        //
+        // The replacement index is created FIRST. The foreign key fk_bot_course needs
+        // an index on the column, and MySQL refuses to drop the last one that serves
+        // it: "Cannot drop index 'course_code': needed in a foreign key constraint".
+        // With idx_bot_course already in place the key uses that instead, and the
+        // unique index becomes droppable.
+        if (indexExists(conn, "bot", "course_code")) {
+            if (!indexExists(conn, "bot", "idx_bot_course")) {
+                st.executeUpdate("CREATE INDEX idx_bot_course ON bot (course_code)");
+            }
+            st.executeUpdate("ALTER TABLE bot DROP INDEX course_code");
+        }
+    }
+
+    /** True when a named index is on a table, so a migration can be skipped. */
+    private static boolean indexExists(Connection conn, String table, String indexName)
+            throws SQLException {
+        String sql = """
+            SELECT COUNT(*) FROM information_schema.statistics
+            WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?""";
+        try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, table);
+            ps.setString(2, indexName);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 }

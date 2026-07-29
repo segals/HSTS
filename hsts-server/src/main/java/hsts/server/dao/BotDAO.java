@@ -50,12 +50,14 @@ public class BotDAO implements IDAO<Bot, Integer> {
     }
 
     /**
-     * Creates the bot for a course.
+     * Creates a bot for a course.
+     *
+     * <p>A course may have several - a general one and a revision one, say - but
+     * only one may be active at a time, which {@code BotController} enforces. That
+     * keeps requirement 70 unambiguous for a student: "the course bot" is whichever
+     * one is on.</p>
      *
      * @return the new bot with its sources loaded (none yet)
-     * @throws SQLException if the course already has one - the UNIQUE key on
-     *         {@code course_code} is what makes requirement 67 possible, since a
-     *         second teacher must add to the existing bot rather than make another
      */
     public Bot insertBot(String courseCode, String name, String createdBy)
             throws SQLException {
@@ -92,9 +94,16 @@ public class BotDAO implements IDAO<Bot, Integer> {
         }
     }
 
-    public Bot findByCourse(String courseCode) throws SQLException {
-        try (PreparedStatement ps = conn().prepareStatement(
-                baseSelect() + " WHERE b.course_code = ?")) {
+    /**
+     * The bot a student would actually reach: the <b>active</b> one, if any.
+     *
+     * <p>Requirement 70 speaks of "the course bot" in the singular. With several
+     * bots allowed per course, the one that answers is the one switched on - and
+     * only one may be, so this is unambiguous.</p>
+     */
+    public Bot findActiveByCourse(String courseCode) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement(baseSelect()
+                + " WHERE b.course_code = ? AND b.status = 'ACTIVE' LIMIT 1")) {
             ps.setString(1, courseCode);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) {
@@ -105,6 +114,24 @@ public class BotDAO implements IDAO<Bot, Integer> {
                 return bot;
             }
         }
+    }
+
+    /** Every bot on one course, active first then by name - the teacher's list. */
+    public List<Bot> findAllByCourse(String courseCode) throws SQLException {
+        List<Bot> list = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement(baseSelect()
+                + " WHERE b.course_code = ? ORDER BY b.status, b.name")) {
+            ps.setString(1, courseCode);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(readRow(rs));
+                }
+            }
+        }
+        for (Bot bot : list) {
+            bot.setSources(findSources(bot.getBotId()));
+        }
+        return list;
     }
 
     @Override
@@ -130,6 +157,85 @@ public class BotDAO implements IDAO<Bot, Integer> {
             ps.setString(1, status.name());
             ps.setInt(2, botId);
             ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Switches off every other bot on the course.
+     *
+     * <p>Only one bot per course may be active. Done in one statement rather than a
+     * read-then-write loop, so two teachers pressing "Turn on" at the same moment
+     * cannot leave two of them on.</p>
+     *
+     * @return how many were switched off, so the teacher can be told
+     */
+    public int deactivateOthers(String courseCode, int keepBotId) throws SQLException {
+        String sql = """
+            UPDATE bot SET status = 'INACTIVE'
+            WHERE course_code = ? AND bot_id <> ? AND status = 'ACTIVE'""";
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setString(1, courseCode);
+            ps.setInt(2, keepBotId);
+            return ps.executeUpdate();
+        }
+    }
+
+    /** How many questions have been asked of one bot - what a delete would destroy. */
+    public int countConversations(int botId) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement(
+                "SELECT COUNT(*) FROM bot_conversation WHERE bot_id = ?")) {
+            ps.setInt(1, botId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    /**
+     * Removes a bot, its material and its conversation history.
+     *
+     * <p><b>This loses the history, and that is a real cost.</b> Requirement 73 says
+     * the system keeps the questions and the answers, and deleting a bot throws its
+     * away. The alternative - refusing to delete anything that has ever been used -
+     * was rejected by the customer, who asked for a plain delete. So the count is
+     * shown before the deletion happens and the tension is recorded in
+     * {@code docs/03_document_updates.md} rather than glossed over.</p>
+     *
+     * <p>Conversations first: {@code knowledge_source} cascades but
+     * {@code bot_conversation} does not, and its foreign key would otherwise refuse
+     * the delete. All three in one transaction, so a failure leaves the bot whole
+     * rather than half-deleted.</p>
+     *
+     * @return how many conversations were destroyed
+     */
+    public int deleteBotAndHistory(int botId) throws SQLException {
+        java.sql.Connection conn = conn();
+        boolean previousAutoCommit = conn.getAutoCommit();
+        conn.setAutoCommit(false);
+        try {
+            int lost;
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "DELETE FROM bot_conversation WHERE bot_id = ?")) {
+                ps.setInt(1, botId);
+                lost = ps.executeUpdate();
+            }
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "DELETE FROM knowledge_source WHERE bot_id = ?")) {
+                ps.setInt(1, botId);
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "DELETE FROM bot WHERE bot_id = ?")) {
+                ps.setInt(1, botId);
+                ps.executeUpdate();
+            }
+            conn.commit();
+            return lost;
+        } catch (SQLException e) {
+            conn.rollback();
+            throw e;
+        } finally {
+            conn.setAutoCommit(previousAutoCommit);
         }
     }
 
@@ -377,10 +483,9 @@ public class BotDAO implements IDAO<Bot, Integer> {
         throw new UnsupportedOperationException("Use setStatus or renameBot.");
     }
 
+    /** Use {@link #deleteBotAndHistory}, which reports what the deletion destroyed. */
     @Override
-    public void delete(Integer botId) {
-        throw new UnsupportedOperationException(
-                "A bot is deactivated rather than deleted - its conversations are kept "
-              + "(requirement 73).");
+    public void delete(Integer botId) throws SQLException {
+        deleteBotAndHistory(botId);
     }
 }

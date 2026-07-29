@@ -80,42 +80,51 @@ public class BotController {
     //  SUC-13: the teacher's side
     // =================================================================
 
-    /** The bots of the courses she teaches, with a placeholder for courses without one. */
+    /**
+     * Every bot on every course she teaches.
+     *
+     * <p>A teacher of two courses sees both courses' bots in one list, and a course
+     * with several bots contributes all of them. The list is ordered by course so
+     * they group naturally on screen.</p>
+     */
     public Response listMyBots(User user) {
         if (!(user instanceof Teacher teacher)) {
             return Response.error("Only a teacher manages a course bot.");
         }
         try {
             List<Bot> bots = new ArrayList<>();
-            for (String courseCode : teacher.getTaughtCourseCodes()) {
-                Bot bot = botDAO.findByCourse(courseCode);
-                if (bot != null) {
-                    bots.add(bot);
-                }
+            List<String> courses = new ArrayList<>(teacher.getTaughtCourseCodes());
+            java.util.Collections.sort(courses);
+            for (String courseCode : courses) {
+                bots.addAll(botDAO.findAllByCourse(courseCode));
             }
+            long active = bots.stream().filter(Bot::isActive).count();
             return Response.ok(bots, bots.isEmpty()
                     ? "None of your courses has a bot yet."
-                    : bots.size() + " bot(s) on your courses.");
+                    : bots.size() + " bot(s) across " + courses.size()
+                      + " course(s) you teach, " + active + " switched on.");
         } catch (SQLException e) {
             return Response.error("Could not load your bots: " + e.getMessage());
         }
     }
 
-    /** Courses she teaches that have no bot yet - what she may still create one for. */
+    /**
+     * Every course she teaches - she may create a bot for any of them.
+     *
+     * <p>This used to list only courses with <em>no</em> bot, because a course could
+     * have only one. A course may now have several, so every course she teaches is
+     * offered; the list says how many each already has so she can see what she is
+     * adding to.</p>
+     */
     public Response listCoursesWithoutBot(User user) {
-        if (!(user instanceof Teacher teacher)) {
+        if (!(user instanceof Teacher)) {
             return Response.error("Only a teacher creates a course bot.");
         }
         try {
-            List<Course> free = new ArrayList<>();
-            for (Course course : courseDAO.findByTeacher(user.getUserId())) {
-                if (botDAO.findByCourse(course.getCourseCode()) == null) {
-                    free.add(course);
-                }
-            }
-            return Response.ok(free, free.isEmpty()
-                    ? "Every course you teach already has a bot."
-                    : free.size() + " course(s) without a bot.");
+            List<Course> courses = courseDAO.findByTeacher(user.getUserId());
+            return Response.ok(courses, courses.isEmpty()
+                    ? "You do not teach any courses."
+                    : "You teach " + courses.size() + " course(s).");
         } catch (SQLException e) {
             return Response.error("Could not load your courses: " + e.getMessage());
         }
@@ -134,22 +143,39 @@ public class BotController {
             return Response.error("That name is too long - 100 characters at most.");
         }
         try {
-            // Requirement 67: a course has one bot, and a colleague adds to it.
-            Bot existing = botDAO.findByCourse(courseCode);
-            if (existing != null) {
-                return Response.error(existing.getCourseName() + " already has a bot, \""
-                        + existing.getName() + "\", created by " + existing.getCreatedByName()
-                        + ". Add your material to that one rather than making another.");
+            // A course may have several bots. Requirement 67 is unaffected: any
+            // teacher of the course may add material to any of them, and the source
+            // list names who added what. What the requirement asks is that a
+            // colleague CAN add to an existing bot, not that she cannot make another.
+            List<Bot> existing = botDAO.findAllByCourse(courseCode);
+            for (Bot other : existing) {
+                if (other.getName().equalsIgnoreCase(name.trim())) {
+                    return Response.error(other.getCourseName() + " already has a bot called \""
+                            + other.getName() + "\". Give this one a different name so they "
+                            + "can be told apart.");
+                }
             }
             Bot bot = botDAO.insertBot(courseCode, name.trim(), user.getUserId());
-            return Response.ok(bot, "Bot created. It is not active yet - add some "
-                    + "material for it to read, then turn it on.");
+            return Response.ok(bot, existing.isEmpty()
+                    ? "Bot created. It is not active yet - add some material for it to "
+                      + "read, then turn it on."
+                    : "Bot created - that course now has " + (existing.size() + 1)
+                      + " bots. Only one can be switched on at a time.");
         } catch (SQLException e) {
             return Response.error("Could not create the bot: " + e.getMessage());
         }
     }
 
-    /** Requirement 60. A bot with no material may not be switched on. */
+    /**
+     * Requirement 60, plus the one-active-per-course rule.
+     *
+     * <p>Switching one on switches the course's others off, and says which. The
+     * alternative - refusing until she turns the other off herself - is two steps to
+     * express one intention, and she has already said what she wants.</p>
+     *
+     * <p>A bot with no material may not be switched on at all: requirement 70 would
+     * otherwise let a student interrogate a bot that knows nothing.</p>
+     */
     public Response setStatus(User user, int botId, BotStatus status) {
         try {
             Bot bot = botDAO.findById(botId);
@@ -164,14 +190,80 @@ public class BotController {
                 return Response.error("This bot has nothing to read yet. Add the question "
                         + "bank, a document or some text before turning it on.");
             }
+
+            String alsoOff = "";
+            if (status == BotStatus.ACTIVE) {
+                // Which ones were on, before they are turned off, so she can be told.
+                List<String> wereOn = new ArrayList<>();
+                for (Bot other : botDAO.findAllByCourse(bot.getCourseCode())) {
+                    if (other.getBotId() != botId && other.isActive()) {
+                        wereOn.add("\"" + other.getName() + "\"");
+                    }
+                }
+                botDAO.deactivateOthers(bot.getCourseCode(), botId);
+                if (!wereOn.isEmpty()) {
+                    alsoOff = " " + String.join(" and ", wereOn)
+                            + (wereOn.size() == 1 ? " was" : " were")
+                            + " switched off - only one bot per course can be on.";
+                }
+            }
+
             botDAO.setStatus(botId, status);
             Bot updated = botDAO.findById(botId);
             return Response.ok(updated, status == BotStatus.ACTIVE
                     ? "\"" + bot.getName() + "\" is on. Students on "
-                      + bot.getCourseName() + " can use it now."
-                    : "\"" + bot.getName() + "\" is off. Students cannot use it.");
+                      + bot.getCourseName() + " can use it now." + alsoOff
+                    : "\"" + bot.getName() + "\" is off. Students on "
+                      + bot.getCourseName() + " have no bot until one is switched on.");
         } catch (SQLException e) {
             return Response.error("Could not change the bot: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Deletes a bot, its material and its history.
+     *
+     * <p><b>The history goes with it.</b> Requirement 73 says the questions and
+     * answers are kept, and this destroys them - so the reply says how many were
+     * lost, and the screen asks first. The customer asked for a plain delete knowing
+     * that; the conflict is written down in {@code docs/03_document_updates.md}
+     * rather than hidden.</p>
+     */
+    public Response deleteBot(User user, int botId) {
+        try {
+            Bot bot = botDAO.findById(botId);
+            if (bot == null) {
+                return Response.error("That bot does not exist.");
+            }
+            String refusal = refuseIfNotHerCourse(user, bot.getCourseCode());
+            if (refusal != null) {
+                return Response.error(refusal);
+            }
+            int lost = botDAO.deleteBotAndHistory(botId);
+            return Response.ok(bot.getCourseCode(),
+                    "Deleted \"" + bot.getName() + "\"."
+                  + (lost == 0 ? " It had never been used."
+                               : " Its " + lost + " stored question(s) and answer(s) "
+                                 + "were deleted with it."));
+        } catch (SQLException e) {
+            return Response.error("Could not delete that bot: " + e.getMessage());
+        }
+    }
+
+    /** How much would be lost by deleting - so the screen can ask properly. */
+    public Response describeDeletion(User user, int botId) {
+        try {
+            Bot bot = botDAO.findById(botId);
+            if (bot == null) {
+                return Response.error("That bot does not exist.");
+            }
+            String refusal = refuseIfNotHerCourse(user, bot.getCourseCode());
+            if (refusal != null) {
+                return Response.error(refusal);
+            }
+            return Response.ok(botDAO.countConversations(botId), null);
+        } catch (SQLException e) {
+            return Response.error("Could not check that bot: " + e.getMessage());
         }
     }
 
@@ -301,22 +393,37 @@ public class BotController {
     //  SUC-14: the student's side
     // =================================================================
 
-    /** Her courses, each saying whether its bot can be used right now and why not. */
+    /**
+     * One row per course of hers: the bot she can actually reach.
+     *
+     * <p>A course may have several bots, but she has no business choosing between a
+     * teacher's drafts - she gets the one that is switched on. If none is on, she is
+     * shown one of them anyway, so the screen can say "not switched on" rather than
+     * pretend the course has no bot at all.</p>
+     */
     public Response listAvailableBots(User user) {
         if (!(user instanceof Student student)) {
             return Response.error("Only a student uses a course bot.");
         }
         try {
             List<Bot> bots = new ArrayList<>();
-            for (String courseCode : student.getEnrolledCourseCodes()) {
-                Bot bot = botDAO.findByCourse(courseCode);
-                if (bot != null) {
-                    bots.add(bot);
+            List<String> courses = new ArrayList<>(student.getEnrolledCourseCodes());
+            java.util.Collections.sort(courses);
+            for (String courseCode : courses) {
+                Bot active = botDAO.findActiveByCourse(courseCode);
+                if (active != null) {
+                    bots.add(active);
+                    continue;
+                }
+                List<Bot> all = botDAO.findAllByCourse(courseCode);
+                if (!all.isEmpty()) {
+                    bots.add(all.get(0));        // so she is told it is switched off
                 }
             }
+            long usable = bots.stream().filter(Bot::isActive).count();
             return Response.ok(bots, bots.isEmpty()
                     ? "None of your courses has a study bot."
-                    : bots.size() + " course bot(s).");
+                    : bots.size() + " course bot(s), " + usable + " you can use now.");
         } catch (SQLException e) {
             return Response.error("Could not load the bots: " + e.getMessage());
         }
@@ -349,15 +456,19 @@ public class BotController {
                 return Response.error("You are not enrolled in that course.");
             }
 
-            Bot bot = botDAO.findByCourse(request.getCourseCode());
+            // Requirement 70, second half: she reaches whichever bot is switched on,
+            // and only one per course can be.
+            Bot bot = botDAO.findActiveByCourse(request.getCourseCode());
             if (bot == null) {
-                return Response.error("That course does not have a study bot.");
-            }
-
-            // Requirement 70, second half: it must be switched on.
-            if (!bot.isActive()) {
-                return Response.error("\"" + bot.getName() + "\" is not switched on at "
-                        + "the moment. Your teacher turns it on and off.");
+                List<Bot> all = botDAO.findAllByCourse(request.getCourseCode());
+                if (all.isEmpty()) {
+                    return Response.error("That course does not have a study bot.");
+                }
+                return Response.error(all.size() == 1
+                        ? "\"" + all.get(0).getName() + "\" is not switched on at the "
+                          + "moment. Your teacher turns it on and off."
+                        : "None of that course's " + all.size() + " bots is switched on "
+                          + "at the moment. Your teacher turns them on and off.");
             }
 
             // Requirement 71 and the מתווה note: not while she is sitting that

@@ -234,6 +234,12 @@ public enum RequestType {
     /** Turns a bot on or off. Payload is a {@link BotStatusRequest}. */
     BOT_SET_STATUS,
 
+    /** Deletes a bot, its material AND its history. Payload is the bot id. */
+    BOT_DELETE,
+
+    /** How many stored questions a delete would destroy. Payload is the bot id. */
+    BOT_DELETE_IMPACT,
+
     /** Adds material for the bot to read. Payload is a {@link SourceRequest}. */
     BOT_ADD_SOURCE,
 

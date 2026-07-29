@@ -158,3 +158,82 @@ here. They belong to Phase 3 alongside the entries above.
 | Textual specifications | SUC-9: who marks — the teacher who **released** the sitting, not the author |
 | Requirements table | Requirement 15's "subject tag" versus the `topic` field automatic building actually needs |
 | Use case table | SUC-10 says "courses she teaches"; requirement 59 and מתווה 10 say "exams she wrote" — these are different sets |
+
+---
+
+## 7. Requirement 73 versus deleting a bot
+
+**Documents:** requirements table, requirement 73; class diagram, `Bot`
+
+### As submitted
+
+> 73. המערכת תשמור את השאלות שנשלחו לבוט ואת התשובות שהתקבלו.
+
+The system keeps the questions sent to the bot and the answers received.
+
+### What the system now does
+
+A teacher may **delete a bot**, and its stored questions and answers are deleted
+with it. Requirement 73 is therefore satisfied for the life of the bot and no
+longer.
+
+### Why
+
+The customer asked for a plain delete: *"I want her to be able to delete a bot in
+a simple way"*. The alternative reading of requirement 73 - refuse to delete
+anything that has ever been used - would leave a teacher permanently stuck with a
+bot she created by mistake, and there is no requirement asking for that either.
+
+The conflict is **narrowed rather than ignored**:
+
+- deleting requires confirmation, and the confirmation **names how many stored
+  questions will be destroyed**, so the cost is stated before it is paid;
+- the count comes from the server, so it is the real number;
+- deactivating (requirement 60) remains the way to take a bot out of service
+  **without** losing anything, and is what the screen recommends;
+- nothing else in the system deletes a conversation.
+
+### Suggested wording
+
+> 73. המערכת תשמור את השאלות שנשלחו לבוט ואת התשובות שהתקבלו, כל עוד הבוט קיים.
+>     מחיקת בוט מוחקת גם את היסטוריית השיחות שלו, ולכן היא דורשת אישור מפורש
+>     שמציין את מספר הרשומות שיימחקו.
+
+---
+
+## 8. One bot per course became several, one active
+
+**Documents:** requirements table, requirement 67; class diagram, `Bot` multiplicity
+
+### As submitted
+
+Requirement 67 says that if a course has more than one teacher and a bot exists,
+another teacher may add knowledge sources **to the existing bot**. The class
+diagram and the first implementation both read that as *one bot per course*,
+enforced by a UNIQUE key on `bot.course_code`.
+
+### What the system now does
+
+A course may have **several bots**, of which **at most one is active**. The
+customer asked for this directly.
+
+### Why it does not break requirement 67
+
+Requirement 67 grants a colleague the ability to add to an existing bot. It does
+not forbid a second bot. Both halves still hold:
+
+- any teacher of the course may add material to any of its bots, and the material
+  list names who added each piece;
+- a student is unaffected, because requirement 70 speaks of *the* course bot and
+  there is still exactly one she can reach - the active one.
+
+The UNIQUE key is replaced by a plain index, and the one-active rule lives in
+`BotController`. It is a condition on a *subset* of rows, which MySQL cannot
+express as an index - and putting it in code lets it explain itself: switching one
+bot on switches the course others off, and says which.
+
+### Suggested wording
+
+> 67. לקורס יכולים להיות כמה בוטים, אך רק אחד מהם פעיל בכל רגע נתון. כל מורה
+>     המלמדת את הקורס יכולה להוסיף או להסיר מקורות ידע מכל אחד מהבוטים של הקורס,
+>     ולהחליף איזה מהם פעיל.

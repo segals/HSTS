@@ -377,6 +377,10 @@ public class HSTSServer extends AbstractServer {
                         BotStatusRequest c = (BotStatusRequest) request.getPayload();
                         return botController.setStatus(u, c.getBotId(), c.getStatus());
                     });
+                case BOT_DELETE        -> withUser(client, u ->
+                        botController.deleteBot(u, (Integer) request.getPayload()));
+                case BOT_DELETE_IMPACT -> withUser(client, u ->
+                        botController.describeDeletion(u, (Integer) request.getPayload()));
                 case BOT_ADD_SOURCE    -> withUser(client, u ->
                         botController.addSource(u, (SourceRequest) request.getPayload()));
                 case BOT_REMOVE_SOURCE -> withUser(client, u ->

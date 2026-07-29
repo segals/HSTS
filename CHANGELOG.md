@@ -1683,3 +1683,116 @@ bot", and now "she has an attempt left".
 
 Run **twice back to back with no database reset**, identical both times. The live
 API was exercised separately: `GeminiProbe` and `BotE2E` both succeed.
+
+---
+
+## Milestone 14, follow-up 2 — several bots per course, deleting, and reading an exchange
+
+Four changes asked for by the customer.
+
+### 1. A teacher with more than one course, visibly
+
+Three teachers already taught two courses each; nothing on screen made that
+apparent because no course had a bot. The seeder now gives **Yael Peretz** a bot on
+Mechanics *and* one on Electricity, so her list proves it is per **teacher**, not
+per course. The bot list is keyed on the course name rather than the bot name, so
+two courses group at a glance.
+
+### 2. Several bots per course, only one active
+
+**Schema.** `bot.course_code` was `UNIQUE`. It is now a plain index, and
+`SchemaManager.migrate` performs the change on databases that already exist —
+`CREATE TABLE IF NOT EXISTS` does nothing to a table already there, so a changed
+definition would otherwise only reach a fresh database.
+
+The migration creates the replacement index **before** dropping the unique one.
+The first attempt did it the other way round and MySQL refused: *"Cannot drop index
+'course_code': needed in a foreign key constraint"* — `fk_bot_course` needs an index
+on the column and will not give up its last one.
+
+**The "only one active" half is in code, not the schema.** It is a condition on a
+*subset* of rows, which MySQL cannot express as an index. Putting it in
+`BotController` also lets it explain itself: switching one bot on switches the
+course's others off and **says which one it turned off**.
+
+`BotDAO.deactivateOthers` does it in a single `UPDATE`, not a read-then-write loop,
+so two teachers pressing "Turn on" at the same moment cannot leave two of them on.
+
+**The student is unaffected.** `findActiveByCourse` gives her the one that is
+switched on, and she sees one row per course — she has no business choosing between
+a teacher's drafts. With none switched on she is told how many the course has.
+
+**Requirement 67 still holds**, and this is written up in
+`docs/03_document_updates.md` §8: the requirement grants a colleague the ability to
+add to an *existing* bot; it does not forbid a second one. Two bots on one course
+may not share a name, or the teacher's own list becomes unreadable.
+
+### 3. Deleting a bot
+
+A `Delete this bot...` button, styled as the destructive action it is. Two steps:
+the server is asked **how many stored questions would be destroyed**, and the
+confirmation names the number.
+
+**This breaks requirement 73, knowingly.** *"המערכת תשמור את השאלות שנשלחו לבוט ואת
+התשובות שהתקבלו"* — the system keeps the questions and answers, and deleting a bot
+throws its away. The customer asked for a plain delete; the alternative reading
+(refuse to delete anything ever used) would leave a teacher permanently stuck with a
+bot created by mistake, and no requirement asks for that either.
+
+Narrowed rather than ignored, and written up in `docs/03_document_updates.md` §7:
+the count is real and comes from the server, deactivating remains the lossless way
+to take a bot out of service, and nothing else in the system deletes a conversation.
+
+`bot_conversation` has no `ON DELETE CASCADE` — its foreign key would refuse the
+delete — so the three tables are cleared in order inside one transaction. A failure
+leaves the bot whole rather than half-deleted.
+
+### 4. The teacher can read a whole exchange
+
+The usage list showed the question **and** a 300-character slice of the answer on
+every row. Answers run past twenty lines, so the list could not be scanned — and
+she is looking for *what was asked*.
+
+Rows now carry the question and the time only. **Clicking one opens the full
+exchange underneath**, collapsed until then. The full text was always being sent;
+what changed is that the list stopped trying to show all of it at once.
+
+Still no name anywhere: the server strips it before the object reaches the wire
+(requirement 75), so there is nothing for the panel to reveal.
+
+### Four order-dependent checks in M14Test, three of which passed by luck
+
+Adding these tests exposed the suite's own assumptions. All four are the same
+family this project keeps meeting — **a test that assumes a clean database** — and
+one was worse than a failure:
+
+**Non-deterministic.** *"a failed question is NOT stored"* and *"each sees only her
+own"* compared **totals** — `before == 1`, `size() == 2`. A student's bot history
+survives between runs, so whether the total is 1 depended on which student got
+picked and what she did last time. They failed one run and passed the next. Now
+they measure the *change* and check by *content*.
+
+**Stale precondition.** Section 11 expected the first bot to be ON so it could watch
+it being displaced — but section 10 had already stripped its material, which
+switches it off automatically. It would have passed while proving nothing; it now
+restores material and switches it on first.
+
+**Set up on a deleted bot.** Section 15 configured the bot that section 12 deletes,
+so both requests failed silently and the refusal came from "no bot is switched on"
+instead of "the service is not configured". It now uses a bot that still exists.
+
+**Section 2 asserted the rule that was being changed.** It checked that a second bot
+per course is *refused*. That was correct until this change and had to be rewritten
+rather than deleted: what survives is that two bots cannot share a name.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| M2–M11, M13 | unchanged, all passing |
+| **M14** | **133/133** (was 85) |
+| **Total** | **711 checks** |
+| Screens | 19/19 load |
+
+Run **twice back to back with no database reset**, identical both times, and M14
+alone three times running to confirm the non-determinism is gone.

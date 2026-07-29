@@ -15,7 +15,10 @@ import hsts.common.protocol.Response;
 import hsts.common.protocol.SourceRequest;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -42,6 +45,22 @@ import java.util.List;
  * <p>Requirement 67 needs nothing special here: the server lets any teacher of the
  * course add material, so a colleague simply opens the same bot and adds to it. The
  * material list names who added each piece, which is how that becomes visible.</p>
+ *
+ * <h2>Several bots per course, one of them on</h2>
+ *
+ * <p>A course may have more than one bot - a general one and a revision one, say -
+ * but only one may be switched on, so requirement 70's "the course bot" stays
+ * unambiguous for a student. Switching one on switches the course's others off, and
+ * the server says which.</p>
+ *
+ * <p>The bot list is keyed on the <b>course</b> rather than the bot name, because a
+ * teacher of two courses sees both here and needs them to group at a glance.</p>
+ *
+ * <h2>Deleting</h2>
+ *
+ * <p>Deleting destroys the bot's stored questions and answers, which requirement 73
+ * says are kept. So the confirmation names how many will go: a dialog that asked
+ * only "are you sure?" would hide the part that matters.</p>
  */
 public class BotManagementController extends GUIScreen {
 
@@ -52,6 +71,8 @@ public class BotManagementController extends GUIScreen {
     private static final String REQ_ADD     = "bm.add";
     private static final String REQ_REMOVE  = "bm.remove";
     private static final String REQ_USAGE   = "bm.usage";
+    private static final String REQ_IMPACT  = "bm.impact";
+    private static final String REQ_DELETE  = "bm.delete";
 
     private static final DateTimeFormatter WHEN =
             DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm");
@@ -66,6 +87,7 @@ public class BotManagementController extends GUIScreen {
     @FXML private Button offButton;
     @FXML private ComboBox<Course> courseBox;
     @FXML private TextField botNameField;
+    @FXML private Button deleteButton;
     @FXML private Button createButton;
 
     @FXML private Label   botTitleLabel;
@@ -84,6 +106,10 @@ public class BotManagementController extends GUIScreen {
     @FXML private HBox usageStatsRow;
     @FXML private ListView<BotUsage.CommonQuestion> commonList;
     @FXML private ListView<BotConversation> recentList;
+    @FXML private VBox  fullExchangeBox;
+    @FXML private Label exchangeWhenLabel;
+    @FXML private Label exchangeQuestionLabel;
+    @FXML private Label exchangeAnswerLabel;
 
     @FXML private Label statusLabel;
 
@@ -92,15 +118,19 @@ public class BotManagementController extends GUIScreen {
     @FXML
     private void initialize() {
         bindStatusLabel(statusLabel);
-        subtitleLabel.setText("One bot per course. Any teacher of the course can add to it "
-                            + "(requirement 67).");
+        subtitleLabel.setText("Every course you teach. A course may have several bots, "
+                            + "but only one switched on at a time.");
         uploadNoteLabel.setText("Word (.docx) is read exactly. A PDF is read only if its "
                               + "text is not compressed - if it is refused, paste the text "
                               + "in above instead.");
 
+        // The course leads, because a teacher of two courses sees both here and the
+        // bots need to group by course at a glance. The switched-on one says so
+        // plainly, since only one per course can be.
         useWrappingCells(botList, b ->
-                b.getName() + "  ·  " + b.getStatus().getDisplayName()
-              + "\n" + b.getCourseName() + "  ·  " + b.getSources().size()
+                b.getCourseName() + "   ·   " + (b.isActive() ? "ON" : "off")
+              + "\n" + b.getName()
+              + "\n" + b.getSources().size()
               + (b.getSources().size() == 1 ? " source" : " sources"));
 
         useWrappingCells(sourceList, s ->
@@ -113,12 +143,15 @@ public class BotManagementController extends GUIScreen {
                 q.getTimesAsked() + (q.getTimesAsked() == 1 ? " time" : " times")
               + "\n" + q.getQuestion());
 
-        // Requirement 75: there is nowhere here to print a name, and the server
-        // has already stripped it, so there would be nothing to print.
+        // Requirement 75: there is nowhere here to print a name, and the server has
+        // already stripped it, so there would be nothing to print.
+        //
+        // The question only. Answers run to twenty lines, and a list of twenty-line
+        // entries cannot be scanned - she is looking for WHAT was asked. Clicking a
+        // row opens the whole exchange underneath.
         useWrappingCells(recentList, c ->
                 c.getAskedAt().format(WHEN)
-              + "\nQ:  " + c.getQuestion()
-              + "\nA:  " + shorten(c.getAnswer()));
+              + "\n" + c.getQuestion());
 
         courseBox.setConverter(new javafx.util.StringConverter<>() {
             @Override public String toString(Course course) {
@@ -131,6 +164,9 @@ public class BotManagementController extends GUIScreen {
 
         botList.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, bot) -> chooseBot(bot));
+
+        recentList.getSelectionModel().selectedItemProperty()
+                .addListener((obs, old, conversation) -> showExchange(conversation));
 
         controller.setResponseHandler(this::onServerResponse);
         controller.setConnectionLostHandler(this::showError);
@@ -178,6 +214,55 @@ public class BotManagementController extends GUIScreen {
         }
         send(RequestType.BOT_SET_STATUS,
              new BotStatusRequest(chosenBot.getBotId(), status), REQ_STATUS);
+    }
+
+    /**
+     * Deleting is two steps, and the first one asks.
+     *
+     * <p>The server is asked how many stored questions would go, so the confirmation
+     * can name the number. Requirement 73 says the questions and answers are kept,
+     * and this destroys them - a dialog that said only "are you sure?" would be
+     * hiding the part that matters.</p>
+     */
+    @FXML
+    private void onDelete() {
+        if (chosenBot == null) {
+            showError("Choose a bot first.");
+            return;
+        }
+        send(RequestType.BOT_DELETE_IMPACT, chosenBot.getBotId(), REQ_IMPACT);
+    }
+
+    private void confirmDelete(int storedQuestions) {
+        Bot bot = chosenBot;
+        if (bot == null) {
+            return;
+        }
+        String detail = storedQuestions == 0
+                ? "It has never been used, so nothing else goes with it."
+                : "Its " + storedQuestions + " stored question"
+                  + (storedQuestions == 1 ? "" : "s")
+                  + " and answer" + (storedQuestions == 1 ? "" : "s")
+                  + " will be deleted too, and cannot be recovered.";
+
+        Alert ask = new Alert(Alert.AlertType.CONFIRMATION);
+        ask.initOwner(hsts.client.HSTSApp.getPrimaryStage());
+        ask.setTitle("Delete this bot?");
+        ask.setHeaderText("Delete \"" + bot.getName() + "\" from " + bot.getCourseName() + "?");
+        ask.setContentText(detail + "\n\nAll the material you gave it is removed as well.");
+        ask.getDialogPane().setMinWidth(460);
+
+        ButtonType deleteIt = new ButtonType("Delete the bot", ButtonBar.ButtonData.OK_DONE);
+        ButtonType keep = new ButtonType("Keep it", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ask.getButtonTypes().setAll(keep, deleteIt);
+
+        ask.showAndWait().ifPresent(chosen -> {
+            if (chosen == deleteIt) {
+                send(RequestType.BOT_DELETE, bot.getBotId(), REQ_DELETE);
+            } else {
+                clearMessage();
+            }
+        });
     }
 
     @FXML
@@ -322,9 +407,36 @@ public class BotManagementController extends GUIScreen {
                 chosenBot = (Bot) response.getPayload();
                 refreshAll();
             }
+            case REQ_IMPACT -> confirmDelete((Integer) response.getPayload());
+            case REQ_DELETE -> {
+                showSuccess(response.getMessage());
+                chosenBot = null;
+                botList.getSelectionModel().clearSelection();
+                showNoBot();
+                send(RequestType.BOT_LIST_MINE, null, REQ_BOTS);
+                send(RequestType.BOT_COURSES_FREE, null, REQ_COURSES);
+            }
             case REQ_USAGE -> showUsage((BotUsage) response.getPayload());
             default -> { }
         }
+    }
+
+    /**
+     * The whole exchange, once she has picked a question.
+     *
+     * <p>Requirement 75 again: there is no name to show, because the server did not
+     * send one. What she gets is the question and the answer her bot gave, in full.</p>
+     */
+    private void showExchange(BotConversation conversation) {
+        boolean show = conversation != null;
+        fullExchangeBox.setVisible(show);
+        fullExchangeBox.setManaged(show);
+        if (!show) {
+            return;
+        }
+        exchangeWhenLabel.setText(conversation.getAskedAt().format(WHEN));
+        exchangeQuestionLabel.setText(conversation.getQuestion());
+        exchangeAnswerLabel.setText(conversation.getAnswer());
     }
 
     private void refreshAll() {
@@ -361,6 +473,8 @@ public class BotManagementController extends GUIScreen {
         onButton.setDisable(true);
         offButton.setDisable(true);
         removeSourceButton.setDisable(true);
+        deleteButton.setDisable(true);
+        showExchange(null);
     }
 
     private void showBot(Bot bot) {
@@ -375,6 +489,8 @@ public class BotManagementController extends GUIScreen {
         onButton.setDisable(bot.isActive() || !bot.hasKnowledge());
         offButton.setDisable(!bot.isActive());
         removeSourceButton.setDisable(bot.getSources().isEmpty());
+        deleteButton.setDisable(false);
+        showExchange(null);          // a different bot, so the old exchange is stale
     }
 
     private void showUsage(BotUsage usage) {
@@ -404,14 +520,6 @@ public class BotManagementController extends GUIScreen {
         HBox.setHgrow(tile, Priority.ALWAYS);
         tile.setMaxWidth(Double.MAX_VALUE);
         return tile;
-    }
-
-    private static String shorten(String text) {
-        if (text == null) {
-            return "";
-        }
-        String flat = text.replaceAll("\\s+", " ").trim();
-        return flat.length() <= 300 ? flat : flat.substring(0, 300) + "...";
     }
 
     private void send(RequestType type, Object payload, String requestId) {
