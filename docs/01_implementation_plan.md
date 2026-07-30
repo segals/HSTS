@@ -20,7 +20,7 @@ All twelve open questions from Phase 0 are answered. Recorded here so nothing dr
 | 5 | **The teacher who released the execution marks and approves it.** In the A-writes/B-releases case, that is B. The principal can never approve — she reads and pulls statistics only. |
 | 6 | `IUserManagementSystem` stays as an interface, implemented as a **local adapter over our own `users` table**. Nothing external is called. |
 | 7 | **The inactivity timer is suspended** while a student has an exam in progress. |
-| 8 | **The close time is a deadline to start, not to finish.** Start at 11:55 on a 90-minute exam → you finish at 13:25. Start at 12:00 or later → refused. |
+| 8 | ~~**The close time is a deadline to start, not to finish.** Start at 11:55 on a 90-minute exam → you finish at 13:25.~~ **Changed by the customer on 2026-07-30: the close time ends the exam for everybody.** Starting at 12:00 or later is still refused; a student who started at 11:55 now works until 12:00 and is handed in automatically. Requirement 45 — *"בסיום זמן הבחינה, המערכת תסגור את הבחינה עבור כל התלמידות ותשמור את התשובות שהוזנו"* — supports the new rule, and the old reading left it doing nothing. Each student gets **one** warning: the 90% popup when her own time binds, or a five-minute notice when the close does. |
 | 9 | **Factor is additive**, capped at 100, floored at 0, applied in bulk after approval. |
 | 10 | **Soft delete** for questions — removed from the bank, still visible inside exams that already contain it. |
 | 11 | **ת"ז is `User.userId`**, and the Israeli check digit is validated. |

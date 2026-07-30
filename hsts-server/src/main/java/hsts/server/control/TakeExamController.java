@@ -282,9 +282,13 @@ public class TakeExamController {
             attempt.setStudentName(student.getFullName());
             attempt.setAttemptNo(used + 1);
             attempt.setStartTime(now.withNano(0));
-            // THE line that implements the agreed rule: her own full time,
-            // measured from when she began, regardless of the window's close.
+            // Her own allowance, measured from when she began. The sitting's close is
+            // NOT folded in here: it is carried alongside and the earlier of the two
+            // wins, so that a teacher adding minutes later still moves one column and
+            // the two ends can be told apart when she is warned. See
+            // StudentExam.effectiveEnd().
             attempt.setDeadline(now.withNano(0).plusMinutes(execution.getAllocatedDuration()));
+            attempt.setCloseTime(execution.getCloseTime());
             attempt.setStatus(SubmissionStatus.IN_PROGRESS);
 
             submissionDAO.insert(attempt);
@@ -296,9 +300,23 @@ public class TakeExamController {
                         eq.getQuestionId(), eq.getQuestionVersion(), null);
             }
 
-            return Response.ok(loadPaper(attempt, exam),
-                    "Good luck. You have " + execution.getAllocatedDuration()
-                  + " minutes, until " + WHEN.format(attempt.getDeadline()) + ".");
+            // What she is told must be the end that will actually stop her. Telling a
+            // girl who joined ten minutes before the room closes that she has ninety
+            // minutes would be a plain untruth, and she would find out at the worst
+            // possible moment.
+            String greeting;
+            if (attempt.isCutShortByClose()) {
+                int left = minutesBetween(attempt.getStartTime(), attempt.effectiveEnd());
+                greeting = "Good luck. This sitting closes for everyone at "
+                         + WHEN.format(attempt.getCloseTime()) + ", so you have "
+                         + left + (left == 1 ? " minute" : " minutes")
+                         + " rather than the full "
+                         + execution.getAllocatedDuration() + ".";
+            } else {
+                greeting = "Good luck. You have " + execution.getAllocatedDuration()
+                         + " minutes, until " + WHEN.format(attempt.getDeadline()) + ".";
+            }
+            return Response.ok(loadPaper(attempt, exam), greeting);
 
         } catch (SQLException e) {
             return Response.error("Could not start the exam: " + e.getMessage());
@@ -372,7 +390,10 @@ public class TakeExamController {
             // If her time ran out a moment ago, this is a time-out however hard she
             // pressed Submit. The stored deadline decides, not the arrival time.
             boolean expired = attempt.isExpiredAt(now);
-            LocalDateTime endedAt = expired ? attempt.getDeadline() : now.withNano(0);
+            // The end that stopped her - her own deadline, or the sitting's close if
+            // that came first. Both are "time out" as far as requirement 48's counts
+            // are concerned; what differs is the moment recorded against her paper.
+            LocalDateTime endedAt = expired ? attempt.effectiveEnd() : now.withNano(0);
             SubmissionStatus status = expired
                     ? SubmissionStatus.TIMED_OUT : SubmissionStatus.FINISHED;
 

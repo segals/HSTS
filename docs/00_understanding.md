@@ -253,6 +253,11 @@ Acceptance test 2.10 fixes a window of 10:00–12:00. Requirement 41 starts a pe
 clock on ID entry. Nothing says what happens if a student starts at 11:55 with a 90-minute
 exam. Does she get 5 minutes, 90 minutes, or is she refused?
 
+> **Settled on 2026-07-30: she gets 5 minutes.** Requirement 45 closes the exam "עבור כל
+> התלמידות" at the end of the exam time, so the window's close is a real end and not only a
+> bar on starting. She is told when she starts that she has 5 minutes rather than 90, warned
+> five minutes before the close, and handed in automatically when it arrives.
+
 ### 5.11 "Factor" is defined nowhere
 
 Requirement 77 lets a teacher "לתת פקטור" after approving grades. `Grade.factor : int`
@@ -338,10 +343,15 @@ for the question the Assignment 3 Word document must answer.
 > recommendation below and the table is left unedited on purpose, so the reasoning that was
 > put to you stays on the record:
 > - **Q5** — the teacher who *released* the execution grades it (confirmed).
-> - **Q8** — the close time is a deadline to **start**, not to finish. A student starting at
->   11:55 on a 90-minute exam finishes at 13:25; starting at 12:00 or later is refused. My
->   "refuse under 5 minutes left" suggestion was dropped. This matches acceptance test 2.10,
->   whose message is "מועד **פתיחת** הבחינה הסתיים" — the *opening* period has ended.
+> - **Q8** — ~~the close time is a deadline to **start**, not to finish. A student starting at
+>   11:55 on a 90-minute exam finishes at 13:25.~~ **Superseded on 2026-07-30 at the
+>   customer's instruction: the close time ends the exam for everybody.** She still may not
+>   *start* at 12:00 or later — acceptance test 2.10's message, "מועד **פתיחת** הבחינה
+>   הסתיים", is about the opening period and is unchanged — but a girl who started at 11:55
+>   is now handed in automatically at 12:00 with her answers kept. Requirement 45 says
+>   exactly that and the first reading left it with nothing to do. The "refuse under 5
+>   minutes left" suggestion stays dropped: she may start late, and is told at once how long
+>   she really has.
 > - **Q11** — the Israeli check digit **is** validated, so all seeded IDs must be genuinely
 >   valid numbers.
 

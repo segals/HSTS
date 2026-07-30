@@ -58,12 +58,43 @@ public enum PushType {
     EXAM_TIME_WARNING,
 
     /**
-     * The student's time ran out and the server closed her exam.
+     * The <b>sitting</b> is about to close for everybody. Payload is the seconds
+     * remaining.
      *
-     * <p>Requirement 45 and acceptance test 2.6: whatever she had entered is
+     * <p>The other half of {@link #EXAM_TIME_WARNING}. An attempt has two possible
+     * ends - her own allowance and the room's closing time (requirement 45) - and
+     * whichever comes first is the one worth warning her about. A girl who started
+     * ten minutes before the room closes has ninety per cent of her own time still
+     * in hand, so the 90% popup would never reach her and she would be handed in
+     * with no warning at all.</p>
+     *
+     * <p>Sent five minutes before the close, and <b>only to the students the close
+     * will actually cut short</b>. Exactly one of the two warnings reaches any one
+     * attempt - the one attached to the end that is going to stop her.</p>
+     */
+    EXAM_CLOSING_WARNING,
+
+    /**
+     * The student's own time ran out and the server closed her exam.
+     *
+     * <p>Requirement 41 and acceptance test 2.6: whatever she had entered is
      * saved and the paper is closed for her.</p>
      */
     EXAM_AUTO_SUBMITTED,
+
+    /**
+     * The sitting's closing time arrived and the server closed her exam with it.
+     *
+     * <p>Requirement 45: <i>"בסיום זמן הבחינה, המערכת תסגור את הבחינה עבור כל
+     * התלמידות ותשמור את התשובות שהוזנו"</i> - at the end of the exam time the
+     * system closes the exam <b>for all the students</b> and keeps what they
+     * entered.</p>
+     *
+     * <p>Told apart from {@link #EXAM_AUTO_SUBMITTED} so the screen can say which
+     * happened. "Your time is up" is wrong and confusing for a girl who still had
+     * twenty minutes of her own left when the room closed.</p>
+     */
+    EXAM_CLOSED_FOR_EVERYONE,
 
     /**
      * The teacher changed how long this sitting is allowed to run.

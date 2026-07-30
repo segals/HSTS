@@ -2290,3 +2290,124 @@ behaviour is the interesting part:
   off** rather than left wondering; requirement 71 is enforced on the asking, and
   the refusal reads *"is not switched on at the moment. Your teacher turns it on
   and off."* The harness now proves that refusal for her directly.
+
+---
+
+## The sitting's closing time now ends the exam for everybody
+
+### What changed and why
+
+Asked for directly: when the exam's end time arrives, everyone still inside is
+handed in, with a five-minute warning beforehand.
+
+**This reverses a decision that was agreed on 2026-07-29** — answer Q8, "the close
+time is a deadline to *start*, not to finish" — so it is worth saying plainly that
+the requirements are on the customer's side. Two of them describe two different
+endings:
+
+| | Requirement | Ends the exam when |
+|---|---|---|
+| 41 | *"עם הזנת מספר הזהות מתחיל מד-הזמן; עם תום הזמן המוקצה הבחינה נסגרת אוטומטית"* | her own allowance runs out |
+| 45 | *"בסיום זמן הבחינה, המערכת תסגור את הבחינה **עבור כל התלמידות** ותשמור את התשובות שהוזנו"* | the sitting's time ends, for everybody |
+
+The old reading left **requirement 45 with nothing to do**: if every exam ended on
+its own student's clock, nothing ever closed anything "for all the students". The
+new reading gives both requirements work, and whichever end comes first is the one
+she meets.
+
+### Two ends, kept apart on purpose
+
+`StudentExam` now carries the sitting's `closeTime` beside her own `deadline`, and
+`effectiveEnd()` is whichever comes first. Every judgement in the system — how
+long is left, has she run out, how long did she take — goes through that one
+method, so the countdown on her screen, the guard that refuses a late answer and
+the clock that hands her paper in cannot disagree.
+
+They are **not** folded into one clamped deadline, for two reasons. The teacher
+may still add minutes mid-exam (requirement 47) and that has to move one column
+rather than a computed value. And the two ends need different words: *"your time
+is up"* and *"the exam has closed for everyone"* are different things to be told,
+and a girl with twenty minutes of her own left would rightly be baffled by the
+first.
+
+The close is **read with the attempt** rather than copied onto it, so a sitting
+whose window moves can never leave a stale copy behind.
+
+### One warning per student — the relevant one
+
+This is the part that needed a decision rather than an implementation. Requirement
+43's popup is at 90% of the exam time; but a girl who starts ten minutes before
+the room closes still has 89% of her ninety minutes in hand when she is handed
+in, so that popup would never reach her at all.
+
+| Which end will stop her | What she gets |
+|---|---|
+| Her own allowance | *"90% of the exam time has gone. You have 6 minutes and 42 seconds left."* |
+| The sitting's close | Five minutes before it: *"This exam closes for everyone at 13:30. You have 4 minutes and 12 seconds left, and your paper will be handed in for you."* |
+
+Exactly one arrives per attempt. The closing wording deliberately names the
+**wall-clock time** as well as the countdown, because this end is not hers: it is
+the same for the girl beside her and working faster will not move it.
+
+A tie goes to her own time, because that is the one the requirements actually name
+a warning for.
+
+### The smaller consequences, each done rather than left
+
+- **She is told the truth when she starts.** *"Good luck. This sitting closes for
+  everyone at 16:57, so you have 7 minutes rather than the full 100."* Telling her
+  she had a hundred minutes would have been a plain untruth she discovered at the
+  worst possible moment.
+- **The teacher is told when extra time buys nothing.** Adding ten minutes to a
+  sitting that closes in four now answers *"...this sitting closes at 16:55 and the
+  exam ends then for everyone, so 2 students gain nothing from the extra time."*
+  Without it she would add time, see nothing change, and reasonably think the
+  system had ignored her.
+- **The end time recorded is the close**, not the moment the tick happened to
+  notice, so two girls closed by the same event are recorded as taking the same
+  time.
+- **Both endings stay `TIMED_OUT`.** Requirement 48 counts started / finished /
+  "לא הספיקו" — two outcomes, not three — and a girl the room closed on did not
+  finish by herself either. What differs is what she is *told*, which is the part
+  she can see.
+
+### Verified
+
+`ClosingTimeTest`, a new harness: the two ends as pure logic, the countdown, the
+warning choice, the forced close of **two** students at once with their answers
+kept, both wordings, and the branch where her own time still binds.
+
+| What | Result |
+|---|---|
+| Which end wins | close before / after / equal / absent — all four |
+| Countdown | counts to the close, not to her full allowance |
+| Warning | closing one arrives; **the 90% one does not also arrive**; neither repeats |
+| Forced close | both students pushed, both `TIMED_OUT`, end time = the close, durations recorded |
+| Requirement 45's other half | the answers each had chosen are still in the database |
+| After the close | she cannot answer, and nobody can start |
+| The other branch | the 90% popup still arrives when her own time binds, and the closing one does not |
+
+**`M7Test` had to change, because it asserted the old rule.** Section 12 was
+called "DECISION 8 - the window closes, her own time does not" and section 14
+checked that she could carry on answering afterwards. Both now check the opposite,
+and section 15 was given its own sitting and student so that the *personal*
+time-out path is still tested rather than lost in the rewrite. That is the whole
+point of keeping the suites: the change showed up as four failures rather than as
+a surprise at the demo.
+
+| Suite | Result |
+|---|---|
+| **M7** | **67/67** (was 55; 12 new, 3 rewritten) |
+| **ClosingTimeTest** | **51/51** |
+| M2–M6, M8–M15, NewUsersTest | unchanged, all passing |
+| **Total** | **917 checks** |
+| Screens | 19/19 load |
+
+Run **three times back to back with no database reset**, identical each time, and
+once more against freshly reset demo data.
+
+One thing to know before running it a fourth time: each pass builds exams in
+Plane Geometry, and three passes take that course from 9 exams to 87. The
+documented ceiling is 99 (a two-digit exam number), so a fourth pass would hit it.
+`buildExam` says so in as many words rather than failing obscurely, and
+`SeedRunner.resetAndSeed` puts it back to 9.

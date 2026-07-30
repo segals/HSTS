@@ -158,6 +158,8 @@ here. They belong to Phase 3 alongside the entries above.
 | Textual specifications | SUC-9: who marks — the teacher who **released** the sitting, not the author |
 | Requirements table | Requirement 15's "subject tag" versus the `topic` field automatic building actually needs |
 | Use case table | SUC-10 says "courses she teaches"; requirement 59 and מתווה 10 say "exams she wrote" — these are different sets |
+| Class diagram (Assignment 2) | `StudentExam` carries the sitting's close time beside her own deadline, and `effectiveEnd()` picks the earlier — see §9 |
+| Textual specifications | SUC-7: the exam now ends at the sitting's close for anyone still inside, and the warning she receives depends on which end binds — see §9 |
 
 ---
 
@@ -237,3 +239,74 @@ bot on switches the course others off, and says which.
 > 67. לקורס יכולים להיות כמה בוטים, אך רק אחד מהם פעיל בכל רגע נתון. כל מורה
 >     המלמדת את הקורס יכולה להוסיף או להסיר מקורות ידע מכל אחד מהבוטים של הקורס,
 >     ולהחליף איזה מהם פעיל.
+
+---
+
+## 9. The sitting's closing time ends the exam for everybody
+
+**Documents:** requirements table, requirements 43 and 45; SUC-7 textual
+specification; acceptance test 2.6
+
+### As submitted
+
+Two requirements describe two different endings and neither says which wins:
+
+- **41** — *"עם הזנת מספר הזהות מתחיל מד-הזמן; עם תום הזמן המוקצה הבחינה נסגרת
+  אוטומטית"* — her own clock, started when she enters her ID.
+- **45** — *"בסיום זמן הבחינה, המערכת תסגור את הבחינה עבור כל התלמידות ותשמור את
+  התשובות שהוזנו"* — at the end of the exam time the system closes it **for all
+  the students**.
+
+Question 8 of the understanding document read the sitting's close as a deadline
+to *start* only, so a girl who began at 11:55 of a 10:00–12:00 window with 90
+minutes allowed worked until 13:25. That answer was accepted on 2026-07-29.
+
+### What the system now does
+
+**Changed at the customer's instruction on 2026-07-30.** An attempt has two ends
+and **the earlier one wins**:
+
+- she may still not *start* after the window closes — acceptance test 2.10's
+  message is about the *opening* period and is unchanged;
+- a student already inside is **handed in automatically when the sitting closes**,
+  with everything she had chosen kept;
+- she is told at the start how long she really has: *"This sitting closes for
+  everyone at 12:00, so you have 5 minutes rather than the full 90."*
+
+### One warning per student, and it is the relevant one
+
+Requirement 43 asks for a popup at 90% of the exam time. With two possible ends,
+90% of *her own* time can easily be a moment that never arrives — a girl who
+starts ten minutes before the room closes still has 89% of her ninety minutes in
+hand when she is handed in. So:
+
+| Which end will stop her | What she is sent |
+|---|---|
+| Her own allowance | Requirement 43's popup at 90%: *"90% of the exam time has gone. You have 6 minutes and 42 seconds left."* |
+| The sitting's close | Five minutes before it: *"This exam closes for everyone at 13:30. You have 4 minutes and 12 seconds left, and your paper will be handed in for you."* |
+
+**Exactly one of the two reaches any one attempt.** Two popups saying nearly the
+same thing is worse than one saying the right thing, and the wrong one of the two
+is actively misleading.
+
+### Why this is a correction, not a new rule
+
+The first reading left requirement 45 with nothing to do: if every student's exam
+ended on her own clock, nothing ever closed anything "עבור כל התלמידות". The new
+reading gives both requirements work — 41 ends her exam when her time runs out,
+45 ends it when the room closes, and whichever comes first is the one she meets.
+
+Both endings are still recorded as *"did not finish by herself"*, because
+requirement 48 counts started / finished / did not manage — two outcomes, not
+three.
+
+### Suggested wording
+
+> 43. לקראת סיום הבחינה תוצג לנבחנת התראה אחת בלבד, המתאימה למועד הסיום הרלוונטי
+>     עבורה: אם זמנה האישי הוא שיסתיים ראשון — התראה בסיום 90% מזמנה, הכוללת את
+>     הזמן שנותר בדקות ובשניות; אם מועד סגירת הביצוע הוא שיסתיים ראשון — התראה
+>     חמש דקות לפני הסגירה, הכוללת את שעת הסגירה ואת הזמן שנותר.
+>
+> 45. בסיום זמן הביצוע, המערכת תסגור את הבחינה עבור כל התלמידות שעדיין נבחנות,
+>     תשמור את התשובות שהוזנו ותודיע לכל אחת מהן. תלמידה שהתחילה לפני מועד
+>     הסגירה תסיים לכל המאוחר במועד הסגירה, גם אם נותר לה זמן אישי.

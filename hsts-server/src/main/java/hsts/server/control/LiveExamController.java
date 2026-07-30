@@ -295,12 +295,38 @@ public class LiveExamController {
             String wording = delta > 0
                     ? "Added " + delta + " minutes."
                     : "Took away " + (-delta) + " minutes.";
+
+            // Since the sitting's close ends the exam for everybody (requirement 45),
+            // minutes added past that moment buy nobody anything. Said out loud: a
+            // teacher who adds twenty and sees nothing change would reasonably think
+            // the system had ignored her.
+            String capped = "";
+            if (delta > 0) {
+                int stillInside = 0;
+                for (StudentExam attempt : submissionDAO.findByExecution(
+                        request.getExecutionId())) {
+                    if (attempt.isInProgress() && attempt.isCutShortByClose()) {
+                        stillInside++;
+                    }
+                }
+                if (stillInside > 0) {
+                    capped = " Note that this sitting closes at "
+                           + execution.getCloseTime().format(
+                                   java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+                           + " and the exam ends then for everyone, so "
+                           + (stillInside == 1 ? "one student gains" : stillInside
+                                   + " students gain")
+                           + " nothing from the extra time.";
+                }
+            }
+
             return Response.ok(executionDAO.findById(execution.getExecutionId()),
                     wording + " " + (moved == 0
                         ? "Nobody is sitting it yet, so it applies to whoever starts."
                         : moved + (moved == 1 ? " student" : " students")
                           + " already sitting had their timer updated straight away.")
-                  + " The exam itself is unchanged - this applies to this sitting only.");
+                  + " The exam itself is unchanged - this applies to this sitting only."
+                  + capped);
 
         } catch (SQLException e) {
             return Response.error("Could not change the time: " + e.getMessage());

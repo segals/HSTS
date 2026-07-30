@@ -143,21 +143,58 @@ public class ExamClockService {
         warned.retainAll(stillRunning);
     }
 
+    /** How long before the room closes its students are warned. */
+    private static final long CLOSING_WARNING_SECONDS = 5 * 60;
+
     /**
-     * Requirement 43: the popup at nine tenths of the way through.
+     * One warning per attempt - the one attached to the end that will actually stop
+     * her.
      *
-     * <p>Worked out from <b>her own</b> start and deadline, not from the sitting's
-     * allotted minutes. The teacher may extend the time mid-exam (requirement 42),
-     * and a warning computed from the original length would then fire at the wrong
-     * moment - or, worse, have fired already and never fire again.</p>
+     * <p>An attempt has two possible ends and they warrant different words:</p>
      *
-     * <p>Sent once. {@link #warned} remembers who has had it, because the clock
-     * ticks every second and the condition stays true for the whole last tenth.</p>
+     * <ul>
+     *   <li>Her own allowance runs out first - requirement 43's popup at nine
+     *       tenths of the way through.</li>
+     *   <li>The sitting closes first (requirement 45 closes it for everybody) - a
+     *       warning five minutes before that, naming the time the room shuts.</li>
+     * </ul>
+     *
+     * <p>Only one is sent, because two popups saying nearly the same thing is worse
+     * than one saying the right thing. Which one is decided by
+     * {@link StudentExam#isCutShortByClose()}, so a girl who started ten minutes
+     * before the room closes is warned about the room - the 90% mark of her own
+     * ninety minutes would never arrive.</p>
+     *
+     * <p>The 90% point is worked out from <b>her own</b> start and deadline, not
+     * from the sitting's allotted minutes. The teacher may extend the time mid-exam
+     * (requirement 47), and a warning computed from the original length would then
+     * fire at the wrong moment - or, worse, have fired already and never fire
+     * again.</p>
+     *
+     * <p>{@link #warned} remembers who has had it, because the clock ticks every
+     * second and the condition stays true right to the end.</p>
      */
     private void warnIfNearlyOut(StudentExam attempt, LocalDateTime now) {
         if (warned.contains(attempt.getSubmissionId())) {
             return;
         }
+        // The seconds, so the wording can name minutes AND seconds. The customer
+        // asked for exactly that, and rightly: "less than a minute left" is true
+        // with fifty seconds to go and tells her nothing she can act on.
+        long leftSeconds = attempt.secondsRemainingAt(now);
+
+        if (attempt.isCutShortByClose()) {
+            if (leftSeconds > CLOSING_WARNING_SECONDS) {
+                return;
+            }
+            warned.add(attempt.getSubmissionId());
+            pushService.toUsername(attempt.getStudentUsername(), new PushEvent(
+                    PushType.EXAM_CLOSING_WARNING,
+                    leftSeconds,
+                    describeClosingWarning(leftSeconds, attempt.getCloseTime())));
+            return;
+        }
+
         if (attempt.getStartTime() == null || attempt.getDeadline() == null) {
             return;
         }
@@ -166,16 +203,12 @@ public class ExamClockService {
         if (totalSeconds <= 0) {
             return;
         }
-        long leftSeconds = attempt.secondsRemainingAt(now);
         if (leftSeconds * 10 > totalSeconds) {
             return;                                  // more than a tenth left
         }
 
         warned.add(attempt.getSubmissionId());
 
-        // The seconds, so the wording can name minutes AND seconds. The customer
-        // asked for exactly that, and rightly: "less than a minute left" is true
-        // with fifty seconds to go and tells her nothing she can act on.
         pushService.toUsername(attempt.getStudentUsername(), new PushEvent(
                 PushType.EXAM_TIME_WARNING,
                 leftSeconds,
@@ -190,32 +223,60 @@ public class ExamClockService {
      * lay it out differently but does not invent the numbers.</p>
      */
     public static String describeWarning(long secondsLeft) {
-        long minutes = Math.max(0, secondsLeft) / 60;
-        long seconds = Math.max(0, secondsLeft) % 60;
-
-        String amount;
-        if (minutes == 0) {
-            amount = seconds + (seconds == 1 ? " second" : " seconds");
-        } else {
-            amount = minutes + (minutes == 1 ? " minute" : " minutes")
-                   + " and " + seconds + (seconds == 1 ? " second" : " seconds");
-        }
-        return "90% of the exam time has gone. You have " + amount + " left.";
+        return "90% of the exam time has gone. You have " + describeAmount(secondsLeft)
+             + " left.";
     }
 
     /**
-     * Closes one attempt whose time has run out.
+     * "This exam closes for everyone at 13:30. You have 4 minutes and 12 seconds
+     * left, and your paper will be handed in for you."
      *
-     * <p>The end time recorded is her <em>deadline</em>, not the moment this tick
-     * happened to run. Otherwise her recorded duration would include however long
-     * the tick took to notice, and two students who ran out at the same instant
-     * could be recorded as taking different amounts of time.</p>
+     * <p>Names the wall-clock time as well as the countdown, because this end is not
+     * hers - it is the room's, it is the same for the girl beside her, and it will
+     * not move however fast she works. The 90% wording would be actively misleading
+     * here: she may have most of her own time still in hand.</p>
+     */
+    public static String describeClosingWarning(long secondsLeft, LocalDateTime closesAt) {
+        String when = (closesAt == null) ? null
+                : closesAt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+        return "This exam closes for everyone"
+             + (when == null ? "" : " at " + when)
+             + ". You have " + describeAmount(secondsLeft)
+             + " left, and your paper will be handed in for you.";
+    }
+
+    /** "6 minutes and 42 seconds", or "45 seconds" under a minute. */
+    private static String describeAmount(long secondsLeft) {
+        long minutes = Math.max(0, secondsLeft) / 60;
+        long seconds = Math.max(0, secondsLeft) % 60;
+
+        if (minutes == 0) {
+            return seconds + (seconds == 1 ? " second" : " seconds");
+        }
+        return minutes + (minutes == 1 ? " minute" : " minutes")
+             + " and " + seconds + (seconds == 1 ? " second" : " seconds");
+    }
+
+    /**
+     * Closes one attempt whose time has run out - by her own clock or the room's.
+     *
+     * <p>The end time recorded is the <em>deadline that stopped her</em>, not the
+     * moment this tick happened to run. Otherwise her recorded duration would
+     * include however long the tick took to notice, and two students closed by the
+     * same event could be recorded as taking different amounts of time.</p>
+     *
+     * <p>Both endings are recorded as {@code TIMED_OUT}. Requirement 48 counts
+     * students who "started, finished, and did not manage" - two categories, not
+     * three - and a girl the room closed on did not finish by herself either. What
+     * differs is what she is <em>told</em>, which is the part she can see.</p>
      */
     private void closeExpired(StudentExam attempt) throws Exception {
-        int minutes = TakeExamMinutes.between(attempt.getStartTime(), attempt.getDeadline());
+        LocalDateTime end = attempt.effectiveEnd();
+        boolean byTheRoom = attempt.isCutShortByClose();
+        int minutes = TakeExamMinutes.between(attempt.getStartTime(), end);
 
         boolean closedByUs = submissionDAO.finish(attempt.getSubmissionId(),
-                SubmissionStatus.TIMED_OUT, attempt.getDeadline(), minutes);
+                SubmissionStatus.TIMED_OUT, end, minutes);
 
         if (!closedByUs) {
             // She pressed Submit in the same instant and got there first. Her
@@ -223,18 +284,26 @@ public class ExamClockService {
             return;
         }
 
-        logSink.accept("Time up: " + attempt.getStudentName()
+        logSink.accept((byTheRoom ? "Sitting closed: " : "Time up: ")
+                     + attempt.getStudentName()
                      + " on exam " + attempt.getExamId()
                      + " (attempt " + attempt.getAttemptNo() + ") - closed automatically.");
 
-        onExamClosed.accept(attempt.getExecutionId(),
-                attempt.getStudentName() + " ran out of time.");
+        onExamClosed.accept(attempt.getExecutionId(), byTheRoom
+                ? attempt.getStudentName() + " was still working when the sitting closed."
+                : attempt.getStudentName() + " ran out of time.");
 
-        pushService.toUsername(attempt.getStudentUsername(), new PushEvent(
-                PushType.EXAM_AUTO_SUBMITTED,
-                attempt.getSubmissionId(),
-                "Your time is up. The exam has been handed in for you, and everything "
-              + "you had chosen was saved."));
+        pushService.toUsername(attempt.getStudentUsername(), byTheRoom
+                ? new PushEvent(
+                    PushType.EXAM_CLOSED_FOR_EVERYONE,
+                    attempt.getSubmissionId(),
+                    "The exam has closed for everyone. Your paper has been handed in, "
+                  + "and everything you had chosen was saved.")
+                : new PushEvent(
+                    PushType.EXAM_AUTO_SUBMITTED,
+                    attempt.getSubmissionId(),
+                    "Your time is up. The exam has been handed in for you, and everything "
+                  + "you had chosen was saved."));
     }
 
     /** Rounded-up whole minutes, kept in one place so the clock and the controller agree. */

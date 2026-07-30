@@ -100,7 +100,7 @@ public class TakeExamController extends GUIScreen {
      * <p>These arrive once a second while she is sitting the exam.</p>
      */
     /**
-     * Requirement 43's popup.
+     * Requirement 43's popup: nine tenths of <b>her own</b> time has gone.
      *
      * <p>A real modal, not a line in the status bar. The requirement says
      * <i>popup</i>, and a girl deep in question 14 will not notice a colour change
@@ -111,24 +111,70 @@ public class TakeExamController extends GUIScreen {
      * A modal wait here would freeze the countdown she is being warned about.</p>
      */
     private void showTimeWarning(long secondsLeft, String message) {
-        showError(message);          // in the status bar too, in case she closes it fast
-
-        long minutes = Math.max(0, secondsLeft) / 60;
-        long seconds = Math.max(0, secondsLeft) % 60;
-
-        Alert popup = new Alert(Alert.AlertType.WARNING);
-        popup.initOwner(hsts.client.HSTSApp.getPrimaryStage());
-        popup.setTitle("90% of the time has gone");
         // The heading names the milestone the requirement is about, and the body
         // names the time left down to the second. "Less than a minute left" was
         // both of those at once and neither of them well.
-        popup.setHeaderText("90% of the exam time has gone");
-        popup.setContentText(String.format(
-                "You have %d minute%s and %d second%s left.%n%n"
+        showWarningPopup("90% of the time has gone",
+                "90% of the exam time has gone",
+                describeLeft(secondsLeft) + " left."
+              + System.lineSeparator() + System.lineSeparator()
               + "Your answers are saved as you choose them. The exam will be handed "
-              + "in for you when the time runs out.",
+              + "in for you when your time runs out.",
+                message);
+    }
+
+    /**
+     * The other warning: the <b>sitting</b> closes shortly, for everyone.
+     *
+     * <p>Deliberately different words. This end is not hers - it is the room's, it
+     * is the same for the girl beside her, and working faster will not move it. She
+     * may well have most of her own time still in hand, which is exactly why the
+     * 90% wording would mislead her here.</p>
+     *
+     * <p>Only one of the two ever reaches one attempt; the server decides which by
+     * asking which end will actually stop her.</p>
+     */
+    private void showClosingWarning(long secondsLeft, String message) {
+        showWarningPopup("The exam is closing",
+                "This exam closes for everyone shortly",
+                describeLeft(secondsLeft) + " left."
+              + System.lineSeparator() + System.lineSeparator()
+              + "Your answers are saved as you choose them. Your paper will be handed "
+              + "in for you when the exam closes, so finish what you can now.",
+                message);
+    }
+
+    /** "6 minutes and 42 seconds", or "45 seconds" under a minute. */
+    private String describeLeft(long secondsLeft) {
+        long minutes = Math.max(0, secondsLeft) / 60;
+        long seconds = Math.max(0, secondsLeft) % 60;
+        if (minutes == 0) {
+            return String.format("You have %d second%s", seconds, seconds == 1 ? "" : "s");
+        }
+        return String.format("You have %d minute%s and %d second%s",
                 minutes, minutes == 1 ? "" : "s",
-                seconds, seconds == 1 ? "" : "s"));
+                seconds, seconds == 1 ? "" : "s");
+    }
+
+    /** The paper is over and was handed in for her. The title says which clock did it. */
+    private void closedForHer(String title, String message) {
+        lockPaper();
+        showOnly(donePane);
+        doneTitleLabel.setText(title);
+        doneDetailLabel.setText(message);
+        showError(message);
+        timerLabel.setText("00:00");
+    }
+
+    private void showWarningPopup(String title, String header, String body,
+                                  String statusLine) {
+        showError(statusLine);       // in the status bar too, in case she closes it fast
+
+        Alert popup = new Alert(Alert.AlertType.WARNING);
+        popup.initOwner(hsts.client.HSTSApp.getPrimaryStage());
+        popup.setTitle(title);
+        popup.setHeaderText(header);
+        popup.setContentText(body);
         popup.getDialogPane().setMinWidth(430);
         popup.show();
     }
@@ -150,6 +196,14 @@ public class TakeExamController extends GUIScreen {
                     showTimeWarning(secondsLeft, event.getMessage());
                 }
             }
+            case EXAM_CLOSING_WARNING -> {
+                // The room closes before her own time runs out (requirement 45), so
+                // this is the warning that matters to her and the 90% one will never
+                // be sent. Exactly one of the two arrives per attempt.
+                if (event.getPayload() instanceof Long secondsLeft) {
+                    showClosingWarning(secondsLeft, event.getMessage());
+                }
+            }
             case EXAM_TIME_CHANGED -> {
                 // Acceptance test 2.7: the countdown moves by itself, with nobody
                 // pressing anything on this machine.
@@ -159,13 +213,14 @@ public class TakeExamController extends GUIScreen {
                 showSuccess(event.getMessage());
             }
             case EXAM_AUTO_SUBMITTED -> {
-                // Requirement 45 / acceptance test 2.6.
-                lockPaper();
-                showOnly(donePane);
-                doneTitleLabel.setText("Time up");
-                doneDetailLabel.setText(event.getMessage());
-                showError(event.getMessage());
-                timerLabel.setText("00:00");
+                // Requirement 41 / acceptance test 2.6 - her own time ran out.
+                closedForHer("Time up", event.getMessage());
+            }
+            case EXAM_CLOSED_FOR_EVERYONE -> {
+                // Requirement 45 - the sitting's time ended and the system closed it
+                // for everybody. "Time up" would be wrong here: she may have had
+                // twenty minutes of her own left.
+                closedForHer("The exam has closed", event.getMessage());
             }
             default -> super.onPush(event);
         }

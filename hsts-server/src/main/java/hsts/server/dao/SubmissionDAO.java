@@ -338,7 +338,7 @@ public class SubmissionDAO implements IDAO<StudentExam, Integer> {
             SELECT s.submission_id, s.execution_id, s.student_id, u.full_name AS student_name,
                    u.username AS student_username,
                    s.attempt_no, s.start_time, s.deadline, s.end_time, s.actual_duration,
-                   s.status, x.exam_id, c.name AS course_name,
+                   s.status, x.exam_id, x.close_time, c.name AS course_name,
                    e.instructions_for_students
             FROM student_exam s
             JOIN users u          ON u.user_id      = s.student_id
@@ -357,6 +357,11 @@ public class SubmissionDAO implements IDAO<StudentExam, Integer> {
         s.setAttemptNo(rs.getInt("attempt_no"));
         s.setStartTime(rs.getTimestamp("start_time").toLocalDateTime());
         s.setDeadline(rs.getTimestamp("deadline").toLocalDateTime());
+        // Read with the row rather than stored on it: the sitting's close belongs to
+        // the sitting, and a copy on every attempt would be one more thing to keep
+        // in step.
+        Timestamp closes = rs.getTimestamp("close_time");
+        s.setCloseTime(closes == null ? null : closes.toLocalDateTime());
         Timestamp end = rs.getTimestamp("end_time");
         s.setEndTime(end == null ? null : end.toLocalDateTime());
         int minutes = rs.getInt("actual_duration");
