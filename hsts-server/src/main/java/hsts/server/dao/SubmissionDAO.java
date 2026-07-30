@@ -101,6 +101,21 @@ public class SubmissionDAO implements IDAO<StudentExam, Integer> {
         return maxAttempts + countGrantedAttempts(executionId, studentId);
     }
 
+    /** Every student who has an attempt at this sitting, each listed once. */
+    public List<String> findStudentIdsIn(int executionId) throws SQLException {
+        List<String> ids = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement(
+                "SELECT DISTINCT student_id FROM student_exam WHERE execution_id = ?")) {
+            ps.setInt(1, executionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ids.add(rs.getString(1));
+                }
+            }
+        }
+        return ids;
+    }
+
     /** How many attempts this student has already made at this sitting. */
     public int countAttempts(int executionId, String studentId) throws SQLException {
         try (PreparedStatement ps = conn().prepareStatement(

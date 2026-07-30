@@ -79,7 +79,9 @@
             <HBox spacing="8" alignment="CENTER_LEFT">
                 <Button fx:id="grantAttemptButton" text="Allow another attempt..."
                         onAction="#onGrantAttempt"/>
-                <Label text="Pick a student first. Use it for a power cut, illness, or a machine that failed."
+                <Button fx:id="grantAllButton" text="Allow one for everyone..."
+                        onAction="#onGrantAttemptToAll"/>
+                <Label text="One student, or the whole room after a power cut."
                        styleClass="caption" wrapText="true"
                        HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
             </HBox>

@@ -51,6 +51,7 @@ import hsts.server.dao.ExecutionDAO;
 import hsts.server.dao.GradeDAO;
 import hsts.server.dao.BotDAO;
 import hsts.server.dao.CodeAttemptDAO;
+import hsts.server.dao.LoginAttemptDAO;
 import hsts.server.dao.SubmissionDAO;
 import hsts.server.dao.QuestionDAO;
 import hsts.server.dao.UserDAO;
@@ -97,7 +98,9 @@ public class HSTSServer extends AbstractServer {
     private final QuestionDAO questionDAO = new QuestionDAO();
     private final CourseDAO courseDAO = new CourseDAO();
     private final IUserManagementSystem userManagement = new LocalUserManagementAdapter(userDAO);
-    private final LoginController loginController = new LoginController(userManagement, sessions);
+    private final LoginAttemptDAO loginAttemptDAO = new LoginAttemptDAO();
+    private final LoginController loginController =
+            new LoginController(userManagement, sessions, loginAttemptDAO);
     private final ExamDAO examDAO = new ExamDAO();
     private final PushService pushService = new PushService(sessions);
     private final QuestionController questionController =

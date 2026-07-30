@@ -40,7 +40,12 @@ public enum PushType {
     EXAM_TIME_TICK,
 
     /**
-     * Nine tenths of her time has gone. Payload is the whole minutes remaining.
+     * Nine tenths of her time has gone. Payload is the <b>seconds</b> remaining.
+     *
+     * <p>Seconds, not minutes. The wording the customer asked for names both -
+     * "you have 6 minutes and 42 seconds left" - and a payload of whole minutes
+     * cannot produce that. It also read badly at the end: with fifty seconds to go
+     * the popup said "less than a minute left", which is true and useless.</p>
      *
      * <p>Requirement 43: <i>"לקראת סיום 90% מזמן הבחינה יופיע popup שמודיע זאת עם
      * מספר הדקות שנשארו"</i> - a popup near the 90% mark saying how many minutes

@@ -110,18 +110,26 @@ public class TakeExamController extends GUIScreen {
      * clock keeps ticking behind it and she can dismiss it whenever she looks up.
      * A modal wait here would freeze the countdown she is being warned about.</p>
      */
-    private void showTimeWarning(long minutesLeft, String message) {
+    private void showTimeWarning(long secondsLeft, String message) {
         showError(message);          // in the status bar too, in case she closes it fast
+
+        long minutes = Math.max(0, secondsLeft) / 60;
+        long seconds = Math.max(0, secondsLeft) % 60;
 
         Alert popup = new Alert(Alert.AlertType.WARNING);
         popup.initOwner(hsts.client.HSTSApp.getPrimaryStage());
-        popup.setTitle("Time is nearly up");
-        popup.setHeaderText(minutesLeft <= 1
-                ? "Less than a minute left"
-                : minutesLeft + " minutes left");
-        popup.setContentText(message + "\n\nYour answers are saved as you choose them. "
-                + "The exam will be handed in for you when the time runs out.");
-        popup.getDialogPane().setMinWidth(420);
+        popup.setTitle("90% of the time has gone");
+        // The heading names the milestone the requirement is about, and the body
+        // names the time left down to the second. "Less than a minute left" was
+        // both of those at once and neither of them well.
+        popup.setHeaderText("90% of the exam time has gone");
+        popup.setContentText(String.format(
+                "You have %d minute%s and %d second%s left.%n%n"
+              + "Your answers are saved as you choose them. The exam will be handed "
+              + "in for you when the time runs out.",
+                minutes, minutes == 1 ? "" : "s",
+                seconds, seconds == 1 ? "" : "s"));
+        popup.getDialogPane().setMinWidth(430);
         popup.show();
     }
 
@@ -135,11 +143,11 @@ public class TakeExamController extends GUIScreen {
             }
             case EXAM_TIME_WARNING -> {
                 // Requirement 43: a popup at nine tenths of the way through, saying
-                // how many minutes are left. The server decides WHEN - it owns the
-                // clock and it sends this exactly once - so all that is left here is
-                // to show it.
-                if (event.getPayload() instanceof Long minutes) {
-                    showTimeWarning(minutes, event.getMessage());
+                // how much time is left. The server decides WHEN - it owns the clock
+                // and it sends this exactly once - and it also writes the sentence,
+                // so all that is left here is to show it.
+                if (event.getPayload() instanceof Long secondsLeft) {
+                    showTimeWarning(secondsLeft, event.getMessage());
                 }
             }
             case EXAM_TIME_CHANGED -> {

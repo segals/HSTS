@@ -155,6 +155,12 @@ public class LiveExamController {
                 return Response.error("You did not release that sitting.");
             }
 
+            // "Everybody" first, because it is a different job: one grant each for
+            // every student who sat, reported as a count rather than a name.
+            if (request.isEveryone()) {
+                return grantToEveryone(user, execution, request.getReason());
+            }
+
             User student = userDAO.findById(request.getStudentId());
             if (student == null) {
                 return Response.error("That student does not exist.");
@@ -190,6 +196,45 @@ public class LiveExamController {
         } catch (SQLException e) {
             return Response.error("Could not grant the attempt: " + e.getMessage());
         }
+    }
+
+    /**
+     * One more attempt for every student who sat this sitting.
+     *
+     * <p>For the case that is about a room rather than a person - the power failed,
+     * the network went down. Granting twenty of them by hand invites missing one,
+     * and a missed girl is the whole problem repeating itself.</p>
+     *
+     * <p>Everyone who <b>started</b>, which is the honest set: a girl who never
+     * turned up has nothing to re-sit, and giving her an attempt she never had would
+     * quietly change what "all your attempts" means for her later.</p>
+     */
+    private Response grantToEveryone(User user, ExamExecution execution, String reason)
+            throws SQLException {
+        List<String> studentIds = submissionDAO.findStudentIdsIn(execution.getExecutionId());
+        if (studentIds.isEmpty()) {
+            return Response.error("Nobody has sat this exam yet, so there is nothing "
+                    + "to grant. Extra attempts are for students who have started.");
+        }
+
+        int granted = 0;
+        for (String studentId : studentIds) {
+            submissionDAO.grantExtraAttempt(execution.getExecutionId(), studentId,
+                    user.getUserId(), reason);
+            granted++;
+
+            User student = userDAO.findById(studentId);
+            if (student != null) {
+                // NFR 18 again: each of them is told, not left to find out.
+                pushService.toUsername(student.getUsername(), new PushEvent(
+                        PushType.EXTRA_ATTEMPT_GRANTED, execution.getExecutionId(),
+                        user.getFullName() + " has allowed another attempt at exam "
+                      + execution.getExamId() + " for everyone who sat it. Enter the "
+                      + "code again to start it."));
+            }
+        }
+        return Response.ok(granted, "Another attempt allowed for all " + granted
+                + " student(s) who sat this exam. Each has been told.");
     }
 
     public Response changeTime(User user, TimeChangeRequest request) {

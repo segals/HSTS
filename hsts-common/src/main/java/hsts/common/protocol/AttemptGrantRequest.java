@@ -20,13 +20,42 @@ public class AttemptGrantRequest implements Serializable {
     private final String studentId;
     private final String reason;
 
+    /**
+     * True when this grants an attempt to <b>everyone</b> who sat the sitting.
+     *
+     * <p>A separate flag rather than a null {@link #studentId} meaning "all", because
+     * a null id also arrives when something has gone wrong on the way here, and
+     * "everybody gets another go" is not a mistake that should be possible to make
+     * by accident.</p>
+     */
+    private final boolean everyone;
+
     public AttemptGrantRequest(int executionId, String studentId, String reason) {
         this.executionId = executionId;
         this.studentId = studentId;
         this.reason = reason;
+        this.everyone = false;
+    }
+
+    private AttemptGrantRequest(int executionId, String reason, boolean everyone) {
+        this.executionId = executionId;
+        this.studentId = null;
+        this.reason = reason;
+        this.everyone = everyone;
+    }
+
+    /**
+     * One more attempt for every student who has sat this sitting.
+     *
+     * <p>Asked for by the customer. The case it is for is a whole room, not a
+     * person: the power failed, or the network went down mid-exam.</p>
+     */
+    public static AttemptGrantRequest forEveryone(int executionId, String reason) {
+        return new AttemptGrantRequest(executionId, reason, true);
     }
 
     public int getExecutionId() { return executionId; }
     public String getStudentId() { return studentId; }
     public String getReason()    { return reason; }
+    public boolean isEveryone()  { return everyone; }
 }

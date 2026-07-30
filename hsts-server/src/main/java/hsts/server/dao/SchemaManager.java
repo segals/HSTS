@@ -319,6 +319,20 @@ public final class SchemaManager {
                   CONSTRAINT fk_ag_teacher FOREIGN KEY (granted_by) REFERENCES users(user_id)
                 ) ENGINE=InnoDB""");
 
+            // ---------- 5-strikes lockout on SIGNING IN ----------
+            //
+            // Asked for by the customer, for every kind of user. Keyed by the typed
+            // USERNAME rather than a user id: a wrong password comes with a real
+            // username, but a wrong username comes with nothing at all, and counting
+            // what was typed catches both. There is deliberately no foreign key -
+            // the whole point is to record attempts on names that may not exist.
+            st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS login_attempt (
+                  username     VARCHAR(50) PRIMARY KEY,
+                  fail_count   INT      NOT NULL DEFAULT 0,
+                  locked_until DATETIME NULL
+                ) ENGINE=InnoDB""");
+
             // ---------- 3-strikes lockout (requirement 39) ----------
             st.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS code_attempt (

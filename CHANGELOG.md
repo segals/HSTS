@@ -2036,3 +2036,130 @@ Milestone 16: run the Assignment 1 acceptance tests by hand and fill in the resu
 table, finish the redlines in `docs/03_document_updates.md`, the Word document, and
 the ZIP. **The two-laptop LAN test is still outstanding**, deferred at the
 customer's direction and still required before submission.
+
+---
+
+## Milestone 15, follow-up — a login lock, a whole-room grant, and better wording
+
+### 1. Five wrong sign-ins, then ten minutes — for every kind of user
+
+Asked for by the customer. `LoginAttemptDAO` mirrors `CodeAttemptDAO` (requirement
+39) but the two are deliberately separate: they count different things and have
+different limits, and a student who mistyped an exam code three times should not
+also be unable to sign in.
+
+**Keyed by the typed username, not a user id.** A wrong password arrives with a real
+username; a wrong *username* arrives with nothing at all. Counting what was typed
+catches both, and it stops somebody working through a list of names five tries at a
+time. The table deliberately has **no foreign key** — the whole point is to record
+attempts on names that do not exist.
+
+Checked **before** the password, or somebody could keep guessing while locked. A
+correct sign-in clears the count, so the five are consecutive. And it **fails
+closed**: if the lock cannot be read, nobody signs in — the alternative is a
+database fault silently removing a lock.
+
+### The regression I introduced, and the suite that caught it
+
+The refusal first read *"Incorrect username or password. You have 4 tries left
+before a 10-minute lock."*
+
+That **undid a deliberate security decision**. The count is kept against the typed
+username, so a real account that has already accumulated failures shows a different
+number from a name nobody has ever used — and comparing the two tells an attacker
+which usernames are real. One shared refusal message exists precisely to prevent
+that, and a helpful countdown quietly broke it.
+
+`M2Test` had been checking it since milestone 2: *"same message for both, so
+usernames cannot be probed"*. It failed. The countdown is gone; the refusal is now
+byte-identical for a wrong password and an unknown user, and `M15Test` asserts that
+directly by comparing the two strings.
+
+The cost is that somebody who has forgotten her password gets no warning before the
+ten minutes. That is the smaller of the two harms, and the lock message explains
+itself when it arrives.
+
+**A second fault, in the test.** `M2Test` probes the username `nobody`, which never
+signs in successfully and therefore never clears its count — so across repeated runs
+it reached five, locked, and started replying with the lockout message. The product
+was right: a name nobody owns cannot clear its own counter. The suite now clears the
+state it depends on.
+
+### 2. One button for the whole room
+
+`AttemptGrantRequest.forEveryone` grants one extra attempt to **every student who
+sat** the sitting. The case it is for is a power cut, not a person, and granting
+twenty by hand invites missing one — which is the same problem repeating itself.
+
+Everyone who **started**, which is the honest set: a girl who never turned up has
+nothing to re-sit, and giving her an attempt would quietly change what "all your
+attempts" means for her later. Each of them is pushed a message. The confirmation
+says how many students it will affect, because "everyone" is not a press to make by
+accident.
+
+A separate flag rather than a null student id meaning "all" — a null id also arrives
+when something has gone wrong on the way, and *everybody gets another go* should not
+be a possible accident.
+
+### 3. The popup wording
+
+Reported from the screen: with five seconds showing on the clock, the popup still
+said *"Less than a minute left"*. True and useless.
+
+The payload changed from whole minutes to **seconds**, because the wording the
+customer asked for names both. It now reads:
+
+> **90% of the exam time has gone**
+> You have 6 minutes and 42 seconds left.
+
+The sentence is composed on the **server**, like the countdown itself, so the screen
+does not invent the numbers. Singular and plural are handled, and under a minute it
+names only seconds rather than saying "0 minutes and 45 seconds".
+
+### 4. Why a coordinator can release an exam — and why that is correct
+
+Asked directly, so it was checked against the sources rather than answered from
+memory.
+
+| Source | Who releases |
+|---|---|
+| SUC-6, actor column | **מורה** — teacher |
+| SUC-6 body | *"עבור בחינה מאושרת בלבד, **המורה** מגדירה מועד..."* |
+| Requirement 37 | *"לצורך ביצוע בחינה, **המורה** מגדירה קוד ביצוע..."* |
+| מתווה scenario 5 | *"**המורה** מגדירה מועד... **המורה** מגדירה קוד ביצוע"* |
+| Requirement 34 | passive — *"ניתן להגדיר"*, no actor named |
+
+Every source that names anybody names **the teacher**. None mentions the coordinator.
+
+**She releases as a teacher, not as a coordinator.** In this school a coordinator
+*is* a teacher who additionally runs a subject — the seed data gives each of them
+taught courses, and Noa Katz teaches Algebra. `ExamExecutionController` requires
+`teacher.teaches(courseCode)`, so she can release Algebra exams and nothing else.
+
+**Requirement 19 did not widen this.** It widened *questions* only. `M15Test` §7 now
+proves the separation: her releasable list contains course 02 alone, and releasing
+an approved Plane Geometry exam — in her own subject, which she may edit the
+questions of — is refused with *"You do not teach that course."*
+
+**Where she edits a teacher's questions:** the **Question bank** screen. Since
+requirement 19 her course combo lists every course in her subject, so she picks
+Plane Geometry there and edits its questions like any other. Tested in §1.
+
+**One observation worth raising in the report, not a defect.** Requirement 30 says
+*every* exam needs the coordinator's approval, and requirement 31 says only the
+coordinator of that subject may give it. A coordinator who writes an exam in her own
+subject is therefore the only person who can approve it — she approves her own work,
+and the demo data contains exactly that case. The documents create it; no
+requirement forbids it, and there is no second coordinator per subject to ask.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| M2 | 48/48 |
+| M3–M11, M13, M14 | unchanged, all passing |
+| **M15** | **90/90** (was 60; 30 new) |
+| **Total** | **821 checks** |
+| Screens | 19/19 load |
+
+Run **three times back to back with no database reset**, identical each time.

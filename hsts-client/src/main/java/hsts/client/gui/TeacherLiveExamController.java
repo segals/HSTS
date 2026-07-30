@@ -53,6 +53,7 @@ public class TeacherLiveExamController extends GUIScreen {
     @FXML private Label  countsLabel;
     @FXML private ListView<StudentExam> studentList;
     @FXML private Button grantAttemptButton;
+    @FXML private Button grantAllButton;
     @FXML private Label  statusLabel;
 
     private ExamExecution chosen;
@@ -122,6 +123,38 @@ public class TeacherLiveExamController extends GUIScreen {
                 send(RequestType.LIVE_GRANT_ATTEMPT,
                      new AttemptGrantRequest(chosen.getExecutionId(),
                              student.getStudentId(), reason), REQ_GRANT));
+    }
+
+    /**
+     * One more attempt for everybody who sat this sitting.
+     *
+     * <p>Confirmed before it happens, and the confirmation says how many students it
+     * will affect. "Everyone" is not a press to make by accident, and the teacher is
+     * the only person who knows whether the power really did go off.</p>
+     */
+    @FXML
+    private void onGrantAttemptToAll() {
+        if (chosen == null) {
+            showError("Choose a sitting first.");
+            return;
+        }
+        int sat = studentList.getItems().size();
+        if (sat == 0) {
+            showError("Nobody has sat this exam yet.");
+            return;
+        }
+
+        TextInputDialog ask = new TextInputDialog();
+        ask.initOwner(hsts.client.HSTSApp.getPrimaryStage());
+        ask.setTitle("Allow another attempt for everyone");
+        ask.setHeaderText("Let all " + sat + " student(s) who sat this exam try again?");
+        ask.setContentText("Why (optional):");
+        ask.getDialogPane().setMinWidth(450);
+
+        ask.showAndWait().ifPresent(reason ->
+                send(RequestType.LIVE_GRANT_ATTEMPT,
+                     AttemptGrantRequest.forEveryone(chosen.getExecutionId(), reason),
+                     REQ_GRANT));
     }
 
     @Override

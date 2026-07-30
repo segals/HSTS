@@ -171,16 +171,36 @@ public class ExamClockService {
             return;                                  // more than a tenth left
         }
 
-        // Rounded UP, so "1 minute left" never reads as "0 minutes left".
-        long minutesLeft = (leftSeconds + 59) / 60;
         warned.add(attempt.getSubmissionId());
 
+        // The seconds, so the wording can name minutes AND seconds. The customer
+        // asked for exactly that, and rightly: "less than a minute left" is true
+        // with fifty seconds to go and tells her nothing she can act on.
         pushService.toUsername(attempt.getStudentUsername(), new PushEvent(
                 PushType.EXAM_TIME_WARNING,
-                minutesLeft,
-                minutesLeft <= 1
-                        ? "Less than a minute of your exam time is left."
-                        : "Only " + minutesLeft + " minutes of your exam time are left."));
+                leftSeconds,
+                describeWarning(leftSeconds)));
+    }
+
+    /**
+     * "90% of the exam time has gone. You have 6 minutes and 42 seconds left."
+     *
+     * <p>Built here so the sentence the student sees is the server's, not something
+     * a client composed - the same reasoning as the countdown itself. The screen may
+     * lay it out differently but does not invent the numbers.</p>
+     */
+    public static String describeWarning(long secondsLeft) {
+        long minutes = Math.max(0, secondsLeft) / 60;
+        long seconds = Math.max(0, secondsLeft) % 60;
+
+        String amount;
+        if (minutes == 0) {
+            amount = seconds + (seconds == 1 ? " second" : " seconds");
+        } else {
+            amount = minutes + (minutes == 1 ? " minute" : " minutes")
+                   + " and " + seconds + (seconds == 1 ? " second" : " seconds");
+        }
+        return "90% of the exam time has gone. You have " + amount + " left.";
     }
 
     /**
