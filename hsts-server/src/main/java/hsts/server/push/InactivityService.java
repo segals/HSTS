@@ -138,7 +138,7 @@ public class InactivityService {
 
             var connection = session.getConnection();
             try {
-                connection.sendToClient(event);
+                Transport.send(connection, event);
             } catch (Exception e) {
                 // Already gone. The session is cleared below regardless.
                 logSink.accept("Could not warn " + user.getUsername()

@@ -140,4 +140,78 @@ public class ResultsViewController {
             return Response.error("Could not load that exam: " + e.getMessage());
         }
     }
+
+    // -----------------------------------------------------------------
+    //  Her own figures
+    // -----------------------------------------------------------------
+
+    /**
+     * One student's own statistics, course by course.
+     *
+     * <p>Built from the same {@link Report} shape the principal's reports use, so
+     * the screen shows the familiar rows and nothing new had to be invented to
+     * carry it.</p>
+     *
+     * <p><b>Her marks only.</b> No class average, no position in the class: SUC-10
+     * says a student sees her own results and requirement 57 keeps one girl's marks
+     * away from another, and an average is a short step from working out somebody
+     * else's mark in a class of four.</p>
+     *
+     * <p>Unapproved papers are left out rather than counted as nought. A mark her
+     * teacher has not released yet is not a mark she has, and averaging it in would
+     * quietly make her look worse than she is.</p>
+     */
+    public Response myStatistics(User user) {
+        if (!(user instanceof Student student)) {
+            return Response.error("Only a student has her own statistics to view.");
+        }
+        try {
+            java.util.Map<String, java.util.List<Integer>> byCourse =
+                    new java.util.LinkedHashMap<>();
+            java.util.List<Integer> everything = new java.util.ArrayList<>();
+
+            for (Grade grade : gradeDAO.findAllForStudent(student.getUserId())) {
+                if (!grade.isApproved()) {
+                    continue;
+                }
+                String course = (grade.getCourseName() == null)
+                        ? "Unknown course" : grade.getCourseName();
+                byCourse.computeIfAbsent(course, c -> new java.util.ArrayList<>())
+                        .add(grade.getFinalGrade());
+                everything.add(grade.getFinalGrade());
+            }
+
+            java.util.List<hsts.common.entity.ReportLine> lines = new java.util.ArrayList<>();
+            for (var entry : byCourse.entrySet()) {
+                java.util.List<Integer> marks = entry.getValue();
+                int best = java.util.Collections.max(marks);
+                int lowest = java.util.Collections.min(marks);
+                String detail = marks.size() + (marks.size() == 1 ? " exam" : " exams")
+                        + (marks.size() == 1 ? "" : "  ·  best " + best + "  ·  lowest " + lowest);
+                lines.add(new hsts.common.entity.ReportLine(entry.getKey(), detail,
+                        hsts.common.entity.ExamStatistics.over(marks)));
+            }
+            // The strongest course first: what she is asking is "how am I doing",
+            // and an alphabetical list answers a different question.
+            lines.sort((a, b) -> Double.compare(
+                    b.getStatistics().getAverage(), a.getStatistics().getAverage()));
+
+            hsts.common.entity.Report report = new hsts.common.entity.Report(
+                    hsts.common.enums.ReportType.BY_STUDENT,
+                    student.getFullName(),
+                    "My results",
+                    "Your own marks, course by course. Nobody else's are included.",
+                    lines,
+                    hsts.common.entity.ExamStatistics.over(everything),
+                    java.time.LocalDateTime.now());
+
+            return Response.ok(report, everything.isEmpty()
+                    ? "No approved marks yet, so there is nothing to work out."
+                    : everything.size() + " mark(s) across "
+                      + lines.size() + (lines.size() == 1 ? " course." : " courses."));
+
+        } catch (SQLException e) {
+            return Response.error("Could not work out your figures: " + e.getMessage());
+        }
+    }
 }

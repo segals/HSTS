@@ -75,6 +75,18 @@ public enum PushType {
     EXAM_CLOSING_WARNING,
 
     /**
+     * Something changed in this user's own queue of work, so her menu badges are
+     * out of date. The message says what, in plain words.
+     *
+     * <p>Sent to a class when an exam is given to them, which is the one change to
+     * a badge that no existing announcement covered. Everything else that moves a
+     * count - an exam sent for approval, a decision on one, a paper handed in, a
+     * mark published - already has an event of its own, and the menu listens for
+     * those too rather than having them all renamed to this.</p>
+     */
+    PENDING_COUNTS_CHANGED,
+
+    /**
      * The student's own time ran out and the server closed her exam.
      *
      * <p>Requirement 41 and acceptance test 2.6: whatever she had entered is

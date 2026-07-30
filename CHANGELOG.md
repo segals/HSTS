@@ -2535,3 +2535,169 @@ edge - the button's own padding - and that emptying the queue hides it and gives
 back its room rather than showing a nought.
 
 Run **three times back to back with no database reset**, identical each time.
+
+---
+
+## Seven interface changes, and the defect two of them uncovered
+
+All asked for from the screen after a walk through the system.
+
+### 1. Nothing says the system is unfinished any more
+
+The menu used to grey out entries that had not been built and name the milestone
+that would deliver them - *"Course study bot — milestone 14"* - under a footer
+reading *"Greyed-out entries are not built yet."* There is nothing left to grey
+out. The milestone is gone from every entry, the footer is hidden rather than
+blanked so it leaves no empty line, and `MenuBadgeTest` now walks every button on
+every role's menu and fails if any of them is disabled or still says "milestone".
+
+### 2. The badges move with nothing pressed
+
+The counts were right from the first version. What was missing was the
+announcement, in two places:
+
+- **A class was not told when an exam was given to them.** Nothing announced a
+  release, so a girl sitting on her menu saw the count stay at nought until she
+  clicked something. `PushType.PENDING_COUNTS_CHANGED` now goes to the enrolled
+  students: *"Plane Geometry is open now - you can take it."*
+- **The menu ignored the announcement a teacher already got.** A hand-in was
+  already pushed to her - it is what refreshes her live view - but the menu's list
+  of events worth re-counting for did not include it. One line.
+
+Still an allowlist rather than "refresh on any push": the exam clock sends a tick
+every second, and a menu that answered those with a request each would be polling
+by another name.
+
+**A mistake made and taken out again, worth recording.** The first attempt added a
+callback so the take-exam controller could announce a hand-in - not realising the
+dispatcher already did, three files away. Every hand-in was pushed twice. The
+suite now asserts the announcement arrives **exactly once**, which is how it was
+found.
+
+### 3. The badge is pink, not red
+
+`#f7d3d8` with deep-rose text, rather than the flat `#c02626` it started as. The
+count is a nudge - *there are three things here* - not an alarm, and a saturated
+red on every menu makes the whole screen read as a warning.
+
+### 4. No word is cut off anywhere
+
+Reported from the screen: the release form showed a button reading **"..."** where
+**Now** should have been. Rather than hunt the rest by eye across seventeen
+screens, `TruncationTest` measures: it lays every screen out three times - at its
+preferred size, at 1280x720, and with every hidden pane revealed - and measures
+each piece of text **in its own font** against the width it was given.
+
+That last detail matters. The first version compared a control's preferred width
+against its actual width, which called a button pinned to `prefWidth="30"`
+perfectly happy while it showed an ellipsis. Checked by deliberately squeezing the
+Now button again and confirming the suite catches it:
+
+```
+[CUT]     /fxml/ExamRelease.fxml
+            "Now" needs 56 and has 39
+```
+
+All seventeen screens are clean.
+
+### 5. Every window fits the display
+
+The screens ask for the width they need - the marking screen wants 1280 - and a
+laptop at 125% or 150% scaling has a desktop only 1536 or 1280 points wide.
+`sizeToScene` will happily make a window taller than the screen, and the bottom of
+it is simply not there: *"the choose question window isn't fully visible"*.
+
+Every window is now clamped to the working area, moved back into view if the
+clamp left it half off the edge, and **resizable**. There used to be a flag for
+that and two screens passed `false`; a window a user cannot resize is one she
+cannot read on a smaller laptop, so the flag is gone rather than set. Dialogs go
+through one helper that makes them resizable and gives their text a width to wrap
+into.
+
+### 6. "Now" sets an end time as well
+
+It set the opening moment and left the closing one at whatever the boxes happened
+to hold - which, now that the close ends the exam for everybody, was either
+already past or days away. It now sets the close to **an hour later** and says so:
+*"Opens now and closes at 15:42. Change either if you need to."*
+
+The caption under the closing time still described the **old** rule - *"This is
+the deadline to START. A student who begins just before it still gets her full
+time."* - which stopped being true when the customer changed it. It now reads
+*"Nobody may start after this moment, and anybody still working is handed in when
+it arrives."*
+
+### 7. A student can see how she is doing
+
+**My grades** now carries her own figures, course by course: how many exams, her
+average, her best and lowest, and a line for all her courses together. Built as a
+`Report` with a `ReportLine` per course, the same shape the principal's reports
+use, so nothing new had to be invented to carry it. Strongest course first - she
+is asking how she is doing, not for an index.
+
+**Her marks only.** No class average and no position: SUC-10 gives her *her*
+results, requirement 57 keeps one girl's marks away from another, and an average
+is a short step from working out somebody else's in a class of four. Unapproved
+papers are left out rather than counted as nought - a mark her teacher has not
+released is not a mark she has, and averaging it in would quietly make her look
+worse than she is. The card disappears entirely when she has no marks yet; a panel
+of dashes reads as a broken screen.
+
+---
+
+## The defect underneath: two threads, one connection
+
+While the badge suite was being extended it failed **once in ten runs** with
+*"no reply to TAKE_START"*, and the server log said *"connection was aborted"*.
+
+It is not the network. OCSF's `sendToClient` is one line -
+`output.writeObject(msg)` - with **no synchronisation**, and two threads write to
+the same connection routinely:
+
+| Thread | What it writes | When |
+|---|---|---|
+| The exam clock | the seconds remaining | every second, to every student in an exam |
+| Her connection's own thread | the reply to her request | whenever she answers or submits |
+| The inactivity sweep | "you have been signed out" | on its own timer |
+| Any request thread | a push to somebody else | approvals, releases, publishing |
+
+Two writes interleaving inside `ObjectOutputStream` put the bytes of one object
+inside the other. The client cannot read past the damage and drops the connection,
+and what the user sees is **a request that never comes back, in the middle of an
+exam**.
+
+`StreamRaceTest` makes it happen on purpose rather than waiting for it: a girl
+sitting an exam answering as fast as she can for fourteen seconds while the clock
+ticks at her. Before the fix it broke the connection on **every** run.
+
+The fix is `Transport.send`, which every writer in the system now goes through and
+which locks on the connection. Holding a lock across the write is safe here: these
+go to a buffered stream on a local network and take microseconds, and the
+alternative - a queue and a writer thread per client - is a great deal of
+machinery for a school with thirty terminals.
+
+| | Before | After |
+|---|---|---|
+| Requests answered | connection died mid-run, every run | **~7,000** |
+| Ticks arriving during them | - | 14 |
+| Replies lost | the rest of the run | **0** |
+
+Three runs each way.
+
+**This is not new.** The same signature is in this file from milestone 7: *"It
+failed once in a long sequence run and could not be reproduced in nine further
+attempts."* That was this, and it would have been the demo's flake to explain.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| **BadgeTest** | **51/51** (was 35; the live announcements and her own figures) |
+| **MenuBadgeTest** | **29/29** (was 20; every entry's wording too) |
+| **TruncationTest** | **17 screens, 0 with cut-off text** (new) |
+| **StreamRaceTest** | **5/5** (new) |
+| M2–M15, NewUsersTest, ClosingTimeTest | unchanged, all passing |
+| **Total** | **973 checks** |
+| Screens | 19/19 load |
+
+Run **three times back to back with no database reset**, identical each time.

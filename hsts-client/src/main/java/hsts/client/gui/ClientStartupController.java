@@ -66,7 +66,7 @@ public class ClientStartupController extends GUIScreen {
             }
         };
 
-        connect.setOnSucceeded(e -> switchTo("/fxml/Login.fxml", false));
+        connect.setOnSucceeded(e -> switchTo("/fxml/Login.fxml"));
 
         connect.setOnFailed(e -> {
             connectButton.setDisable(false);

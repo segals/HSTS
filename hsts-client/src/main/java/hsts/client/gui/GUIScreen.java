@@ -99,9 +99,9 @@ public abstract class GUIScreen {
             told.setContentText(why == null
                     ? "You were signed out after a period without activity."
                     : why);
-            told.getDialogPane().setMinWidth(420);
+            prepareDialog(told, 420);
             told.showAndWait();
-            switchTo("/fxml/Login.fxml", false);
+            switchTo("/fxml/Login.fxml");
         });
     }
 
@@ -178,7 +178,64 @@ public abstract class GUIScreen {
             root.applyCss();
             root.layout();
             stage.sizeToScene();
+            fitToScreen(stage);
         });
+    }
+
+    /**
+     * Keeps a window inside the display it is on.
+     *
+     * <p>The screens ask for the width they need - a marking screen with three
+     * columns wants 1280 - and on a laptop running at 125% or 150% scaling the
+     * desktop is only 1536 or 1280 points wide. {@code sizeToScene} happily makes a
+     * window taller than the screen, and the bottom of it, buttons and all, is
+     * simply not there. Reported from the screen: "the choose question window isn't
+     * fully visible".</p>
+     *
+     * <p>So the window is clamped to the working area - which excludes the taskbar -
+     * and moved back into view. It stays resizable, and every screen keeps a scroll
+     * pane over the part that can grow, so clamping hides nothing.</p>
+     */
+    protected static void fitToScreen(Stage stage) {
+        javafx.geometry.Rectangle2D area =
+                javafx.stage.Screen.getPrimary().getVisualBounds();
+
+        if (stage.getWidth() > area.getWidth()) {
+            stage.setWidth(area.getWidth());
+        }
+        if (stage.getHeight() > area.getHeight()) {
+            stage.setHeight(area.getHeight());
+        }
+        // A window that was clamped is usually now half off the edge it grew past.
+        if (stage.getX() < area.getMinX() || stage.getY() < area.getMinY()
+                || stage.getX() + stage.getWidth() > area.getMaxX()
+                || stage.getY() + stage.getHeight() > area.getMaxY()) {
+            stage.setX(area.getMinX() + (area.getWidth() - stage.getWidth()) / 2);
+            stage.setY(area.getMinY() + (area.getHeight() - stage.getHeight()) / 2);
+        }
+    }
+
+    /**
+     * Prepares a dialog so its text is never cut off.
+     *
+     * <p>A JavaFX {@code Alert} sizes itself to its content and then refuses to grow,
+     * so a long sentence is clipped rather than wrapped. Making it resizable and
+     * giving the label a width to wrap into fixes both, and every dialog in the
+     * system goes through here so none of them can be forgotten.</p>
+     */
+    protected static void prepareDialog(javafx.scene.control.Dialog<?> dialog, double minWidth) {
+        javafx.scene.control.DialogPane pane = dialog.getDialogPane();
+        pane.setMinWidth(minWidth);
+        pane.setPrefWidth(minWidth);
+        dialog.setResizable(true);
+
+        // The content and header labels do not wrap by default inside a dialog.
+        pane.lookupAll(".label").forEach(node -> {
+            if (node instanceof Label label) {
+                label.setWrapText(true);
+            }
+        });
+        pane.getScene().getWindow().sizeToScene();
     }
 
     /**
@@ -224,14 +281,20 @@ public abstract class GUIScreen {
     /**
      * Replaces the window's contents with another screen.
      *
+     * <p>Every screen is resizable and sized to what it holds, then clamped to the
+     * display. There used to be a flag for this and two screens passed
+     * {@code false}; a window a user cannot resize is a window she cannot read on a
+     * smaller laptop, and there was no reason for the exception.</p>
+     *
      * @param fxmlPath absolute classpath path, e.g. {@code "/fxml/MainMenu.fxml"}
      */
-    protected void switchTo(String fxmlPath, boolean resizable) {
+    protected void switchTo(String fxmlPath) {
         try {
             Stage stage = HSTSApp.getPrimaryStage();
             stage.setScene(HSTSApp.loadScene(fxmlPath));
-            stage.setResizable(resizable);
+            stage.setResizable(true);
             stage.sizeToScene();
+            fitToScreen(stage);
         } catch (Exception | Error e) {
             // FXML failures wrap the real cause several layers deep, and the
             // outer LoadException usually has an empty message - which produced

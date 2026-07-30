@@ -393,14 +393,23 @@ Label { -fx-text-fill: -hsts-text; }
     oval, and the padding is what makes room for a second one.
 */
 .badge-unread {
-    -fx-background-color: -hsts-danger;
-    -fx-text-fill: white;
+    /*
+        Soft pink rather than a strong red. The count is a nudge - "there are three
+        things here" - not an alarm, and a saturated red on every menu makes the
+        whole screen feel like a warning. The text is a deep rose so it still
+        carries against the pale fill.
+    */
+    -fx-background-color: #f7d3d8;
+    -fx-text-fill: #9c2b3c;
+    -fx-border-color: #eab5be;
+    -fx-border-width: 1;
     -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-padding: 2 7 2 7;
     -fx-min-width: 21;
     -fx-alignment: CENTER;
     -fx-background-radius: 999;
+    -fx-border-radius: 999;
 }
 
 /* ---------- misc ------------------------------------------------------ */

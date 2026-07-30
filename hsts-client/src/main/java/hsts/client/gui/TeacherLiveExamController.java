@@ -117,7 +117,7 @@ public class TeacherLiveExamController extends GUIScreen {
         ask.setTitle("Allow another attempt");
         ask.setHeaderText("Let " + student.getStudentName() + " sit this exam again?");
         ask.setContentText("Why (optional):");
-        ask.getDialogPane().setMinWidth(430);
+        prepareDialog(ask, 430);
 
         ask.showAndWait().ifPresent(reason ->
                 send(RequestType.LIVE_GRANT_ATTEMPT,
@@ -149,7 +149,7 @@ public class TeacherLiveExamController extends GUIScreen {
         ask.setTitle("Allow another attempt for everyone");
         ask.setHeaderText("Let all " + sat + " student(s) who sat this exam try again?");
         ask.setContentText("Why (optional):");
-        ask.getDialogPane().setMinWidth(450);
+        prepareDialog(ask, 450);
 
         ask.showAndWait().ifPresent(reason ->
                 send(RequestType.LIVE_GRANT_ATTEMPT,
@@ -203,7 +203,7 @@ public class TeacherLiveExamController extends GUIScreen {
 
     @FXML
     private void onBack() {
-        switchTo("/fxml/MainMenu.fxml", true);
+        switchTo("/fxml/MainMenu.fxml");
     }
 
     // -----------------------------------------------------------------

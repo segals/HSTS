@@ -33,10 +33,10 @@ import java.util.List;
  * "<b>המורה</b> מגדירה מועד... <b>המורה</b> מגדירה קוד ביצוע". The coordinator
  * approves; the teacher decides when her class sits it.</p>
  *
- * <p><b>The close time is a deadline to start, not to finish.</b> A student who
- * begins at 11:55 of a 10:00-12:00 window with 90 minutes allotted works until
- * 13:25. That is enforced when she starts (milestone 7); here it only shapes the
- * wording, so that nobody sets a window expecting it to cut students off.</p>
+ * <p><b>The close time ends the exam for everybody</b> (requirement 45). Nobody
+ * may start after it, and anybody still working when it arrives is handed in
+ * automatically. That is enforced by the clock; here it only shapes the wording,
+ * so that nobody sets a window expecting students to run past it.</p>
  */
 public class ExamExecutionController {
 
@@ -55,6 +55,20 @@ public class ExamExecutionController {
 
     private final ExecutionDAO executionDAO;
     private final ExamDAO examDAO;
+
+    /**
+     * Told (sitting, courseCode) whenever an exam is given to a class.
+     *
+     * <p>So the students of that course can be told without pressing anything. A
+     * callback rather than a push service held here: releasing an exam has nothing
+     * to do with who happens to be connected, and the exam clock is wired the same
+     * way for the same reason.</p>
+     */
+    private java.util.function.BiConsumer<ExamExecution, String> onReleased = (x, c) -> { };
+
+    public void setOnReleased(java.util.function.BiConsumer<ExamExecution, String> listener) {
+        this.onReleased = (listener == null) ? (x, c) -> { } : listener;
+    }
 
     public ExamExecutionController(ExecutionDAO executionDAO, ExamDAO examDAO) {
         this.executionDAO = executionDAO;
@@ -203,6 +217,13 @@ public class ExamExecutionController {
             execution.setCreatedAt(LocalDateTime.now());
 
             executionDAO.insert(execution);
+
+            // The class can be told at once, without anybody pressing anything.
+            // A callback rather than a push service of its own: this controller has
+            // no business knowing about sessions, and the clock already works this
+            // way for the same reason.
+            execution.setCourseName(exam.getCourseName());
+            onReleased.accept(execution, exam.getCourseCode());
 
             return Response.ok(execution,
                     "Exam " + exam.getExamId() + " released with code " + code

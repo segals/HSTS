@@ -373,6 +373,8 @@ public class HSTSServer extends AbstractServer {
                         resultsViewController.listMyResults(u));
                 case RESULTS_MARKED_EXAM -> withUser(client, u ->
                         resultsViewController.getMyMarkedExam(u, (Integer) request.getPayload()));
+                case RESULTS_MY_STATISTICS -> withUser(client, u ->
+                        resultsViewController.myStatistics(u));
 
                 // ---- SUC-11: a teacher's results and histogram ----
                 case TEACHER_REPORT_EXAMS    -> withUser(client, u ->
@@ -520,7 +522,10 @@ public class HSTSServer extends AbstractServer {
 
     private void sendSafely(ConnectionToClient client, Response response) {
         try {
-            client.sendToClient(response);
+            // Through Transport: the clock thread may be pushing to this same
+            // connection at this moment, and two unsynchronised writes corrupt
+            // the stream. See Transport.
+            hsts.server.push.Transport.send(client, response);
         } catch (IOException e) {
             log("Could not reply to " + describe(client) + ": " + e.getMessage());
         }
@@ -582,12 +587,47 @@ public class HSTSServer extends AbstractServer {
         // close on time even if nobody happens to be looking at a screen.
         examClock.setLogSink(this::log);
         examClock.setOnExamClosed(liveExamController::notifyTeacherOfActivity);
+        // A paper handed in by hand is already announced where the request is
+        // dispatched, so the teacher's live screen and the count on her menu both
+        // move by themselves. A second announcement was added here by mistake and
+        // taken out again: it pushed every hand-in twice.
+        examExecutionController.setOnReleased(this::tellTheClass);
         examClock.start();
 
         // Requirement 76. Same reasoning: it has to run whenever the server does,
         // or an abandoned session stays signed in until somebody notices.
         inactivity.setLogSink(this::log);
         inactivity.start();
+    }
+
+    /**
+     * Tells a class that one of their exams has been given out.
+     *
+     * <p>They are the only people a release affects, and nothing else announced it -
+     * so a student sitting on her menu when her teacher pressed Release saw nothing
+     * change until she clicked something. The count of exams she may sit is on that
+     * menu, and it has to move on its own.</p>
+     *
+     * <p>A failure here is logged and swallowed: not being told is a nuisance, and
+     * it must never be the reason a release fails.</p>
+     */
+    private void tellTheClass(hsts.common.entity.ExamExecution sitting, String courseCode) {
+        try {
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            boolean openNow = sitting.isOpenAt(now);
+            String what = openNow
+                    ? sitting.getCourseName() + " is open now - you can take it."
+                    : sitting.getCourseName() + " opens at "
+                      + sitting.getOpenTime().format(
+                              java.time.format.DateTimeFormatter.ofPattern("d MMM 'at' HH:mm"))
+                      + ".";
+
+            pushService.toUsernames(userDAO.findUsernamesEnrolledIn(courseCode),
+                    new hsts.common.protocol.PushEvent(
+                            hsts.common.protocol.PushType.PENDING_COUNTS_CHANGED, null, what));
+        } catch (java.sql.SQLException e) {
+            log("Could not tell the class about the release: " + e.getMessage());
+        }
     }
 
     @Override

@@ -296,7 +296,7 @@ public class ExamBuilderController extends GUIScreen {
 
     @FXML
     private void onBack() {
-        switchTo("/fxml/MainMenu.fxml", true);
+        switchTo("/fxml/MainMenu.fxml");
     }
 
     // -----------------------------------------------------------------

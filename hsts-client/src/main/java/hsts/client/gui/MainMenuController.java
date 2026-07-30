@@ -31,9 +31,10 @@ import java.util.List;
  * teacher's entries <em>and</em> the approval entry, without this class testing
  * the role by hand.</p>
  *
- * <p>Entries whose milestone has not arrived yet are shown but disabled, with the
- * milestone named. Hiding them would make the menu look finished when it is not,
- * and this way the shape of the finished system is visible from the start.</p>
+ * <p>Every entry opens a screen. While the system was being built, entries whose
+ * milestone had not arrived were shown greyed out with the milestone named; there
+ * is nothing left to grey out, and a menu that talks about its own construction
+ * has no place in front of a user.</p>
  *
  * <p><b>The menu is a convenience, not a security boundary.</b> Hiding a button
  * stops an honest user pressing the wrong thing; it stops nobody else. Every
@@ -61,18 +62,13 @@ public class MainMenuController extends GUIScreen {
     /**
      * One menu entry.
      *
-     * @param text      what the button says
-     * @param milestone which milestone delivers it, shown while it is not ready
-     * @param fxml      the screen to open, or null if it is not built yet
-     * @param counter   which pending count to show on it, or null for no badge
+     * @param text    what the button says
+     * @param fxml    the screen it opens
+     * @param counter which pending count to show on it, or null for no badge
      */
-    private record MenuEntry(String text, String milestone, String fxml, Counter counter) {
-        MenuEntry(String text, String milestone, String fxml) {
-            this(text, milestone, fxml, null);
-        }
-
-        boolean ready() {
-            return fxml != null;
+    private record MenuEntry(String text, String fxml, Counter counter) {
+        MenuEntry(String text, String fxml) {
+            this(text, fxml, null);
         }
     }
 
@@ -97,9 +93,10 @@ public class MainMenuController extends GUIScreen {
             menuBox.getChildren().add(buildButton(entry));
         }
 
-        footerLabel.setText(
-                "Greyed-out entries are not built yet. Milestone 2 delivers login, "
-              + "roles and this menu; the features arrive in the milestones shown.");
+        // Nothing to explain any more. Hidden rather than blanked, so it does not
+        // leave an empty line where a sentence used to be.
+        footerLabel.setVisible(false);
+        footerLabel.setManaged(false);
 
         clearMessage();
 
@@ -131,12 +128,11 @@ public class MainMenuController extends GUIScreen {
     private Button buildButton(MenuEntry entry) {
         Button button = new Button();
         button.setMaxWidth(Double.MAX_VALUE);
-        button.setDisable(!entry.ready());
         button.getStyleClass().add("menu-entry");
 
-        Label caption = new Label(entry.ready()
-                ? entry.text()
-                : entry.text() + "   —   " + entry.milestone());
+        Label caption = new Label(entry.text());
+        // Never squeezed to an ellipsis, however narrow the window is made.
+        caption.setMinWidth(Region.USE_PREF_SIZE);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -159,9 +155,7 @@ public class MainMenuController extends GUIScreen {
 
         button.setGraphic(row);
         button.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
-        if (entry.ready()) {
-            button.setOnAction(e -> switchTo(entry.fxml(), true));
-        }
+        button.setOnAction(e -> switchTo(entry.fxml()));
         return button;
     }
 
@@ -200,44 +194,37 @@ public class MainMenuController extends GUIScreen {
         List<MenuEntry> entries = new ArrayList<>();
 
         if (user instanceof Teacher) {                       // also covers coordinators
-            entries.add(new MenuEntry("Question bank",           "milestone 3",  "/fxml/QuestionMgmt.fxml"));
-            entries.add(new MenuEntry("Build an exam",           "milestone 4",  "/fxml/ExamBuilder.fxml"));
-            entries.add(new MenuEntry("Release an exam",         "milestone 6",  "/fxml/ExamRelease.fxml"));
-            entries.add(new MenuEntry("Exams running now",       "milestone 8",  "/fxml/TeacherLiveExam.fxml"));
-            entries.add(new MenuEntry("Mark and approve grades", "milestone 9",  "/fxml/Grading.fxml",
+            entries.add(new MenuEntry("Question bank",           "/fxml/QuestionMgmt.fxml"));
+            entries.add(new MenuEntry("Build an exam",           "/fxml/ExamBuilder.fxml"));
+            entries.add(new MenuEntry("Release an exam",         "/fxml/ExamRelease.fxml"));
+            entries.add(new MenuEntry("Exams running now",       "/fxml/TeacherLiveExam.fxml"));
+            entries.add(new MenuEntry("Mark and approve grades", "/fxml/Grading.fxml",
                                       PendingCounts::getPapersToApprove));
-            entries.add(new MenuEntry("Results and histogram",   "milestone 11",
-                                      "/fxml/TeacherReports.fxml"));
-            entries.add(new MenuEntry("My reports",              "milestone 13",
-                                      "/fxml/Reports.fxml"));
-            entries.add(new MenuEntry("Course study bot",        "milestone 14",
-                                      "/fxml/BotManagement.fxml"));
+            entries.add(new MenuEntry("Results and histogram",   "/fxml/TeacherReports.fxml"));
+            entries.add(new MenuEntry("My reports",              "/fxml/Reports.fxml"));
+            entries.add(new MenuEntry("Course study bot",        "/fxml/BotManagement.fxml"));
         }
 
         if (user instanceof SubjectCoordinator) {
-            entries.add(new MenuEntry("Approve or reject exams", "milestone 5",
-                                      "/fxml/ExamApproval.fxml",
+            entries.add(new MenuEntry("Approve or reject exams", "/fxml/ExamApproval.fxml",
                                       PendingCounts::getExamsToApprove));
         }
 
         if (user instanceof Student) {
-            entries.add(new MenuEntry("Take an exam",            "milestone 7",  "/fxml/TakeExam.fxml",
+            entries.add(new MenuEntry("Take an exam",            "/fxml/TakeExam.fxml",
                                       PendingCounts::getExamsToSit));
-            entries.add(new MenuEntry("My grades",               "milestone 10", "/fxml/StudentResults.fxml",
+            entries.add(new MenuEntry("My grades",               "/fxml/StudentResults.fxml",
                                       PendingCounts::getNewResults));
             // SUC-14 and SUC-15 are one screen for a student: asking and reading
             // back what she asked are the same activity, and the history is on it.
-            entries.add(new MenuEntry("Course study bot",        "milestone 14",
-                                      "/fxml/AskBot.fxml"));
+            entries.add(new MenuEntry("Course study bot",        "/fxml/AskBot.fxml"));
         }
 
         if (user instanceof Principal) {
             // Requirement 62 names questions, exams and results together, and they
             // are three tabs of one screen rather than three near-identical windows.
-            entries.add(new MenuEntry("Browse questions, exams and results", "milestone 12",
-                                      "/fxml/PrincipalBrowse.fxml"));
-            entries.add(new MenuEntry("Statistical reports",     "milestone 13",
-                                      "/fxml/Reports.fxml"));
+            entries.add(new MenuEntry("Browse questions, exams and results", "/fxml/PrincipalBrowse.fxml"));
+            entries.add(new MenuEntry("Statistical reports",     "/fxml/Reports.fxml"));
         }
 
         return entries;
@@ -283,7 +270,9 @@ public class MainMenuController extends GUIScreen {
             PushType.EXAM_APPROVED,
             PushType.EXAM_REJECTED,
             PushType.GRADE_APPROVED,           // a mark reached a student
-            PushType.RESULTS_CHANGED);         // marking or publishing moved
+            PushType.RESULTS_CHANGED,          // marking or publishing moved
+            PushType.EXAM_LIVE_STATUS,         // a paper was handed in on her sitting
+            PushType.PENDING_COUNTS_CHANGED);  // an exam was given to her class
 
     @Override
     protected void onPush(PushEvent event) {
@@ -322,6 +311,6 @@ public class MainMenuController extends GUIScreen {
 
     private void backToLogin() {
         controller.clearCurrentUser();
-        switchTo("/fxml/Login.fxml", false);
+        switchTo("/fxml/Login.fxml");
     }
 }

@@ -51,7 +51,7 @@ public class PushService {
             return false;   // not signed in - nothing to do, and nothing wrong
         }
         try {
-            connection.sendToClient(event);
+            Transport.send(connection, event);
             return true;
         } catch (IOException e) {
             logSink.accept("Push to " + username + " failed: " + e.getMessage());

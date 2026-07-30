@@ -5,6 +5,8 @@ import hsts.common.entity.ExamQuestion;
 import hsts.common.entity.Grade;
 import hsts.common.entity.Question;
 import hsts.common.entity.QuestionFeedback;
+import hsts.common.entity.Report;
+import hsts.common.entity.ReportLine;
 import hsts.common.entity.StudentExam;
 import hsts.common.protocol.MarkedExam;
 import hsts.common.protocol.PushEvent;
@@ -31,8 +33,9 @@ import java.util.List;
  */
 public class StudentResultsController extends GUIScreen {
 
-    private static final String REQ_LIST = "sr.list";
-    private static final String REQ_ONE  = "sr.one";
+    private static final String REQ_LIST  = "sr.list";
+    private static final String REQ_ONE   = "sr.one";
+    private static final String REQ_STATS = "sr.stats";
 
     @FXML private Label  subtitleLabel;
     @FXML private Button backButton;
@@ -45,6 +48,11 @@ public class StudentResultsController extends GUIScreen {
     @FXML private Label generalCommentLabel;
     @FXML private VBox  questionBox;
     @FXML private Label statusLabel;
+
+    @FXML private VBox  statsBox;
+    @FXML private Label statsOverallLabel;
+    @FXML private VBox  statsLines;
+    @FXML private Label statsNoteLabel;
 
     @FXML
     private void initialize() {
@@ -67,8 +75,11 @@ public class StudentResultsController extends GUIScreen {
         controller.setResponseHandler(this::onServerResponse);
         controller.setConnectionLostHandler(this::showError);
 
+        statsNoteLabel.setText("Your own marks only. Nobody else's are counted here.");
+
         showNothing();
         send(RequestType.RESULTS_MINE, null, REQ_LIST);
+        send(RequestType.RESULTS_MY_STATISTICS, null, REQ_STATS);
     }
 
     /** A mark was approved or changed while she was looking. */
@@ -77,6 +88,8 @@ public class StudentResultsController extends GUIScreen {
         if (event.getType() == PushType.GRADE_APPROVED) {
             showSuccess(event.getMessage());
             send(RequestType.RESULTS_MINE, null, REQ_LIST);
+            // Her averages move with it, so they are re-asked in the same breath.
+            send(RequestType.RESULTS_MY_STATISTICS, null, REQ_STATS);
         } else {
             super.onPush(event);
         }
@@ -96,7 +109,7 @@ public class StudentResultsController extends GUIScreen {
 
     @FXML
     private void onBack() {
-        switchTo("/fxml/MainMenu.fxml", true);
+        switchTo("/fxml/MainMenu.fxml");
     }
 
     // -----------------------------------------------------------------
@@ -120,8 +133,53 @@ public class StudentResultsController extends GUIScreen {
                 }
             }
             case REQ_ONE -> showMarkedExam((MarkedExam) response.getPayload());
+            case REQ_STATS -> showMyStatistics((Report) response.getPayload());
             default -> { }
         }
+    }
+
+    /**
+     * Her own figures, course by course.
+     *
+     * <p>Deliberately plain: how many exams, her average, her best and lowest. No
+     * class average and no position - SUC-10 gives her <em>her</em> results, and
+     * requirement 57 keeps one girl's marks away from another.</p>
+     *
+     * <p>The whole card disappears when she has no approved marks. A panel of
+     * dashes reads as a broken screen rather than as an empty one.</p>
+     */
+    private void showMyStatistics(Report report) {
+        statsLines.getChildren().clear();
+
+        boolean hasFigures = report != null && report.getOverall() != null
+                && report.getOverall().getGradeCount() > 0;
+        statsBox.setVisible(hasFigures);
+        statsBox.setManaged(hasFigures);
+        if (!hasFigures) {
+            return;
+        }
+
+        statsOverallLabel.setText(String.format(
+                "Across %d course%s: %d exam%s, average %.1f",
+                report.getLines().size(), report.getLines().size() == 1 ? "" : "s",
+                report.getOverall().getGradeCount(),
+                report.getOverall().getGradeCount() == 1 ? "" : "s",
+                report.getOverall().getAverage()));
+
+        for (ReportLine line : report.getLines()) {
+            Label course = new Label(line.getLabel());
+            course.setWrapText(true);
+            course.getStyleClass().add("field-label");
+
+            Label figures = new Label(String.format("average %.1f   ·   %s",
+                    line.getStatistics().getAverage(), line.getDetail()));
+            figures.setWrapText(true);
+            figures.getStyleClass().add("caption");
+
+            VBox row = new VBox(1, course, figures);
+            statsLines.getChildren().add(row);
+        }
+        fitToContent();
     }
 
     private void showNothing() {

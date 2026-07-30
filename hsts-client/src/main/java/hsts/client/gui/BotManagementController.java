@@ -252,7 +252,7 @@ public class BotManagementController extends GUIScreen {
         ask.setTitle("Delete this bot?");
         ask.setHeaderText("Delete \"" + bot.getName() + "\" from " + bot.getCourseName() + "?");
         ask.setContentText(detail + "\n\nAll the material you gave it is removed as well.");
-        ask.getDialogPane().setMinWidth(460);
+        prepareDialog(ask, 460);
 
         ButtonType deleteIt = new ButtonType("Delete the bot", ButtonBar.ButtonData.OK_DONE);
         ButtonType keep = new ButtonType("Keep it", ButtonBar.ButtonData.CANCEL_CLOSE);
@@ -353,7 +353,7 @@ public class BotManagementController extends GUIScreen {
 
     @FXML
     private void onBack() {
-        switchTo("/fxml/MainMenu.fxml", true);
+        switchTo("/fxml/MainMenu.fxml");
     }
 
     /**

@@ -86,6 +86,6 @@ public class LoginScreenController extends GUIScreen {
         }
 
         controller.setCurrentUser(user);
-        switchTo("/fxml/MainMenu.fxml", true);
+        switchTo("/fxml/MainMenu.fxml");
     }
 }

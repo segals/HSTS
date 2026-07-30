@@ -122,7 +122,18 @@ public class ExamReleaseController extends GUIScreen {
         openDate.setValue(now.toLocalDate());
         openHour.getValueFactory().setValue(now.getHour());
         openMinute.getValueFactory().setValue(now.getMinute());
-        showMessage("Opening moment set to now.");
+
+        // ...and an end an hour later, because a sitting that opens now and closes
+        // at whatever the boxes happened to hold is either already over or open for
+        // days. An hour is a sensible default for a class sitting down now; she can
+        // still type anything she likes over it.
+        LocalDateTime end = now.plusHours(1);
+        closeDate.setValue(end.toLocalDate());
+        closeHour.getValueFactory().setValue(end.getHour());
+        closeMinute.getValueFactory().setValue(end.getMinute());
+
+        showMessage("Opens now and closes at " + String.format("%02d:%02d", end.getHour(),
+                end.getMinute()) + ". Change either if you need to.");
     }
 
     @FXML
@@ -168,7 +179,7 @@ public class ExamReleaseController extends GUIScreen {
 
     @FXML
     private void onBack() {
-        switchTo("/fxml/MainMenu.fxml", true);
+        switchTo("/fxml/MainMenu.fxml");
     }
 
     // -----------------------------------------------------------------

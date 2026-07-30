@@ -36,11 +36,21 @@
     <HBox spacing="16" VBox.vgrow="ALWAYS">
         <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
 
-        <VBox styleClass="card" spacing="10" prefWidth="330" minWidth="280">
-            <Label text="MY EXAMS" styleClass="section-title" wrapText="true"/>
-            <ListView fx:id="resultList" VBox.vgrow="ALWAYS"/>
-            <Label text="An exam appears here as soon as you sit it. The mark appears once your teacher has approved it."
-                   styleClass="caption" wrapText="true"/>
+        <VBox spacing="12" prefWidth="360" minWidth="300">
+            <VBox styleClass="card" spacing="10" VBox.vgrow="ALWAYS">
+                <Label text="MY EXAMS" styleClass="section-title" wrapText="true"/>
+                <ListView fx:id="resultList" VBox.vgrow="ALWAYS"/>
+                <Label text="An exam appears here as soon as you sit it. The mark appears once your teacher has approved it."
+                       styleClass="caption" wrapText="true"/>
+            </VBox>
+
+            <!-- Her own figures, course by course. Nobody else's marks are here. -->
+            <VBox fx:id="statsBox" styleClass="card" spacing="8">
+                <Label text="HOW I AM DOING" styleClass="section-title" wrapText="true"/>
+                <Label fx:id="statsOverallLabel" wrapText="true"/>
+                <VBox fx:id="statsLines" spacing="7"/>
+                <Label fx:id="statsNoteLabel" styleClass="caption" wrapText="true"/>
+            </VBox>
         </VBox>
 
         <VBox styleClass="card" spacing="0" HBox.hgrow="ALWAYS" minWidth="440">

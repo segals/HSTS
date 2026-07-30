@@ -175,7 +175,7 @@ public class TakeExamController extends GUIScreen {
         popup.setTitle(title);
         popup.setHeaderText(header);
         popup.setContentText(body);
-        popup.getDialogPane().setMinWidth(430);
+        prepareDialog(popup, 430);
         popup.show();
     }
 
@@ -319,7 +319,7 @@ public class TakeExamController extends GUIScreen {
                 return;
             }
         }
-        switchTo("/fxml/MainMenu.fxml", true);
+        switchTo("/fxml/MainMenu.fxml");
     }
 
     // -----------------------------------------------------------------

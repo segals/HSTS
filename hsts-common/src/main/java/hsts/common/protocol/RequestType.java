@@ -27,6 +27,16 @@ public enum RequestType {
     LOGOUT,
 
     /**
+     * A student's own figures across the courses she studies. No payload; the
+     * reply is a {@link hsts.common.entity.Report} with one line per course.
+     *
+     * <p>Her own marks only. The class average is deliberately absent - requirement
+     * 57 keeps one student's results away from another, and an average of four
+     * girls' marks is a short step from working out theirs.</p>
+     */
+    RESULTS_MY_STATISTICS,
+
+    /**
      * How many things are waiting for the signed-in user, for the menu badges.
      * No payload; the reply is a {@link PendingCounts}.
      *
