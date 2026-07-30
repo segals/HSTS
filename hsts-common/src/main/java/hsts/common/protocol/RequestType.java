@@ -130,6 +130,9 @@ public enum RequestType {
     /** Changes the time allowed, mid-exam. Payload is a {@link TimeChangeRequest}. */
     LIVE_CHANGE_TIME,
 
+    /** Opens one more attempt for one student. Payload is an {@link AttemptGrantRequest}. */
+    LIVE_GRANT_ATTEMPT,
+
     // ---- SUC-9: marking (milestone 9) ----
 
     /** Sittings this teacher released that have papers in them. No payload. */

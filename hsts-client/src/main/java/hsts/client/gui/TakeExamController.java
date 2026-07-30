@@ -99,12 +99,47 @@ public class TakeExamController extends GUIScreen {
      *
      * <p>These arrive once a second while she is sitting the exam.</p>
      */
+    /**
+     * Requirement 43's popup.
+     *
+     * <p>A real modal, not a line in the status bar. The requirement says
+     * <i>popup</i>, and a girl deep in question 14 will not notice a colour change
+     * at the bottom of the screen - which is the whole purpose of warning her.</p>
+     *
+     * <p>Non-blocking: {@code show()} rather than {@code showAndWait()}, so her
+     * clock keeps ticking behind it and she can dismiss it whenever she looks up.
+     * A modal wait here would freeze the countdown she is being warned about.</p>
+     */
+    private void showTimeWarning(long minutesLeft, String message) {
+        showError(message);          // in the status bar too, in case she closes it fast
+
+        Alert popup = new Alert(Alert.AlertType.WARNING);
+        popup.initOwner(hsts.client.HSTSApp.getPrimaryStage());
+        popup.setTitle("Time is nearly up");
+        popup.setHeaderText(minutesLeft <= 1
+                ? "Less than a minute left"
+                : minutesLeft + " minutes left");
+        popup.setContentText(message + "\n\nYour answers are saved as you choose them. "
+                + "The exam will be handed in for you when the time runs out.");
+        popup.getDialogPane().setMinWidth(420);
+        popup.show();
+    }
+
     @Override
     protected void onPush(PushEvent event) {
         switch (event.getType()) {
             case EXAM_TIME_TICK -> {
                 if (event.getPayload() instanceof Long seconds) {
                     showRemaining(seconds);
+                }
+            }
+            case EXAM_TIME_WARNING -> {
+                // Requirement 43: a popup at nine tenths of the way through, saying
+                // how many minutes are left. The server decides WHEN - it owns the
+                // clock and it sends this exactly once - so all that is left here is
+                // to show it.
+                if (event.getPayload() instanceof Long minutes) {
+                    showTimeWarning(minutes, event.getMessage());
                 }
             }
             case EXAM_TIME_CHANGED -> {

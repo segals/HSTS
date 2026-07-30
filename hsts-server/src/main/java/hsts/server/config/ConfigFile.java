@@ -37,6 +37,15 @@ public final class ConfigFile {
     public static final String KEY_SERVER_PORT    = "server.port";
     public static final String KEY_GEMINI_API_KEY = "gemini.api.key";
 
+    /**
+     * Minutes of inactivity before a user is signed out (requirement 76).
+     *
+     * <p>The requirement says "a defined period" without fixing one, so it is
+     * settable rather than hard-coded - a demo may want two minutes and a school
+     * may want sixty.</p>
+     */
+    public static final String KEY_INACTIVITY_MINUTES = "session.inactivity.minutes";
+
     private ConfigFile() {
         // utility class
     }

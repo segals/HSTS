@@ -95,6 +95,16 @@ public class ExamClockService {
      * so the clock would stop, no exam would ever auto-close, and nothing would
      * say why. Catching everything here means one bad tick costs one tick.</p>
      */
+    /**
+     * Attempts that have already had the 90% warning (requirement 43).
+     *
+     * <p>Concurrent because the ticker thread writes it while nothing else does -
+     * but the clock can be stopped and started, and a plain {@code HashSet} shared
+     * across that is asking for trouble for no saving at all.</p>
+     */
+    private final java.util.Set<Integer> warned =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     private void tickSafely() {
         try {
             tick();
@@ -106,22 +116,71 @@ public class ExamClockService {
     private void tick() throws Exception {
         List<StudentExam> running = submissionDAO.findAllInProgress();
         if (running.isEmpty()) {
+            // Nobody is sitting anything, so nobody can be owed a warning. Clearing
+            // here stops the set growing for ever in a long-running server.
+            warned.clear();
             return;
         }
 
         LocalDateTime now = LocalDateTime.now();
+        java.util.Set<Integer> stillRunning = new java.util.HashSet<>();
 
         for (StudentExam attempt : running) {
+            stillRunning.add(attempt.getSubmissionId());
+
             if (attempt.isExpiredAt(now)) {
                 closeExpired(attempt);
+                warned.remove(attempt.getSubmissionId());
             } else {
                 // Only worth sending to somebody who is actually connected.
                 pushService.toUsername(attempt.getStudentUsername(), new PushEvent(
                         PushType.EXAM_TIME_TICK,
                         attempt.secondsRemainingAt(now),
                         null));
+                warnIfNearlyOut(attempt, now);
             }
         }
+        warned.retainAll(stillRunning);
+    }
+
+    /**
+     * Requirement 43: the popup at nine tenths of the way through.
+     *
+     * <p>Worked out from <b>her own</b> start and deadline, not from the sitting's
+     * allotted minutes. The teacher may extend the time mid-exam (requirement 42),
+     * and a warning computed from the original length would then fire at the wrong
+     * moment - or, worse, have fired already and never fire again.</p>
+     *
+     * <p>Sent once. {@link #warned} remembers who has had it, because the clock
+     * ticks every second and the condition stays true for the whole last tenth.</p>
+     */
+    private void warnIfNearlyOut(StudentExam attempt, LocalDateTime now) {
+        if (warned.contains(attempt.getSubmissionId())) {
+            return;
+        }
+        if (attempt.getStartTime() == null || attempt.getDeadline() == null) {
+            return;
+        }
+        long totalSeconds = java.time.Duration.between(
+                attempt.getStartTime(), attempt.getDeadline()).getSeconds();
+        if (totalSeconds <= 0) {
+            return;
+        }
+        long leftSeconds = attempt.secondsRemainingAt(now);
+        if (leftSeconds * 10 > totalSeconds) {
+            return;                                  // more than a tenth left
+        }
+
+        // Rounded UP, so "1 minute left" never reads as "0 minutes left".
+        long minutesLeft = (leftSeconds + 59) / 60;
+        warned.add(attempt.getSubmissionId());
+
+        pushService.toUsername(attempt.getStudentUsername(), new PushEvent(
+                PushType.EXAM_TIME_WARNING,
+                minutesLeft,
+                minutesLeft <= 1
+                        ? "Less than a minute of your exam time is left."
+                        : "Only " + minutesLeft + " minutes of your exam time are left."));
     }
 
     /**

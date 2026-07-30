@@ -3,6 +3,7 @@ package hsts.client.gui;
 import hsts.common.entity.ExamExecution;
 import hsts.common.entity.StudentExam;
 import hsts.common.enums.SubmissionStatus;
+import hsts.common.protocol.AttemptGrantRequest;
 import hsts.common.protocol.PushEvent;
 import hsts.common.protocol.PushType;
 import hsts.common.protocol.Request;
@@ -14,6 +15,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 
@@ -33,6 +35,7 @@ import java.util.List;
 public class TeacherLiveExamController extends GUIScreen {
 
     private static final String REQ_RUNNING = "l.running";
+    private static final String REQ_GRANT  = "live.grant";
     private static final String REQ_STATUS  = "l.status";
     private static final String REQ_CHANGE  = "l.change";
 
@@ -49,6 +52,7 @@ public class TeacherLiveExamController extends GUIScreen {
     @FXML private Button removeButton;
     @FXML private Label  countsLabel;
     @FXML private ListView<StudentExam> studentList;
+    @FXML private Button grantAttemptButton;
     @FXML private Label  statusLabel;
 
     private ExamExecution chosen;
@@ -87,6 +91,39 @@ public class TeacherLiveExamController extends GUIScreen {
      * <p>Overridden so the student list actually reloads. A message over a list
      * still showing the old state would be worse than a Refresh button.</p>
      */
+    /**
+     * Requirement 61: open one more attempt for the student she has picked.
+     *
+     * <p>Asks for a reason, because a grant with no note is impossible to account
+     * for weeks later - but does not insist on one. Nothing in the requirement
+     * demands it, and refusing to help a girl whose machine died because her
+     * teacher could not think of wording would be absurd.</p>
+     */
+    @FXML
+    private void onGrantAttempt() {
+        StudentExam student = studentList.getSelectionModel().getSelectedItem();
+        if (chosen == null) {
+            showError("Choose a sitting first.");
+            return;
+        }
+        if (student == null) {
+            showError("Choose the student in the list below first.");
+            return;
+        }
+
+        TextInputDialog ask = new TextInputDialog();
+        ask.initOwner(hsts.client.HSTSApp.getPrimaryStage());
+        ask.setTitle("Allow another attempt");
+        ask.setHeaderText("Let " + student.getStudentName() + " sit this exam again?");
+        ask.setContentText("Why (optional):");
+        ask.getDialogPane().setMinWidth(430);
+
+        ask.showAndWait().ifPresent(reason ->
+                send(RequestType.LIVE_GRANT_ATTEMPT,
+                     new AttemptGrantRequest(chosen.getExecutionId(),
+                             student.getStudentId(), reason), REQ_GRANT));
+    }
+
     @Override
     protected void onPush(PushEvent event) {
         if (event.getType() == PushType.EXAM_LIVE_STATUS) {
@@ -171,6 +208,12 @@ public class TeacherLiveExamController extends GUIScreen {
                 if (running.isEmpty()) {
                     choose(null);
                     showMessage(response.getMessage());
+                }
+            }
+            case REQ_GRANT -> {
+                showSuccess(response.getMessage());
+                if (chosen != null) {
+                    send(RequestType.LIVE_STATUS, chosen.getExecutionId(), REQ_STATUS);
                 }
             }
             case REQ_STATUS -> {

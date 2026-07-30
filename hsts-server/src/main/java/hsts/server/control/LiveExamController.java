@@ -1,13 +1,16 @@
 package hsts.server.control;
 
+import hsts.common.entity.Exam;
 import hsts.common.entity.ExamExecution;
 import hsts.common.entity.StudentExam;
 import hsts.common.entity.Teacher;
 import hsts.common.entity.User;
 import hsts.common.protocol.PushEvent;
 import hsts.common.protocol.PushType;
+import hsts.common.protocol.AttemptGrantRequest;
 import hsts.common.protocol.Response;
 import hsts.common.protocol.TimeChangeRequest;
+import hsts.server.dao.ExamDAO;
 import hsts.server.dao.ExecutionDAO;
 import hsts.server.dao.SubmissionDAO;
 import hsts.server.dao.UserDAO;
@@ -35,13 +38,15 @@ public class LiveExamController {
 
     private final ExecutionDAO executionDAO;
     private final SubmissionDAO submissionDAO;
+    private final ExamDAO examDAO;
     private final UserDAO userDAO;
     private final PushService pushService;
 
     public LiveExamController(ExecutionDAO executionDAO, SubmissionDAO submissionDAO,
-                              UserDAO userDAO, PushService pushService) {
+                              ExamDAO examDAO, UserDAO userDAO, PushService pushService) {
         this.executionDAO = executionDAO;
         this.submissionDAO = submissionDAO;
+        this.examDAO = examDAO;
         this.userDAO = userDAO;
         this.pushService = pushService;
     }
@@ -119,6 +124,74 @@ public class LiveExamController {
      * change that treats them alike. A student who has not started yet simply gets
      * the new allowance when she does.</p>
      */
+    /**
+     * Requirement 61: the teacher opens one more attempt for one student.
+     *
+     * <p><i>"המורה יכולה להגדיר מספר נסיונות לבחינה. כדי לפתוח ניסיון נוסף המורה
+     * צריכה לאשר זאת"</i> - she sets the number of attempts when she releases the
+     * exam, and any attempt beyond that needs her approval. This is that approval.</p>
+     *
+     * <p>SUC-8 puts it here, with the other things a teacher does <em>while</em> a
+     * sitting runs, and the rule about who may do it is the same one that governs
+     * changing the time: the teacher who released it.</p>
+     *
+     * <p>Recorded as a row, not a counter, so who granted it and when survive - a
+     * question that gets asked if a result is ever disputed.</p>
+     */
+    public Response grantExtraAttempt(User user, AttemptGrantRequest request) {
+        if (request == null) {
+            return Response.error("Nothing to grant.");
+        }
+        if (!(user instanceof Teacher)) {
+            return Response.error("Only a teacher can allow another attempt.");
+        }
+        try {
+            ExamExecution execution = executionDAO.findById(request.getExecutionId());
+            if (execution == null) {
+                return Response.error("That sitting does not exist.");
+            }
+            // The same rule as changing the time: the teacher who released it.
+            if (!execution.getReleasedBy().equals(user.getUserId())) {
+                return Response.error("You did not release that sitting.");
+            }
+
+            User student = userDAO.findById(request.getStudentId());
+            if (student == null) {
+                return Response.error("That student does not exist.");
+            }
+            if (!(student instanceof hsts.common.entity.Student enrolled)) {
+                return Response.error("Extra attempts are for students.");
+            }
+
+            // She must actually be on the course, or the extra attempt is useless -
+            // requirement 21 would refuse her the code anyway.
+            Exam exam = examDAO.findByIdAndVersion(execution.getExamId(),
+                                                   execution.getExamVersion());
+            if (exam != null && !enrolled.isEnrolledIn(exam.getCourseCode())) {
+                return Response.error(student.getFullName()
+                        + " is not enrolled in that course.");
+            }
+
+            int granted = submissionDAO.grantExtraAttempt(request.getExecutionId(),
+                    request.getStudentId(), user.getUserId(), request.getReason());
+            int used = submissionDAO.countAttempts(request.getExecutionId(),
+                    request.getStudentId());
+            int allowed = execution.getMaxAttempts() + granted;
+
+            // NFR 18: she is told, rather than discovering it by trying again.
+            pushService.toUsername(student.getUsername(), new PushEvent(
+                    PushType.EXTRA_ATTEMPT_GRANTED, request.getExecutionId(),
+                    user.getFullName() + " has allowed you another attempt at exam "
+                  + execution.getExamId() + ". Enter the code again to start it."));
+
+            return Response.ok(allowed, student.getFullName() + " may now sit this exam "
+                    + allowed + " time(s) in all; she has used " + used + ".");
+
+        } catch (SQLException e) {
+            return Response.error("Could not grant the attempt: " + e.getMessage());
+        }
+    }
+
     public Response changeTime(User user, TimeChangeRequest request) {
         if (!(user instanceof Teacher)) {
             return Response.error("Only a teacher can change the time.");

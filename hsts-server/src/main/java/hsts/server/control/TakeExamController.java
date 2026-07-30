@@ -13,6 +13,7 @@ import hsts.common.protocol.StartExamRequest;
 import hsts.common.util.ExecutionCode;
 import hsts.common.util.IsraeliId;
 import hsts.server.dao.ExamDAO;
+import hsts.server.dao.CodeAttemptDAO;
 import hsts.server.dao.ExecutionDAO;
 import hsts.server.dao.SubmissionDAO;
 
@@ -45,12 +46,14 @@ public class TakeExamController {
     private final ExecutionDAO executionDAO;
     private final SubmissionDAO submissionDAO;
     private final ExamDAO examDAO;
+    private final CodeAttemptDAO codeAttemptDAO;
 
     public TakeExamController(ExecutionDAO executionDAO, SubmissionDAO submissionDAO,
-                              ExamDAO examDAO) {
+                              ExamDAO examDAO, CodeAttemptDAO codeAttemptDAO) {
         this.executionDAO = executionDAO;
         this.submissionDAO = submissionDAO;
         this.examDAO = examDAO;
+        this.codeAttemptDAO = codeAttemptDAO;
     }
 
     // -----------------------------------------------------------------
@@ -68,8 +71,22 @@ public class TakeExamController {
             return Response.error("Only a student sits an exam.");
         }
 
+        try {
+            // Requirement 39, before anything else: if she is locked out she is
+            // locked out, and a lucky guess must not carry her past it.
+            java.time.Duration locked = codeAttemptDAO.remainingLock(user.getUserId());
+            if (locked != null) {
+                return Response.error("Too many wrong codes. Try again in "
+                        + describe(locked) + ".");
+            }
+        } catch (SQLException e) {
+            return Response.error("Could not check your attempts: " + e.getMessage());
+        }
+
         String code = ExecutionCode.normalise(typedCode);
         if (code == null) {
+            // A badly-formed code is a typing slip, not a guess at somebody else's
+            // sitting, so it does NOT count against her three.
             return Response.error(ExecutionCode.describeProblem(typedCode));
         }
 
@@ -78,7 +95,8 @@ public class TakeExamController {
             if (execution == null) {
                 // Same wording as an inactive sitting, so the code cannot be used
                 // to discover which codes exist (acceptance test 2.2).
-                return Response.error("That code is not valid, or the exam is not active now.");
+                return Response.error(countWrongCode(user.getUserId(),
+                        "That code is not valid, or the exam is not active now."));
             }
 
             Exam exam = examDAO.findByIdAndVersion(execution.getExamId(),
@@ -114,21 +132,69 @@ public class TakeExamController {
                       + "where you left off - your time has kept running.");
             }
 
-            // Acceptance test 2.8 / requirement 61: attempts are limited.
+            // Acceptance test 2.8 and requirement 61: attempts are limited to the
+            // sitting's number PLUS anything her teacher has granted her.
             int used = submissionDAO.countAttempts(execution.getExecutionId(),
                                                    student.getUserId());
-            if (used >= execution.getMaxAttempts()) {
-                return Response.error(execution.getMaxAttempts() == 1
-                        ? "You have already sat this exam. It cannot be taken again."
-                        : "You have used all " + execution.getMaxAttempts()
-                          + " of your attempts at this exam.");
+            int allowed = submissionDAO.attemptsAllowed(execution.getExecutionId(),
+                    student.getUserId(), execution.getMaxAttempts());
+            if (used >= allowed) {
+                int granted = allowed - execution.getMaxAttempts();
+                return Response.error(allowed == 1
+                        ? "You have already sat this exam. It cannot be taken again "
+                          + "unless your teacher allows another attempt."
+                        : "You have used all " + allowed + " of your attempts at this exam"
+                          + (granted > 0 ? ", including " + granted + " your teacher "
+                            + "allowed you" : "") + ".");
             }
+
+            // Requirement 39: three CONSECUTIVE failures. Getting one right wipes
+            // the slate, so a mistake this morning cannot combine with two this
+            // afternoon to lock her out of an exam she is sitting.
+            codeAttemptDAO.clear(user.getUserId());
 
             return Response.ok(execution, "Code accepted. Enter your ID number to begin.");
 
         } catch (SQLException e) {
             return Response.error("Could not check that code: " + e.getMessage());
         }
+    }
+
+    /**
+     * Counts a wrong code and adds what it cost her to the message.
+     *
+     * <p>The wording tells her how many tries remain, or that she is now locked
+     * out. Saying nothing would make the lock arrive from nowhere, and requirement
+     * 39 is a deterrent - a deterrent has to be visible to deter.</p>
+     *
+     * <p>If the counting itself fails, the original refusal is returned unchanged.
+     * A database problem must not turn "wrong code" into something confusing.</p>
+     */
+    private String countWrongCode(String studentId, String refusal) {
+        try {
+            int failures = codeAttemptDAO.recordFailure(studentId);
+            if (failures >= CodeAttemptDAO.STRIKES) {
+                return refusal + " That was " + CodeAttemptDAO.STRIKES
+                     + " wrong codes, so you cannot try again for "
+                     + CodeAttemptDAO.LOCK_FOR.toMinutes() + " minutes.";
+            }
+            int left = CodeAttemptDAO.STRIKES - failures;
+            return refusal + " You have " + left + (left == 1 ? " try" : " tries")
+                 + " left before a " + CodeAttemptDAO.LOCK_FOR.toMinutes()
+                 + "-minute wait.";
+        } catch (SQLException e) {
+            System.err.println("Could not record a wrong code: " + e.getMessage());
+            return refusal;
+        }
+    }
+
+    /** "10 minutes", "1 minute", "under a minute" - never "PT9M59S". */
+    private static String describe(java.time.Duration left) {
+        long minutes = left.toMinutes();
+        if (minutes < 1) {
+            return "under a minute";
+        }
+        return minutes + (minutes == 1 ? " minute" : " minutes");
     }
 
     // -----------------------------------------------------------------
@@ -201,9 +267,12 @@ public class TakeExamController {
                         + WHEN.format(execution.getCloseTime()) + ".");
             }
 
+            // The same sum as the code step, from the same place, so the two cannot
+            // disagree about how many attempts she has.
             int used = submissionDAO.countAttempts(execution.getExecutionId(),
                                                    student.getUserId());
-            if (used >= execution.getMaxAttempts()) {
+            if (used >= submissionDAO.attemptsAllowed(execution.getExecutionId(),
+                    student.getUserId(), execution.getMaxAttempts())) {
                 return Response.error("You have used all your attempts at this exam.");
             }
 

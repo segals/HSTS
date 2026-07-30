@@ -101,7 +101,7 @@ public final class SeedRunner {
     private static final String[] ALL_TABLES = {
         "bot_conversation", "knowledge_source", "bot",
         "exam_statistics", "question_feedback", "grade",
-        "student_answer", "student_exam", "exam_execution",
+        "student_answer", "attempt_grant", "student_exam", "exam_execution",
         "exam_question", "exam",
         "answer", "question",
         "code_attempt", "course_teacher", "course_student",

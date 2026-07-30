@@ -298,6 +298,27 @@ public final class SchemaManager {
                   CONSTRAINT fk_bc_student FOREIGN KEY (student_id) REFERENCES users(user_id)
                 ) ENGINE=InnoDB""");
 
+            // ---------- an extra attempt, granted by the teacher (requirement 61) ----------
+            //
+            // A row per grant rather than a counter, so "she was given two more"
+            // records WHO gave them and WHEN, one line each. A single number could
+            // not answer either question, and the teacher will be asked both if a
+            // student ever disputes a result.
+            st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS attempt_grant (
+                  grant_id     INT AUTO_INCREMENT PRIMARY KEY,
+                  execution_id INT      NOT NULL,
+                  student_id   CHAR(9)  NOT NULL,
+                  granted_by   CHAR(9)  NOT NULL,
+                  granted_at   DATETIME NOT NULL,
+                  reason       VARCHAR(300) NULL,
+                  INDEX idx_grant_who (execution_id, student_id),
+                  CONSTRAINT fk_ag_exec    FOREIGN KEY (execution_id)
+                      REFERENCES exam_execution(execution_id),
+                  CONSTRAINT fk_ag_student FOREIGN KEY (student_id) REFERENCES users(user_id),
+                  CONSTRAINT fk_ag_teacher FOREIGN KEY (granted_by) REFERENCES users(user_id)
+                ) ENGINE=InnoDB""");
+
             // ---------- 3-strikes lockout (requirement 39) ----------
             st.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS code_attempt (

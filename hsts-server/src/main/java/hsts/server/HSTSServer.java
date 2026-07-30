@@ -18,6 +18,7 @@ import hsts.common.protocol.QuestionRef;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
+import hsts.common.protocol.AttemptGrantRequest;
 import hsts.common.protocol.BotCreateRequest;
 import hsts.common.protocol.BotQuestion;
 import hsts.common.protocol.BotStatusRequest;
@@ -49,10 +50,13 @@ import hsts.server.dao.ExamDAO;
 import hsts.server.dao.ExecutionDAO;
 import hsts.server.dao.GradeDAO;
 import hsts.server.dao.BotDAO;
+import hsts.server.dao.CodeAttemptDAO;
 import hsts.server.dao.SubmissionDAO;
 import hsts.server.dao.QuestionDAO;
 import hsts.server.dao.UserDAO;
+import hsts.server.config.ConfigFile;
 import hsts.server.push.ExamClockService;
+import hsts.server.push.InactivityService;
 import hsts.server.push.PushService;
 import hsts.server.push.SessionRegistry;
 import ocsf.server.AbstractServer;
@@ -106,11 +110,35 @@ public class HSTSServer extends AbstractServer {
     private final ExamExecutionController examExecutionController =
             new ExamExecutionController(executionDAO, examDAO);
     private final SubmissionDAO submissionDAO = new SubmissionDAO();
+    private final CodeAttemptDAO codeAttemptDAO = new CodeAttemptDAO();
     private final TakeExamController takeExamController =
-            new TakeExamController(executionDAO, submissionDAO, examDAO);
+            new TakeExamController(executionDAO, submissionDAO, examDAO, codeAttemptDAO);
     private final ExamClockService examClock = new ExamClockService(submissionDAO, pushService);
+
+    /**
+     * Requirement 76. Thirty minutes unless the config file says otherwise, and a
+     * student inside an exam is exempt - see {@link InactivityService}.
+     */
+    private final InactivityService inactivity = new InactivityService(
+            sessions, submissionDAO, java.time.Duration.ofMinutes(readInactivityMinutes()));
+
+    private static long readInactivityMinutes() {
+        String value = ConfigFile.get(ConfigFile.load(),
+                ConfigFile.KEY_INACTIVITY_MINUTES, "30");
+        try {
+            long minutes = Long.parseLong(value.trim());
+            return minutes > 0 ? minutes : 30;
+        } catch (NumberFormatException e) {
+            return 30;                    // a typo in the file must not break start-up
+        }
+    }
+
+    /** Exposed so a test can sweep at a chosen moment instead of waiting. */
+    public InactivityService getInactivityService() {
+        return inactivity;
+    }
     private final LiveExamController liveExamController =
-            new LiveExamController(executionDAO, submissionDAO, userDAO, pushService);
+            new LiveExamController(executionDAO, submissionDAO, examDAO, userDAO, pushService);
     private final GradeDAO gradeDAO = new GradeDAO();
     private final GradingController gradingController = new GradingController(
             gradeDAO, submissionDAO, executionDAO, examDAO, userDAO, pushService);
@@ -167,6 +195,7 @@ public class HSTSServer extends AbstractServer {
         // that caused them - but they should still be visible on the console.
         pushService.setLogSink(this::log);
         examClock.setLogSink(this::log);
+        inactivity.setLogSink(this::log);
     }
 
     private void log(String text) {
@@ -288,6 +317,9 @@ public class HSTSServer extends AbstractServer {
                         liveExamController.listRunningNow(u));
                 case LIVE_STATUS      -> withUser(client, u ->
                         liveExamController.getLiveStatus(u, (Integer) request.getPayload()));
+                case LIVE_GRANT_ATTEMPT -> withUser(client, u ->
+                        liveExamController.grantExtraAttempt(u,
+                                (AttemptGrantRequest) request.getPayload()));
                 case LIVE_CHANGE_TIME -> withUser(client, u ->
                         liveExamController.changeTime(u, (TimeChangeRequest) request.getPayload()));
 
@@ -541,11 +573,17 @@ public class HSTSServer extends AbstractServer {
         examClock.setLogSink(this::log);
         examClock.setOnExamClosed(liveExamController::notifyTeacherOfActivity);
         examClock.start();
+
+        // Requirement 76. Same reasoning: it has to run whenever the server does,
+        // or an abandoned session stays signed in until somebody notices.
+        inactivity.setLogSink(this::log);
+        inactivity.start();
     }
 
     @Override
     protected void serverStopped() {
         examClock.stop();
+        inactivity.stop();
         log("Stopped listening.");
     }
 

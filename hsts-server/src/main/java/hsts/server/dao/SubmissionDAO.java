@@ -51,6 +51,56 @@ public class SubmissionDAO implements IDAO<StudentExam, Integer> {
         }
     }
 
+    /**
+     * How many extra attempts a teacher has granted this student (requirement 61).
+     *
+     * <p><i>"כדי לפתוח ניסיון נוסף המורה צריכה לאשר זאת"</i> - an additional attempt
+     * needs the teacher's approval. Her allowance is therefore the sitting's
+     * {@code max_attempts} plus however many she has been granted, and this is the
+     * second half of that sum.</p>
+     */
+    public int countGrantedAttempts(int executionId, String studentId) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement(
+                "SELECT COUNT(*) FROM attempt_grant "
+              + "WHERE execution_id = ? AND student_id = ?")) {
+            ps.setInt(1, executionId);
+            ps.setString(2, studentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    /** Records one granted attempt. Returns how many she has been given in all. */
+    public int grantExtraAttempt(int executionId, String studentId, String grantedBy,
+                                 String reason) throws SQLException {
+        String sql = """
+            INSERT INTO attempt_grant (execution_id, student_id, granted_by,
+                                       granted_at, reason)
+            VALUES (?, ?, ?, ?, ?)""";
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setInt(1, executionId);
+            ps.setString(2, studentId);
+            ps.setString(3, grantedBy);
+            ps.setTimestamp(4, java.sql.Timestamp.valueOf(
+                    java.time.LocalDateTime.now().withNano(0)));
+            ps.setString(5, (reason == null || reason.isBlank()) ? null : reason.trim());
+            ps.executeUpdate();
+        }
+        return countGrantedAttempts(executionId, studentId);
+    }
+
+    /**
+     * Everything she is allowed: the sitting's limit plus anything granted to her.
+     *
+     * <p>One place, so the code step and the start step cannot disagree about how
+     * many attempts she has - which they would eventually, being two call sites.</p>
+     */
+    public int attemptsAllowed(int executionId, String studentId, int maxAttempts)
+            throws SQLException {
+        return maxAttempts + countGrantedAttempts(executionId, studentId);
+    }
+
     /** How many attempts this student has already made at this sitting. */
     public int countAttempts(int executionId, String studentId) throws SQLException {
         try (PreparedStatement ps = conn().prepareStatement(

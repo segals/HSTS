@@ -1,6 +1,7 @@
 package hsts.server.control;
 
 import hsts.common.entity.Answer;
+import hsts.common.entity.Course;
 import hsts.common.entity.Question;
 import hsts.common.entity.SubjectCoordinator;
 import hsts.common.entity.Teacher;
@@ -10,7 +11,10 @@ import hsts.server.dao.CourseDAO;
 import hsts.server.dao.QuestionDAO;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * SUC-2: managing the question bank.
@@ -109,13 +113,33 @@ public class QuestionController {
         }
     }
 
-    /** The courses this user may write questions for. */
+    /**
+     * The courses this user may write questions for.
+     *
+     * <p>For a coordinator that is the courses she teaches <b>plus every course in
+     * the subject she coordinates</b> (requirement 19). Without the second half she
+     * would be permitted to edit those questions and have no way to reach them:
+     * the screen offers this list and nothing else.</p>
+     *
+     * <p>Merged by course code, because a coordinator usually also teaches one of
+     * her own subject's courses and it must not appear twice.</p>
+     */
     public Response listMyCourses(User user) {
         try {
-            if (user instanceof Teacher) {
-                return Response.ok(courseDAO.findByTeacher(user.getUserId()), null);
+            if (!(user instanceof Teacher)) {
+                return Response.error("Only a teacher has courses to manage.");
             }
-            return Response.error("Only a teacher has courses to manage.");
+            Map<String, Course> byCode = new LinkedHashMap<>();
+            for (Course course : courseDAO.findByTeacher(user.getUserId())) {
+                byCode.put(course.getCourseCode(), course);
+            }
+            if (user instanceof SubjectCoordinator coordinator) {
+                for (Course course : courseDAO.findBySubject(
+                        coordinator.getCoordinatedSubjectCode())) {
+                    byCode.putIfAbsent(course.getCourseCode(), course);
+                }
+            }
+            return Response.ok(new ArrayList<>(byCode.values()), null);
         } catch (SQLException e) {
             return Response.error("Could not load your courses: " + e.getMessage());
         }
@@ -280,20 +304,37 @@ public class QuestionController {
     /**
      * May this user write questions for this course?
      *
-     * <p>Requirement 14: a teacher may create questions only for the courses she
-     * teaches. Requirement 19 additionally lets a subject coordinator edit
-     * questions belonging to the subject she coordinates - that part is scheduled
-     * for milestone 15 with the other derived requirements, so for now a
-     * coordinator is treated exactly like the teacher she also is.</p>
+     * <p>Two requirements, and the coordinator's is the wider one.</p>
+     *
+     * <p><b>Requirement 14</b>: a teacher may create and change questions only for
+     * the courses she teaches.</p>
+     *
+     * <p><b>Requirement 19</b>: <i>"רכזת המקצוע תוכל לערוך שאלות של אותו המקצוע
+     * שמרכזת"</i> - a subject coordinator may edit the questions of the subject she
+     * coordinates. That is <em>every course in the subject</em>, not only the ones
+     * she happens to teach, which is the whole point of the requirement: Noa Katz
+     * coordinates Mathematics and so may correct a question in Plane Geometry even
+     * though she teaches Algebra.</p>
+     *
+     * <p>Checked coordinator-first, because {@code SubjectCoordinator} extends
+     * {@code Teacher} - testing the narrower role first would refuse her before the
+     * wider rule was ever reached. That mistake has already been made once on this
+     * project, on the exam-viewing path, and is recorded in the change log.</p>
      */
     private String refuseIfCannotEditCourse(User user, String courseCode) {
         if (!(user instanceof Teacher teacher)) {
             return "Only a teacher can change the question bank.";
         }
-        if (!teacher.teaches(courseCode)) {
-            return "You do not teach that course, so you cannot change its questions.";
+        if (teacher.teaches(courseCode)) {
+            return null;
         }
-        return null;
+        if (user instanceof SubjectCoordinator coordinator
+                && coordinatesSubjectOf(coordinator, courseCode)) {
+            return null;                       // requirement 19
+        }
+        return user instanceof SubjectCoordinator
+                ? "That course is not in your subject, so you cannot change its questions."
+                : "You do not teach that course, so you cannot change its questions.";
     }
 
     /** May this user look at this course's questions? */
@@ -301,16 +342,38 @@ public class QuestionController {
         if (isBlank(courseCode)) {
             return "No course was chosen.";
         }
-        if (user instanceof SubjectCoordinator || user instanceof Teacher) {
-            Teacher teacher = (Teacher) user;
+        if (user instanceof Teacher teacher) {
             if (teacher.teaches(courseCode)) {
                 return null;
             }
-            return "You do not teach that course.";
+            // Requirement 19 again: she cannot sensibly be allowed to edit a
+            // question she is not allowed to read.
+            if (user instanceof SubjectCoordinator coordinator
+                    && coordinatesSubjectOf(coordinator, courseCode)) {
+                return null;
+            }
+            return user instanceof SubjectCoordinator
+                    ? "That course is not in your subject."
+                    : "You do not teach that course.";
         }
-        // The principal's read-only access to the whole bank (requirement 62)
-        // arrives with milestone 12 and its own screen.
+        // The principal reads the whole bank through her own screen (requirement 62),
+        // not through this controller.
         return "You are not allowed to view this question bank.";
+    }
+
+    /** True when the course belongs to the subject this coordinator runs. */
+    private boolean coordinatesSubjectOf(SubjectCoordinator coordinator, String courseCode) {
+        try {
+            Course course = courseDAO.findById(courseCode);
+            return course != null
+                && course.getSubjectCode() != null
+                && course.getSubjectCode().equals(coordinator.getCoordinatedSubjectCode());
+        } catch (SQLException e) {
+            // Refuse rather than guess: a lookup that failed is not permission.
+            System.err.println("Could not check the subject of " + courseCode
+                             + ": " + e.getMessage());
+            return false;
+        }
     }
 
     private static boolean isBlank(String s) {

@@ -40,6 +40,19 @@ public enum PushType {
     EXAM_TIME_TICK,
 
     /**
+     * Nine tenths of her time has gone. Payload is the whole minutes remaining.
+     *
+     * <p>Requirement 43: <i>"לקראת סיום 90% מזמן הבחינה יופיע popup שמודיע זאת עם
+     * מספר הדקות שנשארו"</i> - a popup near the 90% mark saying how many minutes
+     * are left.</p>
+     *
+     * <p>Sent <b>once</b> per attempt. The clock ticks every second, and a warning
+     * that reappeared every second for the last tenth of the exam would be worse
+     * than no warning at all.</p>
+     */
+    EXAM_TIME_WARNING,
+
+    /**
      * The student's time ran out and the server closed her exam.
      *
      * <p>Requirement 45 and acceptance test 2.6: whatever she had entered is
@@ -104,5 +117,25 @@ public enum PushType {
      * student would sit looking at "not switched on" after it had been switched
      * on.</p>
      */
-    BOT_AVAILABILITY_CHANGED
+    BOT_AVAILABILITY_CHANGED,
+
+    /**
+     * Signed out for being idle. Payload is how many minutes she was idle.
+     *
+     * <p>Requirement 76. Sent just before the connection is closed, so the client
+     * can return to the login screen saying <em>why</em> - "the connection was
+     * lost" is a different thing and invites her to blame the network.</p>
+     *
+     * <p>A student inside an exam is never sent this: she is working, not idle, and
+     * the server knows it because there is a row saying so.</p>
+     */
+    SESSION_TIMED_OUT,
+
+    /**
+     * Her teacher has opened one more attempt for her. Payload is the execution id.
+     *
+     * <p>Requirement 61. Told rather than discovered: without this she would find
+     * out by typing the code again and being surprised it worked.</p>
+     */
+    EXTRA_ATTEMPT_GRANTED
 }

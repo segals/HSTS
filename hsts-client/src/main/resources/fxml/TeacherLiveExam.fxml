@@ -71,6 +71,19 @@
             </HBox>
             <ListView fx:id="studentList" VBox.vgrow="ALWAYS"/>
 
+            <!--
+                Requirement 61: "כדי לפתוח ניסיון נוסף המורה צריכה לאשר זאת".
+                The number of attempts is set when the exam is released; anything
+                beyond it needs her approval, and this is where she gives it.
+            -->
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Button fx:id="grantAttemptButton" text="Allow another attempt..."
+                        onAction="#onGrantAttempt"/>
+                <Label text="Pick a student first. Use it for a power cut, illness, or a machine that failed."
+                       styleClass="caption" wrapText="true"
+                       HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+            </HBox>
+
             <Label fx:id="statusLabel" wrapText="true" text=" "
                    styleClass="status" maxWidth="Infinity"/>
         </VBox>

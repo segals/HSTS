@@ -66,11 +66,43 @@ public abstract class GUIScreen {
      * then reload - that is what "no manual refresh" means in practice.</p>
      */
     protected void onPush(PushEvent event) {
+        if (event.getType() == PushType.SESSION_TIMED_OUT) {
+            // Requirement 76. Handled here rather than on each screen, because it
+            // can arrive on ANY of them - and every screen must react the same way.
+            // The server closes the connection a moment later, so this has to be
+            // shown and acted on now, not after a round trip.
+            signedOutForIdleness(event.getMessage());
+            return;
+        }
         if (event.getType() == PushType.EXAM_REJECTED) {
             showError(event.getMessage());
         } else {
             showSuccess(event.getMessage());
         }
+    }
+
+    /**
+     * Back to the login screen, saying why (requirement 76).
+     *
+     * <p>Told plainly, because the alternative is the connection simply dropping
+     * and her concluding the network is broken. The dialog comes first so the
+     * message survives the screen change.</p>
+     */
+    private void signedOutForIdleness(String why) {
+        javafx.application.Platform.runLater(() -> {
+            javafx.scene.control.Alert told =
+                    new javafx.scene.control.Alert(
+                            javafx.scene.control.Alert.AlertType.INFORMATION);
+            told.initOwner(hsts.client.HSTSApp.getPrimaryStage());
+            told.setTitle("Signed out");
+            told.setHeaderText("You have been signed out");
+            told.setContentText(why == null
+                    ? "You were signed out after a period without activity."
+                    : why);
+            told.getDialogPane().setMinWidth(420);
+            told.showAndWait();
+            switchTo("/fxml/Login.fxml", false);
+        });
     }
 
     /** Shows a normal, informational message. */

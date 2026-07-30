@@ -1903,3 +1903,136 @@ school with a few hundred banked questions is entirely ordinary.
 | Screens | 19/19 load |
 
 Run **three times back to back with no database reset**, identical each time.
+
+---
+
+## Milestone 15 — the six derived requirements
+
+Left until last on purpose, as the plan set out. Five were built here; the sixth
+was built with milestone 9 and is **re-checked rather than assumed** — "it was done
+earlier" is not evidence.
+
+| # | What it asks | State before | Now |
+|---|---|---|---|
+| **19** | a coordinator edits her subject's questions | explicitly deferred, with a comment saying so | built |
+| **39** | three wrong codes, then ten minutes out | table existed, nothing used it | built |
+| **43** | a popup at nine tenths of the time | nothing | built |
+| **61** | the teacher opens an extra attempt | attempts capped, no way to grant one | built |
+| **76** | signed out after inactivity | last-activity recorded, nothing swept | built |
+| **77** | a factor after approval | done in milestone 9 | re-verified |
+
+### 19 — the coordinator's reach is wider than her teaching
+
+*"רכזת המקצוע תוכל לערוך שאלות של אותו המקצוע שמרכזת"* — **every course in her
+subject**, not only the ones she happens to teach. Noa Katz coordinates Mathematics
+and teaches Algebra; she may now correct a Plane Geometry question.
+
+Two halves, and the second is easy to forget: she also had to be **offered** those
+courses. Permission to edit a question she has no way to reach is not a feature -
+the screen shows the course list and nothing else.
+
+Checked **coordinator-first**, because `SubjectCoordinator` extends `Teacher` and
+testing the narrower role first refuses her before the wider rule is reached. That
+exact mistake was made once before on this project, on the exam-viewing path.
+
+### 39 — the lock is in the database, and it beats a correct code
+
+Three consecutive wrong codes, then ten minutes. Stored in `code_attempt`, not in
+memory: a lockout a student can end by waiting for a server restart is not a
+lockout, and it has to survive her closing the client.
+
+Three decisions worth defending:
+
+- **A malformed code is not a guess.** Typing "AB" is a slip; it does not count
+  against her three. Only a properly-formed code that is wrong does.
+- **A correct code wipes the slate.** The requirement says three *consecutive*
+  failures, so a mistake this morning cannot combine with two this afternoon.
+- **The lock beats a correct code.** Checked before anything else, or a lucky guess
+  would carry her straight through it.
+
+She is told what each mistake costs — *"You have 2 tries left before a 10-minute
+wait"*. A deterrent nobody can see does not deter.
+
+### 43 — measured from her own clock, and sent once
+
+The warning is computed from **her** start and **her** deadline, not from the
+sitting's allotted minutes. The teacher may extend the time mid-exam (requirement
+42), and a warning computed from the original length would fire at the wrong moment
+— or have fired already and never fire again.
+
+Sent **once per attempt**. The clock ticks every second and the condition stays true
+for the whole last tenth; a popup every second would be worse than no popup.
+
+On screen it is a real modal, because the requirement says *popup* and a girl deep
+in question 14 will not notice the status bar change colour. Non-blocking, so her
+countdown keeps running behind it — a modal wait would freeze the very clock she is
+being warned about.
+
+### 61 — recorded as a row, not a counter
+
+Her allowance is the sitting's `max_attempts` **plus** whatever her teacher has
+granted, computed in one place so the code step and the start step cannot drift
+apart.
+
+A row per grant rather than a number, because "she was given two more" should also
+answer *who* and *when* — both get asked if a result is ever disputed. The student
+is pushed a message rather than left to discover it by trying the code again.
+
+### 76 — a student inside an exam is never signed out
+
+This is the part that needed thinking about. "Activity" means *a message from her
+client*, and a girl reading a hard question sends nothing while she reads it.
+Signing her out mid-exam would be the worst thing this system could do to anybody.
+
+So an attempt in progress makes her exempt — she is not idle, she is working, and
+the server knows because there is a row saying so. Her exam still ends on time; the
+clock closes it at her deadline, and once closed she is eligible like anyone else.
+All three states are tested.
+
+She is **told, then disconnected**, in that order. Dropping the socket first would
+leave her reading "the connection was lost", which invites her to blame the network.
+
+If the "is she in an exam?" query itself fails, she is assumed to **be** in one.
+Leaving somebody signed in too long is a nuisance; throwing her out of an exam is a
+disaster.
+
+Thirty minutes by default, settable in the config file — the requirement says "a
+defined period" without fixing one.
+
+### Faults found, and four of the five were the test
+
+**43's window was wrong.** The test moved the deadline to seven minutes away but
+left the start time alone, so her exam *became* seven minutes long and she had a
+hundred per cent of it left, not ten. Both ends now move.
+
+**The sweep signed out the suite's own connections** — teacher1 and coordinator1
+were idle by the time it ran, so it signed them out, which is exactly what it is
+supposed to do. Everything after it then failed. Requirement 77 now runs first and
+the sweep is last.
+
+**A student was signed in twice.** The exam-exemption test picked a student the
+suite already held a session for, and NFR 16 correctly refused the second login.
+Third time this project has hit that rule.
+
+**Two conditional checks made the total drift** — 58 one run, 59 the next. The
+suite now picks a student enrolled in the demo course deliberately, so both
+conditions always hold and the count is 60 every time.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| M2–M11, M13, M14 | unchanged, all passing |
+| **M15 (new)** | **60/60** |
+| **Total** | **791 checks** |
+| Screens | 19/19 load |
+
+Run **twice back to back with no database reset**, identical both times, and M15
+three times alone to confirm the count is stable.
+
+### What is left
+
+Milestone 16: run the Assignment 1 acceptance tests by hand and fill in the results
+table, finish the redlines in `docs/03_document_updates.md`, the Word document, and
+the ZIP. **The two-laptop LAN test is still outstanding**, deferred at the
+customer's direction and still required before submission.
