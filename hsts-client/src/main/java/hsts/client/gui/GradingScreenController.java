@@ -125,7 +125,9 @@ public class GradingScreenController extends GUIScreen {
               + "\n" + (g.isMarked()
                     ? g.getFinalGrade() + (g.wasChangedByHand()
                           ? "  (system said " + g.getAutoGrade() + ")" : "")
-                      + "  ·  " + (g.isApproved() ? "approved" : "not approved yet")
+                      // Says whose approval, not just that there is none. She is
+                      // reading her own queue, so the answer is "yours".
+                      + "  ·  " + (g.isApproved() ? "approved" : "waiting for your approval")
                     : "still sitting  ·  nothing to mark yet"));
 
         sittingList.getSelectionModel().selectedItemProperty()
@@ -372,7 +374,7 @@ public class GradingScreenController extends GUIScreen {
                 + (attempt.getActualDuration() == null ? ""
                    : "   ·   took " + attempt.getActualDuration() + " min")
                 + "   ·   system marked it " + grade.getAutoGrade()
-                + (grade.isApproved() ? "   ·   APPROVED" : "   ·   not approved yet")
+                + (grade.isApproved() ? "   ·   APPROVED" : "   ·   WAITING FOR YOUR APPROVAL")
                 + (grade.wasChangedByHand() && grade.getManualChangeExplanation() != null
                    ? "\nChanged by hand: " + grade.getManualChangeExplanation() : ""));
 

@@ -276,6 +276,36 @@ public class GradeDAO implements IDAO<Grade, Integer> {
      * no way to see that somebody was still working. She is now listed and flagged,
      * which is also the message acceptance test 3.11 asks for.</p>
      */
+    /**
+     * How many handed-in papers on this teacher's sittings still need her approval.
+     *
+     * <p>The number behind the badge on "Mark and approve grades". Driven from
+     * {@code student_exam} with a <b>left</b> join for the same reason as the list
+     * below: a paper that has been handed in but not yet marked has no {@code grade}
+     * row at all - it is marked when she opens the sitting - and it is still a paper
+     * waiting for her. Joining the other way would show a badge of nought above a
+     * screen full of work.</p>
+     *
+     * <p>Papers still being sat are excluded: nothing is waiting for the teacher
+     * while the student is still writing.</p>
+     */
+    public int countAwaitingApprovalBy(String teacherId) throws SQLException {
+        String sql = """
+            SELECT COUNT(*)
+            FROM student_exam s
+            JOIN exam_execution x ON x.execution_id  = s.execution_id
+            LEFT JOIN grade g     ON g.submission_id = s.submission_id
+            WHERE x.released_by = ?
+              AND s.status <> 'IN_PROGRESS'
+              AND (g.submission_id IS NULL OR g.is_approved = FALSE)""";
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setString(1, teacherId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
     public List<Grade> findByExecutionIncludingUnmarked(int executionId) throws SQLException {
         String sql = """
             SELECT s.submission_id, g.auto_grade, g.final_grade, g.factor, g.is_approved,

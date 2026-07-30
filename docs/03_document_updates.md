@@ -310,3 +310,61 @@ three.
 > 45. בסיום זמן הביצוע, המערכת תסגור את הבחינה עבור כל התלמידות שעדיין נבחנות,
 >     תשמור את התשובות שהוזנו ותודיע לכל אחת מהן. תלמידה שהתחילה לפני מועד
 >     הסגירה תסיים לכל המאוחר במועד הסגירה, גם אם נותר לה זמן אישי.
+
+---
+
+## 10. Two additions to the screens: who an approval waits for, and unread badges
+
+**Documents:** class diagram (`ExamStatus`, `Grade`, `User`); requirements table
+
+Asked for by the customer on 2026-07-30 as user-interface improvements. Neither
+changes a rule: who may approve what, and what an approval does, are exactly as
+before.
+
+### As submitted
+
+`ExamStatus` has three values and the class diagram shows no display text for
+them. Nothing in the requirements says how a waiting state should be worded, and
+nothing describes a notification count anywhere in the system.
+
+### What the system now does
+
+**Every waiting thing names the role it is waiting for.** An exam awaiting its
+coordinator reads *"Waiting for Subject Coordinator approval"* wherever it is
+shown; a mark awaiting its teacher reads *"waiting for your approval"* on the
+marking screen and *"Waiting for your teacher to approve it"* on the student's.
+
+**The menu carries unread counts**, as a phone does: a red circle at the right of
+the entry, showing how many things are waiting for that user.
+
+| Role | Entry | Counted |
+|---|---|---|
+| Coordinator | Approve or reject exams | exams in her subject awaiting her decision |
+| Teacher | Mark and approve grades | papers on her sittings not yet approved |
+| Student | Take an exam | sittings open now she may still enter |
+| Student | My grades | marks published since she last looked |
+
+The principal has none: she approves nothing (system description §7.3).
+
+### Changes to the submitted design
+
+| Class | Change |
+|---|---|
+| `ExamStatus` | a second attribute, the role an approval waits for, alongside the display text |
+| `Grade` | `getWaitingFor()` - who must approve this mark, or nothing once approved |
+| `User` | `resultsSeenAt` - when this student last opened her results |
+| *(new)* `PendingCounts` | the four counts, carried in one reply |
+| *(new)* `PendingCountsController` | answers "what is waiting for this user" |
+
+`User.resultsSeenAt` is the only new stored fact in either change. It exists
+because "marks she has not read" is the one count that cannot be derived from
+rows that already exist - nothing recorded whether she had looked. It sits on the
+person rather than on each mark because she reads the list, not the rows.
+
+### Suggested wording, if the requirements table is to mention it
+
+> 79. בכל מסך שבו מוצג פריט הממתין לאישור, תוצג במפורש בעלת התפקיד שממנה מצופה
+>     האישור.
+>
+> 80. בתפריט הראשי יוצג לצד כל פעולה מונה של הפריטים הממתינים לטיפולה של
+>     המשתמשת. המונה מתעדכן מעצמו ונעלם כאשר לא נותרו פריטים ממתינים.

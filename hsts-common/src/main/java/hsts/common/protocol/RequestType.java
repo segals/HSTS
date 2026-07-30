@@ -26,6 +26,16 @@ public enum RequestType {
     /** Ends the session held by this connection. */
     LOGOUT,
 
+    /**
+     * How many things are waiting for the signed-in user, for the menu badges.
+     * No payload; the reply is a {@link PendingCounts}.
+     *
+     * <p>Asked when the menu opens and again whenever a push says something that
+     * could change a count has happened. Never on a timer - a badge that costs a
+     * request a second would be a worse problem than the one it solves.</p>
+     */
+    PENDING_COUNTS,
+
     // ---- SUC-2: question bank (milestone 3) ----
 
     /** The courses the signed-in teacher teaches. No payload. */

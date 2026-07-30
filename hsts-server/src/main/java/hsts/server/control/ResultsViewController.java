@@ -38,6 +38,9 @@ public class ResultsViewController {
     private final ExecutionDAO executionDAO;
     private final ExamDAO examDAO;
 
+    /** Only to record that she has looked, which clears the unread badge. */
+    private final hsts.server.dao.UserDAO userDAO = new hsts.server.dao.UserDAO();
+
     public ResultsViewController(GradeDAO gradeDAO, SubmissionDAO submissionDAO,
                                  ExecutionDAO executionDAO, ExamDAO examDAO) {
         this.gradeDAO = gradeDAO;
@@ -71,6 +74,11 @@ public class ResultsViewController {
                     grade.setTeacherGeneralComment(null);
                 }
             }
+
+            // She is looking at them now, so nothing here is unread any more and the
+            // badge on her menu clears. Written after the list has been built, so a
+            // mark approved a moment later is still counted as new.
+            userDAO.markResultsSeen(student.getUserId());
 
             return Response.ok(all, all.isEmpty()
                     // Acceptance test 4.12.

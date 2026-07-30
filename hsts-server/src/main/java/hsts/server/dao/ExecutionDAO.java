@@ -137,6 +137,33 @@ public class ExecutionDAO implements IDAO<ExamExecution, Integer> {
         return list;
     }
 
+    /**
+     * Sittings open right now on the courses this student is enrolled in.
+     *
+     * <p>Enrolment is joined here rather than filtered afterwards, because a
+     * sitting she may not take is not one to count on her menu. Whether she has an
+     * attempt left is a separate question, answered by {@code SubmissionDAO} with
+     * the same arithmetic the code screen uses - so the badge and the screen can
+     * never disagree about whether she can go in.</p>
+     */
+    public List<ExamExecution> findOpenForStudent(String studentId) throws SQLException {
+        String sql = baseSelect() + """
+             JOIN course_student cs ON cs.course_code = e.course_code
+                                   AND cs.user_id     = ?
+            WHERE NOW() BETWEEN x.open_time AND x.close_time
+            ORDER BY x.close_time""";
+        List<ExamExecution> list = new ArrayList<>();
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(readRow(rs));
+                }
+            }
+        }
+        return list;
+    }
+
     /** Every release of one exam, whatever version. */
     public List<ExamExecution> findByExam(String examId) throws SQLException {
         String sql = baseSelect() + " WHERE x.exam_id = ? ORDER BY x.open_time DESC";

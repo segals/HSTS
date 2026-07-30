@@ -127,8 +127,20 @@ public class Grade implements Serializable {
         return null;
     }
 
+    /**
+     * Whose approval this mark is waiting for, or null once it has been given.
+     *
+     * <p>The teacher who released the sitting is the one who approves it - decided
+     * during planning and unchanged. Named here so every screen says the same
+     * thing rather than each inventing its own phrase for "not approved yet".</p>
+     */
+    public String getWaitingFor() {
+        return approved ? null : "the teacher";
+    }
+
     @Override
     public String toString() {
-        return studentName + "  ·  " + finalGrade + (approved ? "  (approved)" : "  (not approved)");
+        return studentName + "  ·  " + finalGrade
+             + (approved ? "  (approved)" : "  (waiting for the teacher's approval)");
     }
 }

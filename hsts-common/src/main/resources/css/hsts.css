@@ -384,6 +384,24 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-padding: 3 8 3 8;
     -fx-background-radius: 4;
 }
+/*
+    The unread count on a menu entry - the red circle, as on a phone.
+
+    A large -fx-background-radius rounds the ends completely however wide the
+    label grows, so "3" is a circle and "12" a pill, with no second style and no
+    arithmetic in the controller. min-width keeps a single digit from being an
+    oval, and the padding is what makes room for a second one.
+*/
+.badge-unread {
+    -fx-background-color: -hsts-danger;
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 7 2 7;
+    -fx-min-width: 21;
+    -fx-alignment: CENTER;
+    -fx-background-radius: 999;
+}
 
 /* ---------- misc ------------------------------------------------------ */
 .image-frame {

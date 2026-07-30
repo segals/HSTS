@@ -5,12 +5,19 @@ import hsts.common.entity.Student;
 import hsts.common.entity.SubjectCoordinator;
 import hsts.common.entity.Teacher;
 import hsts.common.entity.User;
+import hsts.common.protocol.PendingCounts;
+import hsts.common.protocol.PushEvent;
+import hsts.common.protocol.PushType;
 import hsts.common.protocol.Request;
 import hsts.common.protocol.RequestType;
 import hsts.common.protocol.Response;
 import javafx.fxml.FXML;
+import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.util.ArrayList;
@@ -35,6 +42,7 @@ import java.util.List;
 public class MainMenuController extends GUIScreen {
 
     private static final String REQ_LOGOUT = "logout";
+    private static final String REQ_COUNTS = "counts";
 
     @FXML private Label  nameLabel;
     @FXML private Label  roleLabel;
@@ -44,18 +52,32 @@ public class MainMenuController extends GUIScreen {
     @FXML private Label  statusLabel;
     @FXML private Label  footerLabel;
 
+    /** Which number from the reply belongs on which entry. Null means no badge. */
+    @FunctionalInterface
+    private interface Counter {
+        int of(PendingCounts counts);
+    }
+
     /**
      * One menu entry.
      *
      * @param text      what the button says
      * @param milestone which milestone delivers it, shown while it is not ready
      * @param fxml      the screen to open, or null if it is not built yet
+     * @param counter   which pending count to show on it, or null for no badge
      */
-    private record MenuEntry(String text, String milestone, String fxml) {
+    private record MenuEntry(String text, String milestone, String fxml, Counter counter) {
+        MenuEntry(String text, String milestone, String fxml) {
+            this(text, milestone, fxml, null);
+        }
+
         boolean ready() {
             return fxml != null;
         }
     }
+
+    /** The badge label on each entry that has one, so the counts can be applied. */
+    private final java.util.Map<Counter, Label> badges = new java.util.LinkedHashMap<>();
 
     @FXML
     private void initialize() {
@@ -72,16 +94,7 @@ public class MainMenuController extends GUIScreen {
         contextLabel.setText(describeContext(user));
 
         for (MenuEntry entry : menuFor(user)) {
-            Button button = new Button(entry.ready()
-                    ? entry.text()
-                    : entry.text() + "   —   " + entry.milestone());
-            button.setMaxWidth(Double.MAX_VALUE);
-            button.setDisable(!entry.ready());
-            button.getStyleClass().add("menu-entry");
-            if (entry.ready()) {
-                button.setOnAction(e -> switchTo(entry.fxml(), true));
-            }
-            menuBox.getChildren().add(button);
+            menuBox.getChildren().add(buildButton(entry));
         }
 
         footerLabel.setText(
@@ -95,7 +108,65 @@ public class MainMenuController extends GUIScreen {
             logoutButton.setDisable(true);
             showError(reason);
         });
+
+        // What is waiting for her, for the badges. Asked once here; asked again only
+        // when a push says something that could change it has happened. No timer:
+        // this must not become a request a second.
+        askForCounts();
     }
+
+    /**
+     * One menu button, with room for an unread badge at its right-hand end.
+     *
+     * <p>The whole row is the button's <em>graphic</em> rather than its text, so the
+     * badge sits inside the button and lights up with it on hover, and so a spacer
+     * can push it to the far edge the way a phone does. A plain graphic beside the
+     * text would sit immediately after the words, where a long entry and a short one
+     * would put it in different places.</p>
+     *
+     * <p>The row's width follows the button's, which the surrounding {@code VBox}
+     * stretches to fill - so the width comes from the parent and this cannot chase
+     * its own tail.</p>
+     */
+    private Button buildButton(MenuEntry entry) {
+        Button button = new Button();
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.setDisable(!entry.ready());
+        button.getStyleClass().add("menu-entry");
+
+        Label caption = new Label(entry.ready()
+                ? entry.text()
+                : entry.text() + "   —   " + entry.milestone());
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox row = new HBox(10, caption, spacer);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setMinWidth(0);
+        row.prefWidthProperty().bind(button.widthProperty().subtract(GRAPHIC_INSET));
+
+        if (entry.counter() != null) {
+            Label badge = new Label();
+            badge.getStyleClass().add("badge-unread");
+            // Not managed while it is empty, so an entry with nothing waiting takes
+            // exactly the height it always did.
+            badge.setVisible(false);
+            badge.setManaged(false);
+            row.getChildren().add(badge);
+            badges.put(entry.counter(), badge);
+        }
+
+        button.setGraphic(row);
+        button.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+        if (entry.ready()) {
+            button.setOnAction(e -> switchTo(entry.fxml(), true));
+        }
+        return button;
+    }
+
+    /** The button's own left and right padding plus its border, from hsts.css. */
+    private static final int GRAPHIC_INSET = 32;
 
     /** A line of context that proves the server sent this user's real associations. */
     private String describeContext(User user) {
@@ -133,7 +204,8 @@ public class MainMenuController extends GUIScreen {
             entries.add(new MenuEntry("Build an exam",           "milestone 4",  "/fxml/ExamBuilder.fxml"));
             entries.add(new MenuEntry("Release an exam",         "milestone 6",  "/fxml/ExamRelease.fxml"));
             entries.add(new MenuEntry("Exams running now",       "milestone 8",  "/fxml/TeacherLiveExam.fxml"));
-            entries.add(new MenuEntry("Mark and approve grades", "milestone 9",  "/fxml/Grading.fxml"));
+            entries.add(new MenuEntry("Mark and approve grades", "milestone 9",  "/fxml/Grading.fxml",
+                                      PendingCounts::getPapersToApprove));
             entries.add(new MenuEntry("Results and histogram",   "milestone 11",
                                       "/fxml/TeacherReports.fxml"));
             entries.add(new MenuEntry("My reports",              "milestone 13",
@@ -144,12 +216,15 @@ public class MainMenuController extends GUIScreen {
 
         if (user instanceof SubjectCoordinator) {
             entries.add(new MenuEntry("Approve or reject exams", "milestone 5",
-                                      "/fxml/ExamApproval.fxml"));
+                                      "/fxml/ExamApproval.fxml",
+                                      PendingCounts::getExamsToApprove));
         }
 
         if (user instanceof Student) {
-            entries.add(new MenuEntry("Take an exam",            "milestone 7",  "/fxml/TakeExam.fxml"));
-            entries.add(new MenuEntry("My grades",               "milestone 10", "/fxml/StudentResults.fxml"));
+            entries.add(new MenuEntry("Take an exam",            "milestone 7",  "/fxml/TakeExam.fxml",
+                                      PendingCounts::getExamsToSit));
+            entries.add(new MenuEntry("My grades",               "milestone 10", "/fxml/StudentResults.fxml",
+                                      PendingCounts::getNewResults));
             // SUC-14 and SUC-15 are one screen for a student: asking and reading
             // back what she asked are the same activity, and the history is on it.
             entries.add(new MenuEntry("Course study bot",        "milestone 14",
@@ -184,6 +259,64 @@ public class MainMenuController extends GUIScreen {
     private void onServerResponse(Response response) {
         if (REQ_LOGOUT.equals(response.getRequestId())) {
             backToLogin();
+            return;
+        }
+        if (REQ_COUNTS.equals(response.getRequestId())) {
+            // A failure here is deliberately silent. Nothing is broken from her point
+            // of view - the menu works - and an error line about counting would be
+            // the only thing on a screen she has just arrived at.
+            if (response.isOk() && response.getPayload() instanceof PendingCounts counts) {
+                applyCounts(counts);
+            }
+        }
+    }
+
+    /**
+     * Which pushes mean a badge could have changed.
+     *
+     * <p>An allowlist rather than "refresh on anything": the clock pushes a tick
+     * every second while an exam is being sat, and a menu that answered those with a
+     * request each would be polling by another name.</p>
+     */
+    private static final java.util.Set<PushType> AFFECTS_BADGES = java.util.EnumSet.of(
+            PushType.EXAM_AWAITING_APPROVAL,   // an exam arrived for the coordinator
+            PushType.EXAM_APPROVED,
+            PushType.EXAM_REJECTED,
+            PushType.GRADE_APPROVED,           // a mark reached a student
+            PushType.RESULTS_CHANGED);         // marking or publishing moved
+
+    @Override
+    protected void onPush(PushEvent event) {
+        super.onPush(event);
+        if (AFFECTS_BADGES.contains(event.getType())) {
+            askForCounts();
+        }
+    }
+
+    private void askForCounts() {
+        if (badges.isEmpty()) {
+            return;                    // this role has no badged entries - the principal
+        }
+        send(RequestType.PENDING_COUNTS, null, REQ_COUNTS);
+    }
+
+    /** Puts the numbers on the badges, hiding any that has nothing waiting. */
+    private void applyCounts(PendingCounts counts) {
+        for (java.util.Map.Entry<Counter, Label> entry : badges.entrySet()) {
+            int waiting = entry.getKey().of(counts);
+            Label badge = entry.getValue();
+            badge.setText(String.valueOf(waiting));
+            badge.setVisible(waiting > 0);
+            badge.setManaged(waiting > 0);
+        }
+    }
+
+    private void send(RequestType type, Object payload, String requestId) {
+        try {
+            controller.send(new Request(type, payload, requestId));
+        } catch (Exception e) {
+            // Same reasoning as above: the menu itself is unaffected.
+            System.out.println("Could not ask for the pending counts: " + e.getMessage());
         }
     }
 

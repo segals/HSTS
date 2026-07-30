@@ -25,22 +25,48 @@ package hsts.common.enums;
 public enum ExamStatus {
 
     /** Written and saved, waiting for the subject coordinator to look at it. */
-    PENDING_APPROVAL("Pending approval"),
+    PENDING_APPROVAL("Waiting for Subject Coordinator approval", "Subject Coordinator"),
 
     /** The coordinator approved it. Only now may it be released to a class. */
-    APPROVED("Approved"),
+    APPROVED("Approved", null),
 
     /** The coordinator rejected it. The reason is stored and sent to the author. */
-    REJECTED("Rejected");
+    REJECTED("Rejected", null);
 
     private final String displayName;
+    private final String waitingFor;
 
-    ExamStatus(String displayName) {
+    ExamStatus(String displayName, String waitingFor) {
         this.displayName = displayName;
+        this.waitingFor = waitingFor;
     }
 
+    /**
+     * What every screen shows for this status.
+     *
+     * <p>"Pending approval" used to be the wording, and it left the obvious
+     * question unanswered: pending on whom? Naming the role here rather than on
+     * each screen means the exam list, the exam detail, the principal's browser
+     * and the teacher's report cannot drift apart.</p>
+     */
     public String getDisplayName() {
         return displayName;
+    }
+
+    /**
+     * Whose approval this is waiting for, or null when nobody's is outstanding.
+     *
+     * <p>Separate from {@link #getDisplayName()} so a screen that wants to build
+     * its own sentence - "Saved. Waiting for Subject Coordinator approval." - does
+     * not have to take the display name apart to find the role in it.</p>
+     */
+    public String getWaitingFor() {
+        return waitingFor;
+    }
+
+    /** True while somebody still has to approve this. */
+    public boolean isWaitingForApproval() {
+        return waitingFor != null;
     }
 
     @Override

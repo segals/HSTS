@@ -36,6 +36,7 @@ import hsts.server.control.ExamExecutionController;
 import hsts.server.control.GradingController;
 import hsts.server.control.LiveExamController;
 import hsts.server.control.BotController;
+import hsts.server.control.PendingCountsController;
 import hsts.server.control.PrincipalController;
 import hsts.server.control.ReportController;
 import hsts.server.control.ResultsViewController;
@@ -154,6 +155,8 @@ public class HSTSServer extends AbstractServer {
     private final ReportFactory reportFactory =
             new ReportFactory(examDAO, gradeDAO, userDAO, courseDAO);
     private final ReportController reportController = new ReportController(reportFactory);
+    /** The numbers behind the menu badges. Builds its own DAOs; it only reads. */
+    private final PendingCountsController pendingCountsController = new PendingCountsController();
     private final BotDAO botDAO = new BotDAO();
 
     /**
@@ -239,6 +242,10 @@ public class HSTSServer extends AbstractServer {
                 case PING   -> handlePing();
                 case LOGIN  -> handleLogin(request, client);
                 case LOGOUT -> loginController.logout(client);
+
+                // The menu badges. Read-only, and the counts are of that user's own
+                // outstanding work - so it needs a signed-in user like everything else.
+                case PENDING_COUNTS -> withUser(client, pendingCountsController::countsFor);
 
                 // ---- SUC-2: question bank ----
                 // Every one of these needs a signed-in user, and every one

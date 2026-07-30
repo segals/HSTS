@@ -66,6 +66,12 @@ public final class SchemaManager {
                   full_name           VARCHAR(100) NOT NULL,
                   role                ENUM('TEACHER','COORDINATOR','STUDENT','PRINCIPAL') NOT NULL,
                   coordinated_subject CHAR(2)      NULL,
+                  -- When she last opened her results. Everything approved after
+                  -- this moment is what the unread badge on "My grades" counts.
+                  -- One column on the person rather than a flag per mark: she
+                  -- reads the list, not the rows, so the list is what to remember.
+                  -- Milliseconds, to match grade.approved_at - see the note there.
+                  results_seen_at     DATETIME(3)  NULL,
                   CONSTRAINT fk_users_subject FOREIGN KEY (coordinated_subject)
                     REFERENCES subject(subject_code)
                 ) ENGINE=InnoDB""");
@@ -227,7 +233,11 @@ public final class SchemaManager {
                   final_grade               INT      NOT NULL,
                   factor                    INT      NOT NULL DEFAULT 0,
                   is_approved               BOOLEAN  NOT NULL DEFAULT FALSE,
-                  approved_at               DATETIME NULL,
+                  -- Milliseconds, because the unread badge on a student's results
+                  -- compares this against the moment she last looked. At whole-second
+                  -- precision a mark approved in the same second as her visit sorts
+                  -- equal to it, and she would never be told about it at all.
+                  approved_at               DATETIME(3) NULL,
                   manual_change_explanation TEXT     NULL,
                   teacher_general_comment   TEXT     NULL,
                   graded_by                 CHAR(9)  NULL,
@@ -376,6 +386,62 @@ public final class SchemaManager {
                 st.executeUpdate("CREATE INDEX idx_bot_course ON bot (course_code)");
             }
             st.executeUpdate("ALTER TABLE bot DROP INDEX course_code");
+        }
+
+        // The unread badge on a student's results needs to know when she last
+        // looked. Left NULL by this migration on purpose: an existing student has
+        // never opened the screen since the column existed, so every published mark
+        // is genuinely unread to it, which is the honest starting point.
+        if (!columnExists(conn, "users", "results_seen_at")) {
+            st.executeUpdate("ALTER TABLE users ADD COLUMN results_seen_at DATETIME(3) NULL");
+        } else if (datetimePrecision(conn, "users", "results_seen_at") == 0) {
+            // It was added at whole seconds first. Widening it here rather than only
+            // in the CREATE means a database from that day gets the fix too - which
+            // is the whole point of this method.
+            st.executeUpdate("ALTER TABLE users MODIFY results_seen_at DATETIME(3) NULL");
+        }
+
+        // ...and it has to be compared against grade.approved_at, which was written
+        // at whole-second precision. That is close enough for everything else in the
+        // system and NOT close enough for this: a mark approved in the same second as
+        // she opened her results sorts equal to her visit, so it never counts as
+        // unread and she is never told about it. Found by the badge suite, which is
+        // fast enough to hit the same second every run.
+        //
+        // Widening only - every stored value keeps its meaning, and nothing else
+        // reads this column to more than a minute.
+        if (datetimePrecision(conn, "grade", "approved_at") == 0) {
+            st.executeUpdate("ALTER TABLE grade MODIFY approved_at DATETIME(3) NULL");
+        }
+    }
+
+    /** Fractional-second digits on a DATETIME column: 0 for a plain one. */
+    private static int datetimePrecision(Connection conn, String table, String column)
+            throws SQLException {
+        String sql = """
+            SELECT COALESCE(datetime_precision, 0) FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?""";
+        try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, table);
+            ps.setString(2, column);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    /** True when a named column is on a table, so a migration can be skipped. */
+    private static boolean columnExists(Connection conn, String table, String column)
+            throws SQLException {
+        String sql = """
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?""";
+        try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, table);
+            ps.setString(2, column);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 

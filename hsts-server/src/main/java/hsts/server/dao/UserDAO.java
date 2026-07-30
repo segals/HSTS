@@ -273,4 +273,49 @@ public class UserDAO implements IDAO<User, String> {
         }
         return subjects;
     }
+
+    // -----------------------------------------------------------------
+    //  The unread badge on a student's results
+    // -----------------------------------------------------------------
+
+    /**
+     * Records that this student has just opened her results.
+     *
+     * <p>Written from the server's clock rather than a value sent in, for the same
+     * reason the exam countdown is: the moment belongs to the server, and a client
+     * that named its own would be deciding what counts as read.</p>
+     */
+    public void markResultsSeen(String userId) throws SQLException {
+        // NOW(3): milliseconds, to be comparable with grade.approved_at. At whole
+        // seconds a mark approved in the same second as her visit is never counted
+        // as unread, and she is simply never told.
+        try (PreparedStatement ps = conn().prepareStatement(
+                "UPDATE users SET results_seen_at = NOW(3) WHERE user_id = ?")) {
+            ps.setString(1, userId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Marks approved for this student since she last looked at her results.
+     *
+     * <p>A student who has never opened the screen has a NULL marker, and every
+     * approved mark counts - which is the honest answer, not a special case.</p>
+     */
+    public int countUnreadResults(String userId) throws SQLException {
+        String sql = """
+            SELECT COUNT(*)
+            FROM grade g
+            JOIN student_exam s ON s.submission_id = g.submission_id
+            JOIN users u        ON u.user_id       = s.student_id
+            WHERE s.student_id = ?
+              AND g.is_approved = TRUE
+              AND (u.results_seen_at IS NULL OR g.approved_at > u.results_seen_at)""";
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setString(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
 }

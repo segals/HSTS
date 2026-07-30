@@ -2411,3 +2411,127 @@ Plane Geometry, and three passes take that course from 9 exams to 87. The
 documented ceiling is 99 (a two-digit exam number), so a fourth pass would hit it.
 `buildExam` says so in as many words rather than failing obscurely, and
 `SeedRunner.resetAndSeed` puts it back to 9.
+
+---
+
+## Saying whose approval it needs, and unread badges on the menu
+
+Two UX changes, asked for together. Nothing else was touched: no rule about who may
+approve what has changed, and no screen does anything it did not do before.
+
+### 1. Every waiting thing names who it is waiting for
+
+`ExamStatus.PENDING_APPROVAL` used to display as **"Pending approval"**, which left
+the obvious question unanswered. It now reads:
+
+> **Waiting for Subject Coordinator approval**
+
+Changed in the enum, not on the screens. Six places show an exam's status - the
+exam list, the exam detail, the version history, the release screen, the
+principal's browser and the teacher's report - and wording repeated six times is
+wording that drifts. `getWaitingFor()` returns the role on its own, for a screen
+that wants to build its own sentence rather than take the display name apart.
+
+The same for a mark: `Grade.getWaitingFor()` returns *"the teacher"* until it is
+approved, and the marking screen now says **"waiting for your approval"** rather
+than "not approved yet" - she is reading her own queue, so the answer is "yours".
+
+What was already right and was left alone: saving an exam already answered *"sent
+to the subject coordinator for approval"*; the student's results screen already
+said *"Waiting for your teacher to approve it"*; the coordinator's own list is
+already headed **WAITING FOR YOU**; and the release screen already explained that
+an exam needs the coordinator's approval before a class can sit it.
+
+### 2. Unread badges
+
+A red circle with a count, at the right-hand end of the menu entry, as on a phone.
+
+| Role | Entry | What the number is |
+|---|---|---|
+| Coordinator | Approve or reject exams | exams in her subject waiting for her decision |
+| Teacher | Mark and approve grades | papers handed in on her sittings that she has not approved |
+| Student | Take an exam | sittings open right now that she may still go into |
+| Student | My grades | marks published since she last opened her results |
+
+A coordinator is also a teacher, so she gets both of the first two.
+
+**The principal has none, deliberately.** She approves nothing and marks nothing
+(system description §7.3), so a badge on her menu could only ever be noise. Her
+menu does not even ask for the counts.
+
+**Only her own work is counted.** An exam she wrote that is sitting with the
+coordinator does not appear on the teacher's badge: there is nothing for her to do
+about it, and the exam's status already says who it is waiting for. A badge that
+counted other people's work would never reach nought and would be ignored inside a
+day.
+
+**Each count is produced the way the screen behind it lists.** The coordinator's
+badge calls the very method her approval screen calls - the suite asserts the two
+are equal rather than asserting a number. The student's "take an exam" badge
+applies the same attempts arithmetic the code screen applies, so it cannot promise
+a sitting the next screen refuses.
+
+**Updated by push, never by polling.** The menu asks once when it opens, and again
+only when a push arrives that could have changed a count - a small allowlist, not
+"anything", because the exam clock pushes a tick every second and a menu that
+answered those with a request each would be polling by another name.
+
+### The student's "unread", and the one new column
+
+The other three counts are questions about existing rows. "Marks she has not read"
+is not: nothing recorded whether she had looked. So `users.results_seen_at` was
+added - one nullable column on the person rather than a flag on every mark, because
+she reads the *list*, and the list is what to remember. Opening her results sets
+it; the badge counts marks approved after it.
+
+An existing student's column starts NULL, so every published mark is unread to it.
+That is the honest starting point rather than a special case.
+
+### The defect the badge suite found
+
+The first version compared `grade.approved_at > users.results_seen_at`, both
+`DATETIME` - whole seconds. **A mark approved in the same second as she opened her
+results sorts equal to her visit, so it never counts as unread and she is never
+told about it at all.** Not a test artefact: the marker never rewinds, so the
+notification is lost for good.
+
+`BadgeTest` is fast enough to land in that same second every run, which is how it
+surfaced. Both columns are now `DATETIME(3)`. The migration widens
+`grade.approved_at` on an existing database as well - checked by rolling the schema
+back by hand, running the schema step, and reading the column types out again:
+
+```
+grade.approved_at      = datetime(3)
+users.results_seen_at  = datetime(3)
+```
+
+A second, smaller thing the suite corrected was my own assumption: I wrote a check
+saying a just-submitted paper has no mark row yet. It has - handing in marks it at
+once. The row that genuinely has none is one **the clock** closed, because
+`closeExpired` finishes the attempt and leaves the marking until the teacher opens
+the sitting. That is precisely the case the LEFT JOIN in `countAwaitingApprovalBy`
+exists for, so the suite now produces it - a second girl, closed by the clock - and
+asserts both halves: no mark row, and still counted.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| **BadgeTest** | **35/35** - the wording, and every count as a *delta* before and after the action |
+| **MenuBadgeTest** | **20/20** - the badge as JavaFX actually lays it out |
+| M2–M15, NewUsersTest, ClosingTimeTest | unchanged, all passing |
+| **Total** | **952 checks** |
+| Screens | 19/19 load |
+
+`BadgeTest` measures deltas, never absolutes: the suites leave exams and papers
+behind on purpose, so "she has three waiting" is true only on freshly reset data
+and would fail for reasons that have nothing to do with badges.
+
+`MenuBadgeTest` is a JavaFX harness in the shape of `FxmlLoadTest`. It loads the
+real menu for each role, applies counts, forces a layout pass and then measures:
+that the badge exists on the right entries and on no others, that two digits still
+fit inside the button, that the badge ends within 16 pixels of the button's right
+edge - the button's own padding - and that emptying the queue hides it and gives
+back its room rather than showing a nought.
+
+Run **three times back to back with no database reset**, identical each time.
