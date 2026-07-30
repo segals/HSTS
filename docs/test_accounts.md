@@ -28,17 +28,45 @@ password  =  <username>!<first letter of the role, upper case>
 | Student | `student<n>` | `student14` | `student14!S` |
 | Principal | `principal` | `principal` | `principal!P` |
 
-## Milestone 1
+## The full seeded set
 
-Only one account exists so far, seeded into the throwaway `m1_skeleton_user`
-table by the server on first start:
+**55 users:** 1 principal, 4 subject coordinators, 8 teachers, 40 students — and
+the two accounts below, which exist to make the whole school visible from one
+login.
 
-| Username | Password | Full name |
-|---|---|---|
-| `teacher1` | `teacher1!T` | Test Teacher One |
+### Two accounts that cover everything
 
-Milestone 2 replaces that table with the real `users` table and seeds the full
-set: 1 principal, 4 coordinators, 8 teachers and ~40 students.
+| Username | Password | Full name | ID (typed before an exam) | What she has |
+|---|---|---|---|---|
+| `teacher9` | `teacher9!T` | Orit Nahum | `100000546` | Teaches **all 8 courses**, so all 4 subjects |
+| `student41` | `student41!S` | Liat Barnea | `100000553` | Studies **all 8 courses**, so all 4 subjects |
+
+Nobody else has more than two courses, which makes some screens hard to judge: a
+course picker with one entry proves very little, and a per-subject report drawn
+from a girl enrolled in three of the eight courses shows three quarters of
+nothing. These two give every course picker in the system something in all four
+subjects.
+
+Neither invents a rule. The client story says *"כל קורס מועבר ע"י מורה אחת או יותר
+ויש תלמידות הלומדות את הקורס"* — a course has one **or more** teachers, and
+students who study it. Nothing in it, or in requirement 13, caps how many courses
+one person may take.
+
+**What Orit sees:** all 8 courses in her question bank, the entire current
+question bank to edit (requirement 14 limits a teacher to courses she teaches —
+here that is everything), and every approved exam in the school in her
+release list. She has written nothing herself, so her own reports are empty until
+she writes an exam.
+
+**What Liat sees:** 8 courses, published results in Plane Geometry and Mechanics
+(the demo seeder seats her like anybody else), every active study bot in the
+school, and the live sitting `NOW1` open to her.
+
+### Milestone 1 (historical)
+
+Milestone 1 had a single account in a throwaway `m1_skeleton_user` table —
+`teacher1` / `teacher1!T`, "Test Teacher One". Milestone 2 replaced that table
+with the real `users` table.
 
 ## A note for the report
 

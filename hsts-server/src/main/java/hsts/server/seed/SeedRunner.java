@@ -29,7 +29,7 @@ import java.util.Random;
  *
  * <p><b>Israeli ID check digits.</b> Every user ID has to pass the check-digit
  * test, because a student types hers before an exam and the system verifies it.
- * {@code 123456789} is not a valid ID. Generating them guarantees all ~53 are.</p>
+ * {@code 123456789} is not a valid ID. Generating them guarantees all 55 are.</p>
  *
  * <p><b>Dates relative to now.</b> Later milestones need an exam that is open
  * <em>at the moment of the demo</em>. Hard-coded timestamps go stale the first
@@ -234,9 +234,41 @@ public final class SeedRunner {
                 }
             }
 
+            // ---- one teacher who teaches every course, and one girl who studies
+            //      every course - so all four subjects are covered by one person ----
+            //
+            // Asked for directly, and useful beyond the asking: a "my courses" list
+            // cannot really be judged from a teacher who has one course, and the
+            // per-subject reports cannot be judged from a girl enrolled in three of
+            // the eight. With these two, every course-picker in the system has
+            // something in all four subjects to show.
+            //
+            // No rule is invented. The client story says "כל קורס מועבר ע"י מורה אחת
+            // או יותר ויש תלמידות הלומדות את הקורס" - a course has one *or more*
+            // teachers and students who study it. Neither that sentence nor
+            // requirement 13 puts any ceiling on how many courses one person may
+            // take, so a teacher of all eight is unusual, not illegal.
+            //
+            // Created last on purpose: idCounter has already numbered everybody else,
+            // so every existing user keeps the exact ID she had before these two were
+            // added, and a bug reproduced yesterday still reproduces today.
+            //
+            // The surnames are deliberately outside LAST_NAMES, so neither can collide
+            // with a name personName() hands out.
+            Teacher everyCourse = new Teacher(nextId(idCounter++), "teacher9", "Orit Nahum");
+            userDAO.insertWithPassword(everyCourse, passwordFor("teacher9", 'T'));
+
+            Student everySubject = new Student(nextId(idCounter++), "student41", "Liat Barnea");
+            userDAO.insertWithPassword(everySubject, passwordFor("student41", 'S'));
+
+            for (String[] course : COURSES) {
+                link(conn, "course_teacher", course[0], everyCourse.getUserId());
+                link(conn, "course_student", course[0], everySubject.getUserId());
+            }
+
             conn.commit();
 
-            return "Seeded " + (1 + coordinators.size() + teachers.size() + studentCount)
+            return "Seeded " + (1 + coordinators.size() + teachers.size() + studentCount + 2)
                  + " users, " + SUBJECTS.length + " subjects, " + COURSES.length + " courses.";
 
         } catch (SQLException e) {
@@ -325,7 +357,7 @@ public final class SeedRunner {
                 return name;
             }
         }
-        // 20 x 14 = 280 combinations against ~53 people, so this is unreachable -
+        // 20 x 14 = 280 combinations against ~55 people, so this is unreachable -
         // but a silent duplicate would be worse than an obvious suffix.
         return FIRST_NAMES[Math.floorMod(index, FIRST_NAMES.length)] + " #" + index;
     }

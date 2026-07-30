@@ -2163,3 +2163,130 @@ requirement forbids it, and there is no second coordinator per subject to ask.
 | Screens | 19/19 load |
 
 Run **three times back to back with no database reset**, identical each time.
+
+---
+
+## One teacher of every course, one girl who studies every course
+
+### Why
+
+Asked for directly, and it fixes something that had been quietly limiting every
+demonstration: nobody in the seeded school had more than two courses. A course
+picker with one entry proves almost nothing about the picker, and a per-subject
+report drawn from a girl enrolled in three of the eight courses shows three
+quarters of nothing. Every course picker in the system now has something in all
+four subjects to show.
+
+| Username | Password | Full name | ID | Has |
+|---|---|---|---|---|
+| `teacher9` | `teacher9!T` | Orit Nahum | `100000546` | all 8 courses, so all 4 subjects |
+| `student41` | `student41!S` | Liat Barnea | `100000553` | all 8 courses, so all 4 subjects |
+
+Both follow the documented convention in `docs/test_accounts.md`
+(`<role><number>` / `<username>!<role initial>`), so nothing new has to be
+remembered at the demo.
+
+### No rule was invented
+
+The client story says *"כל קורס מועבר ע"י מורה אחת או יותר ויש תלמידות הלומדות את
+הקורס"* — a course is taught by one **or more** teachers and has students who
+study it — and requirement 13 repeats it. Neither sentence, and nothing else in
+the requirements table, caps how many courses one person may take. A teacher of
+all eight is unusual for a real school; it is not illegal in this one.
+
+### Two decisions worth defending
+
+**Created last, after all 53 others.** `nextId` numbers people in the order they
+are created, so inserting the new teacher next to the other teachers would have
+shifted every student's ID by one. Every existing account keeps the exact ID it
+had — checked: `student1` is still `100000140`, `student40` still `100000538` —
+so a bug reproduced yesterday still reproduces today, and any note anybody made
+of an ID is still true.
+
+**Enrolled before the demo content is seeded, not after.** That means the seeder
+seats Liat like anybody else, and she comes out with real marked papers: 75, 60
+and 50 in Plane Geometry and 40 in Mechanics. A girl with results in more than
+one course is exactly what מתווה 12's "one student across her exams" report
+needs, and the alternative — enrolling her afterwards — would have given the demo
+a student in eight courses with an empty results screen.
+
+That does move one thing, and it is worth stating plainly rather than being
+found later: Plane Geometry had exactly 18 students and the mid-term seats 18, so
+it used to seat everyone. With Liat enrolled there are 19, and the alphabetically
+last girl no longer has a mid-term paper. **The marks themselves did not change.**
+A sitting is capped by how many marks the seeder has to hand out, not by how many
+girls are enrolled, and the mark each seat receives depends on the seat's position
+rather than on who is sitting in it — so the histogram, the average and every
+statistic are identical. Verified directly: still 78 marked papers, still 18 in
+the GEO1 sitting.
+
+### The answer to "can a coordinator have more than one subject?"
+
+**No — not in this system, and that is deliberate rather than accidental.**
+
+| Source | What it says |
+|---|---|
+| Requirement 12 | *"לכל קורס יש רכזת מקצוע"* — every course has a subject coordinator |
+| Requirement 19 | *"רכזת המקצוע תוכל לערוך שאלות של אותו המקצוע **שמרכזת**"* — singular |
+| Requirement 31 | *"...בחינות השייכות **למקצוע שהיא מרכזת** בלבד"* — singular |
+| Class diagram (Assignment 2, submitted) | `SubjectCoordinator -coordinatedSubject : Subject`, association **1 — 1** |
+
+No requirement says a coordinator may have two subjects, and none forbids it
+either — but every sentence that mentions her subject is singular, and the
+submitted class diagram pins the association at one to one. The database follows
+the diagram: `users.coordinated_subject` is a single `CHAR(2)` column, not a join
+table, so a second subject cannot be stored even by hand.
+
+Changing it would not be a small edit. It would need a `subject_coordinator`
+table, a `Set<String>` on the entity, `coordinates()` becoming a membership test,
+three call sites in `ExamApprovalController` and `ExamBuilderController`,
+`listMyCourses` in `QuestionController`, and a redline against the submitted class
+diagram. Worth doing only if the customer actually wants it — so it is recorded
+here as an answer, not done.
+
+### Verified
+
+A new harness, `NewUsersTest`, checks both accounts through **real logins and the
+same requests the screens send** — a row in `course_teacher` proves nothing about
+what her own client receives.
+
+| What | Result |
+|---|---|
+| Orit's course list | 8 courses, 4 subjects |
+| Questions she may edit | the whole current bank (121 with test debris, 80 clean) |
+| Exams she may release | every approved exam version in the school |
+| Liat's courses | 8, covering 4 subjects |
+| Her results | 4 published marks, in 2 courses |
+| Her study bots | one row per course of hers that has a bot; only the active ones usable |
+| The live sitting | `NOW1` accepts her, and checking the code does not use her attempt |
+| Nothing else moved | 55 users, GEO1 still 18 papers, every course still has a teacher and students, every subject still exactly one coordinator |
+
+| Suite | Result |
+|---|---|
+| M2 | **54/54** (was 48; 6 new) |
+| M3–M11, M13–M15 | unchanged, all passing |
+| **NewUsersTest** | **27/27** |
+| **Total** | **854 checks** |
+| Screens | 19/19 load |
+
+Run **three times back to back with no database reset**, identical each time, and
+`NewUsersTest` run separately against freshly reset data as well — the two states
+report different bot counts and it passes in both, because the numbers it expects
+come from the database rather than from what I remembered them being.
+
+**Three of its checks failed the first time and all three were the harness, not
+the product** — each recorded here because the reasoning behind the product's
+behaviour is the interesting part:
+
+- It compared the visible bank against every row in `question`. Editing keeps the
+  old version and deleting is a soft delete, so the table holds history the bank
+  screen must never show. Now compared against current, undeleted questions.
+- It expected the release list to hold only *current* approved exams. The list is
+  deliberately per **version** — an exam approved and later edited can still be
+  given to a class, and the screen prints `020101 · v2 · Plane Geometry` so the
+  teacher can tell them apart.
+- It expected a student to see only active bots. She is deliberately shown a
+  switched-off bot on a course that has no active one, **so that she is told it is
+  off** rather than left wondering; requirement 71 is enforced on the asking, and
+  the refusal reads *"is not switched on at the moment. Your teacher turns it on
+  and off."* The harness now proves that refusal for her directly.

@@ -446,6 +446,13 @@ course deliberately short on hard questions, ~10 questions with 2–3 versions, 
 covering every status including one edited exam, executions in every state, ~150 submissions
 with a realistic spread, 2–3 bots with ~30 stored conversations.
 
+Two accounts were added on top of that on 2026-07-30, taking the user count to 55:
+`teacher9` (Orit Nahum) teaches all eight courses and `student41` (Liat Barnea) studies all
+eight, so one login covers all four subjects. Details in
+[test_accounts.md](test_accounts.md). The brief sets no ceiling on how many courses one
+person may take — the client story says a course has "one or more" teachers — so this adds
+people, not rules.
+
 **How it will be produced.** Not as hand-written SQL. A small Java class,
 `hsts.server.seed.SeedRunner`, generates and inserts it, for two reasons that hand-written
 SQL cannot satisfy:
