@@ -423,6 +423,17 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-border-radius: 999;
 }
 
+/* The invisible frame every screen sits in, so a window smaller than the
+   screen scrolls instead of cutting the content off. It must add nothing
+   visible of its own - no border, no panel colour, no shadow. */
+.screen-frame,
+.screen-frame > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+.screen-frame { -fx-border-color: transparent; }
+
 /* ---------- misc ------------------------------------------------------ */
 .image-frame {
     -fx-border-color: -hsts-border;

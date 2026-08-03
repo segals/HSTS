@@ -221,7 +221,8 @@ public class ExecutionDAO implements IDAO<ExamExecution, Integer> {
      */
     private String baseSelect() {
         return """
-            SELECT x.execution_id, x.exam_id, x.exam_version, x.execution_code,
+            SELECT x.execution_id, x.exam_id, e.name AS exam_name,
+                   x.exam_version, x.execution_code,
                    x.open_time, x.close_time, x.allocated_duration, x.original_duration,
                    x.max_attempts, x.released_by, u.full_name AS released_by_name,
                    x.created_at, c.name AS course_name,
@@ -243,6 +244,7 @@ public class ExecutionDAO implements IDAO<ExamExecution, Integer> {
         ExamExecution x = new ExamExecution();
         x.setExecutionId(rs.getInt("execution_id"));
         x.setExamId(rs.getString("exam_id"));
+        x.setExamName(rs.getString("exam_name"));
         x.setExamVersion(rs.getInt("exam_version"));
         x.setExecutionCode(rs.getString("execution_code"));
         x.setOpenTime(rs.getTimestamp("open_time").toLocalDateTime());
@@ -267,7 +269,8 @@ public class ExecutionDAO implements IDAO<ExamExecution, Integer> {
         }
         String placeholders = String.join(",", java.util.Collections.nCopies(courseCodes.size(), "?"));
         String sql = """
-            SELECT e.exam_id, e.version, e.course_code, e.subject_code, c.name AS course_name,
+            SELECT e.exam_id, e.version, e.name AS exam_name,
+                   e.course_code, e.subject_code, c.name AS course_name,
                    e.duration_minutes, e.instructions_for_students, e.notes_for_teacher,
                    e.author_id, u.full_name AS author_name, e.status, e.rejection_reason,
                    e.approved_by, e.approved_at, e.is_current, e.created_at
@@ -288,6 +291,7 @@ public class ExecutionDAO implements IDAO<ExamExecution, Integer> {
                     Exam exam = new Exam();
                     exam.setExamId(rs.getString("exam_id"));
                     exam.setVersion(rs.getInt("version"));
+                    exam.setName(rs.getString("exam_name"));
                     exam.setCourseCode(rs.getString("course_code"));
                     exam.setSubjectCode(rs.getString("subject_code"));
                     exam.setCourseName(rs.getString("course_name"));

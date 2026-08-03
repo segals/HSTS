@@ -59,6 +59,20 @@ public class Exam implements Serializable {
     private String approvedBy;
     private LocalDateTime approvedAt;
 
+    /**
+     * What the teacher calls it: "Plane Geometry mid-term".
+     *
+     * <p>Not in the submitted documents. Requirements 22 to 26 define an exam as its
+     * questions, its 6-digit number, a duration, points, two blocks of free text and
+     * the author's name - and none of them gives it a name, so every screen showed
+     * "020101" and a reader had to remember which one that was. Asked for from the
+     * screen and added as a derived requirement; see docs/03_document_updates.md.</p>
+     *
+     * <p>The number is unchanged and still shown everywhere beside it. It is what
+     * requirement 23 fixes the format of, and what everybody types into a form.</p>
+     */
+    private String name;
+
     private boolean current = true;
 
     /** Display only: see {@link #isNewlyApproved()}. Never stored. */
@@ -84,6 +98,21 @@ public class Exam implements Serializable {
     public String getRejectionReason()           { return rejectionReason; }
     public String getApprovedBy()                { return approvedBy; }
     public LocalDateTime getApprovedAt()         { return approvedAt; }
+    public String getName()                      { return name; }
+
+    /**
+     * "Mid-term  ·  020101", for a list row.
+     *
+     * <p>In one place so every screen reads the same way round: the name first,
+     * because that is what she is looking for, and the number after it, because that
+     * is what she has to type on a form.</p>
+     */
+    public String describe() {
+        return (name == null || name.isBlank())
+                ? examId
+                : name + "  ·  " + examId;
+    }
+
     public boolean isCurrent()                   { return current; }
 
     /**
@@ -113,6 +142,7 @@ public class Exam implements Serializable {
     public void setRejectionReason(String reason)    { this.rejectionReason = reason; }
     public void setApprovedBy(String by)             { this.approvedBy = by; }
     public void setApprovedAt(LocalDateTime at)      { this.approvedAt = at; }
+    public void setName(String name)                 { this.name = name; }
     public void setCurrent(boolean current)          { this.current = current; }
     public void setCreatedAt(LocalDateTime at)       { this.createdAt = at; }
 

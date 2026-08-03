@@ -84,6 +84,7 @@ public class ExamBuilderController extends GUIScreen {
     @FXML private VBox     questionRows;
     @FXML private Button   evenPointsButton;
     @FXML private Button   removeQuestionButton;
+    @FXML private TextField examNameField;
     @FXML private Spinner<Integer> durationSpinner;
     @FXML private TextArea studentInstructions;
     @FXML private TextArea teacherNotes;
@@ -119,7 +120,7 @@ public class ExamBuilderController extends GUIScreen {
               + "\n" + q.getText());
 
         useWrappingCells(examList, e ->
-                e.getExamId() + "  ·  v" + e.getVersion() + "  ·  " + e.getStatus().getDisplayName()
+                e.describe() + "  ·  v" + e.getVersion() + "  ·  " + e.getStatus().getDisplayName()
               + "\n" + e.getQuestionCount() + (e.getQuestionCount() == 1 ? " question" : " questions")
               + "  ·  " + e.getDurationMinutes() + " min");
 
@@ -266,6 +267,13 @@ public class ExamBuilderController extends GUIScreen {
         }
         readFormIntoDraft();
 
+        if (draft.getName() == null || draft.getName().isBlank()) {
+            showError("Give the exam a name first - something a colleague would "
+                    + "recognise, like \"Plane Geometry mid-term\".");
+            examNameField.requestFocus();
+            return;
+        }
+
         int total = draft.getTotalPoints();
         if (total != Exam.REQUIRED_TOTAL_POINTS) {
             showError("The points add up to " + total + ", not "
@@ -382,6 +390,7 @@ public class ExamBuilderController extends GUIScreen {
         examVersionLabel.setText("It will be given the next free 6-digit id: "
                                + "2 digits exam, 2 course, 2 subject.");
         questionRows.getChildren().clear();
+        examNameField.clear();
         studentInstructions.clear();
         teacherNotes.clear();
         durationSpinner.getValueFactory().setValue(60);
@@ -403,6 +412,7 @@ public class ExamBuilderController extends GUIScreen {
             examVersionLabel.setText("Adjust the points and duration, then Save.");
         }
 
+        examNameField.setText(exam.getName() == null ? "" : exam.getName());
         studentInstructions.setText(exam.getInstructionsForStudents() == null
                 ? "" : exam.getInstructionsForStudents());
         teacherNotes.setText(exam.getNotesForTeacher() == null
@@ -486,6 +496,9 @@ public class ExamBuilderController extends GUIScreen {
     }
 
     private void readFormIntoDraft() {
+        // Compulsory. The server refuses a blank one too - this only saves her a
+        // round trip and puts the cursor where the problem is.
+        draft.setName(examNameField.getText() == null ? "" : examNameField.getText().trim());
         draft.setDurationMinutes(durationSpinner.getValue());
         draft.setInstructionsForStudents(blankToNull(studentInstructions.getText()));
         draft.setNotesForTeacher(blankToNull(teacherNotes.getText()));

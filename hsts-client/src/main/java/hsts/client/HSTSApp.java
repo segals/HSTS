@@ -48,9 +48,47 @@ public class HSTSApp extends Application {
         if (url == null) {
             throw new IOException("FXML not found on the classpath: " + fxmlPath);
         }
-        Scene scene = new Scene(new FXMLLoader(url).load());
+        Scene scene = new Scene(scrollable(new FXMLLoader(url).load()));
         applyStylesheet(scene);
         return scene;
+    }
+
+    /**
+     * Wraps a screen so it can never be cut off by a window that is too small.
+     *
+     * <h2>Why</h2>
+     *
+     * <p>The screens ask for the width they need - the marking screen wants three
+     * columns and 1280 points. Make the window narrower than that, by dragging it or
+     * because the display is smaller, and JavaFX squeezes the columns down to their
+     * minimum and then simply <b>clips</b> whatever still does not fit. Reported from
+     * the screen: the third card of the release form was sliced down its middle by
+     * the window edge.</p>
+     *
+     * <p>Inside a scroll pane the same window shows a scroll bar instead. Nothing is
+     * lost - it is reachable, which is the whole difference between "small" and
+     * "broken".</p>
+     *
+     * <h2>Why here and not in seventeen FXML files</h2>
+     *
+     * <p>Every screen goes through this method. Doing it in each file would mean
+     * seventeen chances to forget, and the eighteenth screen would be the one that
+     * arrives clipped at the demo.</p>
+     *
+     * <p>{@code fitToWidth} and {@code fitToHeight} make the content fill the window
+     * whenever the window is the bigger of the two, so a screen with room to spare
+     * still stretches exactly as it did before. The scroll bars appear only when they
+     * are the only way to see everything.</p>
+     */
+    private static javafx.scene.Parent scrollable(javafx.scene.Parent screen) {
+        javafx.scene.control.ScrollPane frame = new javafx.scene.control.ScrollPane(screen);
+        frame.setFitToWidth(true);
+        frame.setFitToHeight(true);
+        frame.setPannable(false);
+        // No border and no background of its own: this is a container, not a panel,
+        // and it must not draw a line around every screen in the system.
+        frame.getStyleClass().add("screen-frame");
+        return frame;
     }
 
     /**

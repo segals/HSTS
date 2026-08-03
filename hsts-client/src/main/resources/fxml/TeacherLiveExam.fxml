@@ -77,9 +77,9 @@
                 beyond it needs her approval, and this is where she gives it.
             -->
             <HBox spacing="8" alignment="CENTER_LEFT">
-                <Button fx:id="grantAttemptButton" text="Allow another attempt..."
+                <Button fx:id="grantAttemptButton" text="Allow another attempt..." minWidth="-Infinity"
                         onAction="#onGrantAttempt"/>
-                <Button fx:id="grantAllButton" text="Allow one for everyone..."
+                <Button fx:id="grantAllButton" text="Allow one for everyone..." minWidth="-Infinity"
                         onAction="#onGrantAttemptToAll"/>
                 <Label text="One student, or the whole room after a power cut."
                        styleClass="caption" wrapText="true"

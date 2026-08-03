@@ -312,7 +312,7 @@ public class GradeDAO implements IDAO<Grade, Integer> {
                    g.approved_at, g.manual_change_explanation, g.teacher_general_comment,
                    g.graded_by, s.student_id, u.full_name AS student_name,
                    s.actual_duration, s.execution_id, s.status AS submission_status,
-                   x.exam_id, c.name AS course_name,
+                   x.exam_id, e.name AS exam_name, c.name AS course_name,
                    (g.submission_id IS NOT NULL) AS is_marked
             FROM student_exam s
             LEFT JOIN grade g      ON g.submission_id = s.submission_id
@@ -524,7 +524,7 @@ public class GradeDAO implements IDAO<Grade, Integer> {
                    g.approved_at, g.manual_change_explanation, g.teacher_general_comment,
                    g.graded_by, s.student_id, u.full_name AS student_name,
                    s.actual_duration, s.execution_id, s.status AS submission_status,
-                   x.exam_id, c.name AS course_name
+                   x.exam_id, e.name AS exam_name, c.name AS course_name
             FROM grade g
             JOIN student_exam s    ON s.submission_id = g.submission_id
             JOIN users u           ON u.user_id       = s.student_id
@@ -552,6 +552,7 @@ public class GradeDAO implements IDAO<Grade, Integer> {
         g.setExecutionId(rs.getInt("execution_id"));
         g.setSubmissionStatus(rs.getString("submission_status"));
         g.setExamId(rs.getString("exam_id"));
+        g.setExamName(rs.getString("exam_name"));
         g.setCourseName(rs.getString("course_name"));
         return g;
     }

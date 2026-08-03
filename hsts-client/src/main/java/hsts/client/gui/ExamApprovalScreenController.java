@@ -61,7 +61,7 @@ public class ExamApprovalScreenController extends GUIScreen {
                             + "A rejection needs a reason - it is sent to the teacher.");
 
         useWrappingCells(pendingList, e ->
-                e.getExamId() + "  ·  v" + e.getVersion() + "  ·  " + e.getCourseName()
+                e.describe() + "  ·  v" + e.getVersion() + "  ·  " + e.getCourseName()
               + "\n" + e.getAuthorName()
               + "  ·  " + plural(e.getQuestionCount(), "question")
               + "  ·  " + e.getDurationMinutes() + " min");

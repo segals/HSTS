@@ -62,6 +62,21 @@ she writes an exam.
 (the demo seeder seats her like anybody else), every active study bot in the
 school, and the live sitting `NOW1` open to her.
 
+### The coordinator who teaches nothing
+
+`coordinator3` (Tamar Barak, Literature) coordinates a subject but **teaches no
+courses at all**. She is in the data on purpose: nothing in the documents says a
+coordinator must teach, and the system behaves differently for her - releasing an
+exam is done by the teacher *of the course*, so "Release an exam" is not on her
+menu. The other three coordinators do teach a class each.
+
+| Username | Password | Name | Subject | Teaches |
+|---|---|---|---|---|
+| `coordinator1` | `coordinator1!C` | Noa Katz | Mathematics | Algebra (02) |
+| `coordinator2` | `coordinator2!C` | Maya Shapira | Physics | Electricity (04) |
+| `coordinator3` | `coordinator3!C` | Tamar Barak | Literature | **nothing** |
+| `coordinator4` | `coordinator4!C` | Yael Golan | Biology | Human Anatomy (08) |
+
 ### Milestone 1 (historical)
 
 Milestone 1 had a single account in a throwaway `m1_skeleton_user` table —

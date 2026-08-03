@@ -23,6 +23,7 @@
 <?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.ColumnConstraints?>
@@ -119,6 +120,16 @@
             <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
                 <VBox spacing="12">
                     <padding><Insets top="12" right="10" bottom="12" left="0"/></padding>
+
+                    <!-- First, because it is the first thing she should decide and
+                         the exam cannot be saved without it. -->
+                    <VBox spacing="5">
+                        <Label text="EXAM NAME  ·  REQUIRED" styleClass="section-title" wrapText="true"/>
+                        <TextField fx:id="examNameField"
+                                   promptText="e.g. Plane Geometry mid-term"/>
+                        <Label text="What a colleague would call it. The 6-digit number is given by the system and stays beside it everywhere."
+                               styleClass="caption" wrapText="true"/>
+                    </VBox>
 
                     <HBox spacing="10" alignment="CENTER_LEFT">
                         <Label text="QUESTIONS AND POINTS" styleClass="section-title" wrapText="true"/>

@@ -56,6 +56,9 @@ public class ExamExecution implements Serializable {
     private LocalDateTime createdAt;
 
     // ---- filled in for display; not columns of this table ----
+    /** The exam's name, so a sitting can be named rather than numbered. */
+    private String examName;
+
     private String courseName;
     private String examTitle;
 
@@ -84,6 +87,14 @@ public class ExamExecution implements Serializable {
     public String getReleasedBy()           { return releasedBy; }
     public String getReleasedByName()       { return releasedByName; }
     public LocalDateTime getCreatedAt()     { return createdAt; }
+    public String getExamName()             { return examName; }
+
+    /** "Mid-term  ·  010101", the same way round as everywhere else. */
+    public String describeExam() {
+        return (examName == null || examName.isBlank())
+                ? examId : examName + "  ·  " + examId;
+    }
+
     public String getCourseName()           { return courseName; }
     public String getExamTitle()            { return examTitle; }
     public int getNumStarted()              { return numStarted; }
@@ -102,6 +113,7 @@ public class ExamExecution implements Serializable {
     public void setReleasedBy(String userId)         { this.releasedBy = userId; }
     public void setReleasedByName(String name)       { this.releasedByName = name; }
     public void setCreatedAt(LocalDateTime t)        { this.createdAt = t; }
+    public void setExamName(String name)             { this.examName = name; }
     public void setCourseName(String name)           { this.courseName = name; }
     public void setExamTitle(String title)           { this.examTitle = title; }
     public void setNumStarted(int n)                 { this.numStarted = n; }

@@ -2812,3 +2812,134 @@ One practical note for anyone running the suites: three full passes take Plane
 Geometry from 9 exams to the documented ceiling of 99, because most suites build
 their exams there. `SeedRunner.resetAndSeed` puts it back; `buildExam` says so in as
 many words rather than failing obscurely.
+
+---
+
+## Exams have names, a coordinator who teaches nothing, and no window that cuts
+
+### 1. Every exam has a name, and it is compulsory
+
+Requirements 22 to 26 define an exam as its questions, its 6-digit number, a
+duration, points per question, two blocks of free text and the author's name.
+**None of them gives it a name**, so every screen in the system showed "020101"
+and the reader had to remember which one that was.
+
+Asked for from the screen, and added as a derived requirement - see
+[docs/03_document_updates.md §11](docs/03_document_updates.md). The shape is not
+new to the documents: requirement 66 already has a teacher naming her study bot
+when she creates it.
+
+**Compulsory, at the customer's request.** A name that may be left blank is a name
+half the exams will not have, and a list that is half names and half numbers is
+worse than a list of numbers. The server refuses a blank one, a whitespace-only
+one, and one too long to fit a list row; the screen refuses it first and puts the
+cursor in the box, which saves a round trip but is not the check that counts.
+
+**The number is untouched.** Requirement 23 fixes its format and it is still
+generated, still unique, still shown - now beside the name rather than alone.
+`Exam.describe()` puts them in one order, everywhere: *"Plane Geometry mid-term ·
+010101"*. The name first because that is what she is looking for; the number after
+it because that is what she types on a form.
+
+It reaches every screen that names an exam, which meant carrying it on two more
+entities: a **sitting** and a **mark** each know their exam's name now, so the
+marking screen, the student's results, the release list and the principal's
+browser all read the same way. The principal's search matches on the name too.
+
+The demo exams are named as a teacher would name them:
+
+```
+010101  Plane Geometry mid-term            040101  Plane Geometry practice paper
+020101  Plane Geometry end of year         050101  Angles and quadrilaterals test
+030101  Circles and triangles quiz         010201  Algebra class test
+010302  Mechanics class test               010704  Genetics class test
+020201  Algebra revision test  (rejected)
+```
+
+Exams written before the column existed are not left blank - the migration builds
+them a name from what they do have, the course and the number, because a list of
+empty names looks like data loss and this is at least true.
+
+### 2. A coordinator who teaches nothing
+
+`coordinator3` (Tamar Barak, Literature) now teaches no courses at all.
+
+Nothing in the documents says a coordinator must teach: the client story lists a
+course's teachers and its coordinator as two separate facts. The system already
+behaves differently for her - releasing is done by the teacher **of the course**,
+so she has nothing she could ever release and that entry is not on her menu. A
+rule with no example of it in the data is a rule nobody can check, and now there
+is one to log in as.
+
+Course 06 keeps its teachers: `teacher6` and `teacher9` both take it, so
+requirement 13 still holds.
+
+### 3. No window cuts anything, at any size
+
+Reported with a screenshot: the third card of the release form sliced down its
+middle by the window edge.
+
+Clamping the window to the display (done a fortnight ago) stopped windows growing
+off the screen, but it did not stop the opposite: make a window narrower than the
+content's minimum - by dragging it, or on a smaller display - and JavaFX squeezes
+the columns to their minimum and then simply **clips** the rest.
+
+Every screen is now loaded inside a scroll frame, in `HSTSApp.loadScene` - the one
+method every screen goes through, rather than in seventeen FXML files with
+seventeen chances to forget. The frame draws nothing of its own; it fills the
+window when the window is bigger, and shows a scroll bar when it is not. Nothing
+is lost, which is the whole difference between "small" and "broken".
+
+`TruncationTest` was tightened to match: it now loads each screen through the same
+method the real client uses, at **four** sizes - preferred, 1280×720, the 960×1030
+shape of the reported screenshot, and 700×500 - and additionally fails if a screen
+is squeezed below its own minimum or is not inside the frame at all.
+
+That found four more screens with genuinely cut text at small sizes, all now
+fixed: *Back to menu* and *Discard changes* on the question bank, both
+*Allow another attempt…* buttons on the live screen, *Add this text* on the bot
+screen, and six report table columns narrower than their own headings.
+
+### The answer to "can a coordinator who does not teach mark grades?"
+
+**No, and she should not be able to.**
+
+| Source | Who marks |
+|---|---|
+| Use case table, **SUC-9**, primary actor | **מורה** |
+| SUC-9 body | *"**המורה** רואה רשימת בחינות שבוצעו וממתינות **לאישורה**... ולאשר את הציון"* |
+| Use case table, **SUC-10** | names the coordinator - to **view**: *"רכזת המקצוע צופה בציונים של המקצוע שהיא מרכזת"* |
+
+The pattern is the one that runs through the whole table: where a coordinator has
+a power it is granted explicitly and scoped to her **subject**. For grades that
+power is *viewing*, not marking.
+
+The system agrees without needing a rule about coordinators: marking is scoped to
+the sittings a teacher **released**, and somebody who teaches nothing cannot
+release anything, so her marking screen is empty. Verified: `coordinator3` has
+nothing to release and nothing to mark.
+
+**The entry is deliberately still on her menu**, unlike "Release an exam". They are
+different: releasing needs a course she teaches *now*, while marking is about
+sittings she released *at any time* - a coordinator who taught last year still has
+last year's papers to finish, and hiding the screen would strand them.
+
+**One real gap, worth a line in the report.** SUC-10 says a coordinator may view
+the grades of her subject. The system gives her only what she gets as a teacher -
+her own courses' results. There is no subject-wide grade view for a coordinator.
+Nothing else depends on it and no test asserts it; it is simply not built. Say the
+word and it is a small addition.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| **M4** | **53/53** (was 43; the name rules - blank, spaces, too long, trimmed, and it comes back named) |
+| **NewUsersTest** | **35/35** (was 27; the coordinator who teaches nothing, and every demo exam named) |
+| **TruncationTest** | **17 screens, 0 cut** - now at four sizes, through the real loader |
+| M2–M15, ClosingTimeTest, BadgeTest, StreamRaceTest | unchanged, all passing |
+| **Total** | **1017 checks** |
+| Screens | 19/19 load, 37/37 menu-badge checks |
+
+Run **three times**, with a reset between passes because the suites exhaust Plane
+Geometry's 99 exam numbers in about two and a half.

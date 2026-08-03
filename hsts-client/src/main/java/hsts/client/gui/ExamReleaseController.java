@@ -88,13 +88,13 @@ public class ExamReleaseController extends GUIScreen {
         // The dot marks an exam of HERS approved since she last opened this screen.
         // The badge on the menu counts the same exams; this says which they are.
         useWrappingCells(approvedList, e ->
-                e.getExamId() + "  ·  v" + e.getVersion() + "  ·  " + e.getCourseName()
+                e.describe() + "  ·  v" + e.getVersion() + "  ·  " + e.getCourseName()
               + "\nby " + e.getAuthorName() + "  ·  " + e.getDurationMinutes() + " min"
               + (e.isNewlyApproved() ? "\nApproved since you last looked." : ""),
                 Exam::isNewlyApproved);
 
         useWrappingCells(executionList, x ->
-                "Code " + x.getExecutionCode() + "  ·  exam " + x.getExamId()
+                "Code " + x.getExecutionCode() + "  ·  " + x.describeExam()
                         + " v" + x.getExamVersion()
               + "\n" + x.getOpenTime().format(WHEN) + "  →  " + x.getCloseTime().format(WHEN)
               + "\n" + x.getAllocatedDuration() + " min  ·  "

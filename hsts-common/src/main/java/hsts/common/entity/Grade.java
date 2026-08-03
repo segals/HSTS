@@ -47,6 +47,7 @@ public class Grade implements Serializable {
     private String studentId;
     private String studentName;
     private String examId;
+    private String examName;
     private String courseName;
     private Integer actualDuration;
     private int executionId;
@@ -83,6 +84,14 @@ public class Grade implements Serializable {
     public String getStudentId()               { return studentId; }
     public String getStudentName()             { return studentName; }
     public String getExamId()                  { return examId; }
+    public String getExamName()                { return examName; }
+
+    /** "Mid-term  ·  010101". */
+    public String describeExam() {
+        return (examName == null || examName.isBlank())
+                ? examId : examName + "  ·  " + examId;
+    }
+
     public String getCourseName()              { return courseName; }
     public Integer getActualDuration()         { return actualDuration; }
     public int getExecutionId()                { return executionId; }
@@ -102,6 +111,7 @@ public class Grade implements Serializable {
     public void setStudentId(String id)                 { this.studentId = id; }
     public void setStudentName(String name)             { this.studentName = name; }
     public void setExamId(String examId)                { this.examId = examId; }
+    public void setExamName(String n)            { this.examName = n; }
     public void setCourseName(String name)              { this.courseName = name; }
     public void setActualDuration(Integer minutes)      { this.actualDuration = minutes; }
     public void setExecutionId(int id)                  { this.executionId = id; }

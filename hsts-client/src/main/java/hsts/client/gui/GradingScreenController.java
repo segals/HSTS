@@ -116,7 +116,7 @@ public class GradingScreenController extends GUIScreen {
         // students. So several rows sharing one exam number is normal, and the code
         // is what tells them apart. It leads.
         useWrappingCells(sittingList, x ->
-                "Code " + x.getExecutionCode() + "  ·  exam " + x.getExamId()
+                "Code " + x.getExecutionCode() + "  ·  " + x.describeExam()
               + "\n" + x.getCourseName()
               + "\n" + describeSitting(x));
 
@@ -350,6 +350,13 @@ public class GradingScreenController extends GUIScreen {
                 stats.getAverage(), stats.getMedian(), stats.getGradeCount()));
     }
 
+    /** "Mid-term  ·  010101" when the name is known, the number alone otherwise. */
+    private String describeExamOf(Grade grade, String examId) {
+        return (grade != null && grade.getExamName() != null && !grade.getExamName().isBlank())
+                ? grade.getExamName() + "  ·  " + examId
+                : "Exam " + examId;
+    }
+
     private void showNoPaper() {
         openPaper = null;
         paperTitleLabel.setText("No paper open");
@@ -369,7 +376,7 @@ public class GradingScreenController extends GUIScreen {
 
         paperTitleLabel.setText(attempt.getStudentName());
         markLabel.setText(String.valueOf(grade.getFinalGrade()));
-        paperMetaLabel.setText("Exam " + attempt.getExamId()
+        paperMetaLabel.setText(describeExamOf(grade, attempt.getExamId())
                 + "   ·   " + attempt.getStatus().getDisplayName()
                 + (attempt.getActualDuration() == null ? ""
                    : "   ·   took " + attempt.getActualDuration() + " min")

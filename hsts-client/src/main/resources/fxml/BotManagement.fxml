@@ -124,7 +124,7 @@
                             <TextArea fx:id="textArea" prefRowCount="5" wrapText="true"
                                       promptText="Notes, a summary, key formulas - anything the bot should know"/>
                             <HBox spacing="8" alignment="CENTER_LEFT">
-                                <Button fx:id="addTextButton" text="Add this text"
+                                <Button fx:id="addTextButton" text="Add this text" minWidth="-Infinity"
                                         onAction="#onAddText"/>
                                 <Label fx:id="uploadNoteLabel" styleClass="caption"
                                        wrapText="true" HBox.hgrow="ALWAYS"

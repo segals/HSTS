@@ -203,7 +203,8 @@ public final class DemoContentSeeder {
             int exams = 0, sittings = 0, papers = 0;
 
             // ---- Plane Geometry: the exam Noa wrote and Noa ran ----
-            String midterm = createExam("01", "01", staff.get("teacher1"), 90,
+            String midterm = createExam("01", "01", "Plane Geometry mid-term",
+                    staff.get("teacher1"), 90,
                     "Answer all twenty questions. Each is worth 5 points.",
                     "Question 17 (the chord) has caught people out before - watch for it.",
                     bankByCourse.get("01").subList(0, 20), 5, staff.get("coordinator1"));
@@ -215,7 +216,8 @@ public final class DemoContentSeeder {
                     MIDTERM_CORRECT, 20, now.minusDays(21), staff.get("teacher1"), true);
 
             // ---- the same author, a DIFFERENT teacher running it (requirement 59) ----
-            String endOfYear = createExam("01", "01", staff.get("teacher1"), 90,
+            String endOfYear = createExam("01", "01", "Plane Geometry end of year",
+                    staff.get("teacher1"), 90,
                     "Answer all twenty questions. Each is worth 5 points.",
                     null,
                     bankByCourse.get("01").subList(4, 24), 5, staff.get("coordinator1"));
@@ -227,7 +229,8 @@ public final class DemoContentSeeder {
                     ENDOFYEAR_CORRECT, 20, now.minusDays(7), staff.get("teacher2"), true);
 
             // ---- an exam Maya wrote herself, so the two reports differ ----
-            String quiz = createExam("01", "01", staff.get("teacher2"), 45,
+            String quiz = createExam("01", "01", "Circles and triangles quiz",
+                    staff.get("teacher2"), 45,
                     "Ten questions, 10 points each.", null,
                     bankByCourse.get("01").subList(6, 16), 10, staff.get("coordinator1"));
             exams++;
@@ -239,14 +242,14 @@ public final class DemoContentSeeder {
 
             // ---- one exam per other subject, so the principal has breadth ----
             String[][] others = {
-                {"02", "01", "coordinator1", "coordinator1"},
-                {"03", "02", "teacher3",     "coordinator2"},
-                {"07", "04", "teacher7",     "coordinator4"},
+                {"02", "01", "coordinator1", "coordinator1", "Algebra class test"},
+                {"03", "02", "teacher3",     "coordinator2", "Mechanics class test"},
+                {"07", "04", "teacher7",     "coordinator4", "Genetics class test"},
             };
             int codeSuffix = 1;
             for (String[] row : others) {
                 String course = row[0], subject = row[1];
-                String examId = createExam(course, subject, staff.get(row[2]), 40,
+                String examId = createExam(course, subject, row[4], staff.get(row[2]), 40,
                         "Five questions, 20 points each.", null,
                         bankByCourse.get(course).subList(0, 5), 20, staff.get(row[3]));
                 exams++;
@@ -258,7 +261,8 @@ public final class DemoContentSeeder {
             }
 
             // ---- a sitting that is OPEN RIGHT NOW, for the take-exam demo ----
-            String live = createExam("01", "01", staff.get("teacher1"), 60,
+            String live = createExam("01", "01", "Plane Geometry practice paper",
+                    staff.get("teacher1"), 60,
                     "Answer all ten questions. Each is worth 10 points.",
                     "This is the sitting used for the live demonstration.",
                     bankByCourse.get("01").subList(10, 20), 10, staff.get("coordinator1"));
@@ -268,9 +272,11 @@ public final class DemoContentSeeder {
             sittings++;
 
             // ---- one waiting for approval, one rejected, so that screen is not empty ----
-            createPending("01", "01", staff.get("teacher2"), 60,
+            createPending("01", "01", "Angles and quadrilaterals test",
+                    staff.get("teacher2"), 60,
                     bankByCourse.get("01").subList(2, 12), 10);
-            createRejected("02", "01", staff.get("teacher2"), 60,
+            createRejected("02", "01", "Algebra revision test",
+                    staff.get("teacher2"), 60,
                     bankByCourse.get("02").subList(0, 5), 20, staff.get("coordinator1"),
                     "Three of these questions were on last term's paper. Please replace them.");
             exams += 2;
@@ -587,7 +593,7 @@ public final class DemoContentSeeder {
         return String.format("%02d%s%s", next, course, subject);
     }
 
-    private static String writeExam(String course, String subject, String author,
+    private static String writeExam(String course, String subject, String name, String author,
                                     int minutes, String forStudents, String forTeacher,
                                     List<String> questionIds, int points,
                                     String status, String approvedBy, String rejection)
@@ -595,25 +601,27 @@ public final class DemoContentSeeder {
 
         String examId = nextExamId(course, subject);
         String sql = """
-            INSERT INTO exam (exam_id, version, course_code, subject_code, duration_minutes,
+            INSERT INTO exam (exam_id, version, name, course_code, subject_code,
+                              duration_minutes,
                               instructions_for_students, notes_for_teacher, author_id, status,
                               rejection_reason, approved_by, approved_at, is_current, created_at)
-            VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)""";
+            VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)""";
         try (PreparedStatement ps = conn().prepareStatement(sql)) {
             LocalDateTime created = LocalDateTime.now().minusDays(30);
             ps.setString(1, examId);
-            ps.setString(2, course);
-            ps.setString(3, subject);
-            ps.setInt(4, minutes);
-            ps.setString(5, forStudents);
-            ps.setString(6, forTeacher);
-            ps.setString(7, author);
-            ps.setString(8, status);
-            ps.setString(9, rejection);
-            ps.setString(10, approvedBy);
-            ps.setTimestamp(11, approvedBy == null ? null
+            ps.setString(2, name);
+            ps.setString(3, course);
+            ps.setString(4, subject);
+            ps.setInt(5, minutes);
+            ps.setString(6, forStudents);
+            ps.setString(7, forTeacher);
+            ps.setString(8, author);
+            ps.setString(9, status);
+            ps.setString(10, rejection);
+            ps.setString(11, approvedBy);
+            ps.setTimestamp(12, approvedBy == null ? null
                     : Timestamp.valueOf(created.plusDays(1)));
-            ps.setTimestamp(12, Timestamp.valueOf(created));
+            ps.setTimestamp(13, Timestamp.valueOf(created));
             ps.executeUpdate();
         }
 
@@ -633,25 +641,26 @@ public final class DemoContentSeeder {
         return examId;
     }
 
-    private static String createExam(String course, String subject, String author, int minutes,
-                                     String forStudents, String forTeacher,
+    private static String createExam(String course, String subject, String name, String author,
+                                     int minutes, String forStudents, String forTeacher,
                                      List<String> questionIds, int points, String coordinator)
             throws SQLException {
-        return writeExam(course, subject, author, minutes, forStudents, forTeacher,
+        return writeExam(course, subject, name, author, minutes, forStudents, forTeacher,
                 questionIds, points, "APPROVED", coordinator, null);
     }
 
-    private static void createPending(String course, String subject, String author, int minutes,
-                                      List<String> questionIds, int points) throws SQLException {
-        writeExam(course, subject, author, minutes,
+    private static void createPending(String course, String subject, String name, String author,
+                                      int minutes, List<String> questionIds, int points)
+            throws SQLException {
+        writeExam(course, subject, name, author, minutes,
                 "Answer all questions.", null, questionIds, points,
                 "PENDING_APPROVAL", null, null);
     }
 
-    private static void createRejected(String course, String subject, String author, int minutes,
-                                       List<String> questionIds, int points, String coordinator,
-                                       String why) throws SQLException {
-        writeExam(course, subject, author, minutes,
+    private static void createRejected(String course, String subject, String name, String author,
+                                       int minutes, List<String> questionIds, int points,
+                                       String coordinator, String why) throws SQLException {
+        writeExam(course, subject, name, author, minutes,
                 "Answer all questions.", null, questionIds, points,
                 "REJECTED", coordinator, why);
     }

@@ -56,7 +56,8 @@
         <Label text="Course" styleClass="field-label" wrapText="true"/>
         <ComboBox fx:id="courseCombo" prefWidth="260"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>
+        <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"
+                minWidth="-Infinity"/>
     </HBox>
 
     <!-- ===================== body ===================== -->
@@ -185,7 +186,7 @@
                 <HBox spacing="10" alignment="CENTER_LEFT">
                     <Button fx:id="saveButton" text="Save" onAction="#onSave"
                             styleClass="primary" defaultButton="true" prefWidth="150"/>
-                    <Button fx:id="cancelButton" text="Discard changes" onAction="#onNew"
+                    <Button fx:id="cancelButton" text="Discard changes" onAction="#onNew" minWidth="-Infinity"
                             styleClass="quiet"/>
                     <Region HBox.hgrow="ALWAYS"/>
                 </HBox>

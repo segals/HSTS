@@ -60,7 +60,7 @@ public class StudentResultsController extends GUIScreen {
         subtitleLabel.setText("Your own results. This list updates by itself when a mark is approved.");
 
         useWrappingCells(resultList, g ->
-                "Exam " + g.getExamId() + "  ·  " + g.getCourseName()
+                g.describeExam() + "  ·  " + g.getCourseName()
               + "\n" + (g.isApproved()
                     ? "Mark: " + g.getFinalGrade()
                     : "Waiting for your teacher to approve it"));
@@ -98,7 +98,7 @@ public class StudentResultsController extends GUIScreen {
     private void open(Grade grade) {
         if (!grade.isApproved()) {
             showNothing();
-            examTitleLabel.setText("Exam " + grade.getExamId());
+            examTitleLabel.setText(grade.describeExam());
             examMetaLabel.setText(grade.getCourseName());
             showMessage("Your teacher has not approved this exam yet. "
                       + "The mark will appear here once she has.");

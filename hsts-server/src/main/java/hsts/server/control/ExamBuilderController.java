@@ -147,6 +147,7 @@ public class ExamBuilderController {
             if (course == null) {
                 return Response.error("No course with code " + exam.getCourseCode() + ".");
             }
+            exam.setName(exam.getName().trim());
             exam.setSubjectCode(course.getSubjectCode());
             exam.setAuthorId(user.getUserId());
             exam.setExamId(examDAO.generateNextExamId(course.getCourseCode(),
@@ -155,8 +156,8 @@ public class ExamBuilderController {
             examDAO.insert(exam);
 
             return Response.ok(exam,
-                    "Exam " + exam.getExamId() + " saved and sent to the subject "
-                  + "coordinator for approval.");
+                    "\"" + exam.getName() + "\" saved as exam " + exam.getExamId()
+                  + " and sent to the subject coordinator for approval.");
         } catch (SQLException e) {
             return Response.error("Could not save the exam: " + e.getMessage());
         }
@@ -190,6 +191,9 @@ public class ExamBuilderController {
             edited.setCourseCode(existing.getCourseCode());
             edited.setSubjectCode(existing.getSubjectCode());
             edited.setAuthorId(user.getUserId());
+            if (edited.getName() != null) {
+                edited.setName(edited.getName().trim());
+            }
 
             String invalid = validate(edited);
             if (invalid != null) {
@@ -271,7 +275,21 @@ public class ExamBuilderController {
      * a gap found while reading the documents in phase 0. It is enforced here
      * because the מתווה is the acceptance bar.</p>
      */
+    /** The longest name that still fits a list row without pushing the number off it. */
+    private static final int MAX_NAME_LENGTH = 120;
+
     private String validate(Exam exam) {
+        // Compulsory, at the customer's request. The 6-digit number is unique and
+        // never changes, but nobody remembers which exam "020101" is - and a name
+        // that may be left blank is a name half the exams will not have.
+        if (exam.getName() == null || exam.getName().isBlank()) {
+            return "Give the exam a name. Something a colleague would recognise, "
+                 + "like \"Plane Geometry mid-term\".";
+        }
+        if (exam.getName().trim().length() > MAX_NAME_LENGTH) {
+            return "That name is too long. Keep it under " + MAX_NAME_LENGTH
+                 + " characters so it fits on a list.";
+        }
         if (exam.getQuestions() == null || exam.getQuestions().isEmpty()) {
             // Acceptance test 1.4.
             return "An exam must contain at least one question.";

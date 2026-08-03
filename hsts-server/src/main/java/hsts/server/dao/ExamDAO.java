@@ -141,27 +141,29 @@ public class ExamDAO implements IDAO<Exam, String> {
 
     private void insertRow(Exam exam) throws SQLException {
         String sql = """
-            INSERT INTO exam (exam_id, version, course_code, subject_code, duration_minutes,
+            INSERT INTO exam (exam_id, version, name, course_code, subject_code,
+                              duration_minutes,
                               instructions_for_students, notes_for_teacher, author_id,
                               status, rejection_reason, approved_by, approved_at,
                               is_current, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""";
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""";
         try (PreparedStatement ps = conn().prepareStatement(sql)) {
             ps.setString(1, exam.getExamId());
             ps.setInt(2, exam.getVersion());
-            ps.setString(3, exam.getCourseCode());
-            ps.setString(4, exam.getSubjectCode());
-            ps.setInt(5, exam.getDurationMinutes());
-            ps.setString(6, exam.getInstructionsForStudents());
-            ps.setString(7, exam.getNotesForTeacher());
-            ps.setString(8, exam.getAuthorId());
-            ps.setString(9, exam.getStatus().name());
-            ps.setString(10, exam.getRejectionReason());
-            ps.setString(11, exam.getApprovedBy());
-            ps.setTimestamp(12, exam.getApprovedAt() == null
+            ps.setString(3, exam.getName() == null ? "" : exam.getName());
+            ps.setString(4, exam.getCourseCode());
+            ps.setString(5, exam.getSubjectCode());
+            ps.setInt(6, exam.getDurationMinutes());
+            ps.setString(7, exam.getInstructionsForStudents());
+            ps.setString(8, exam.getNotesForTeacher());
+            ps.setString(9, exam.getAuthorId());
+            ps.setString(10, exam.getStatus().name());
+            ps.setString(11, exam.getRejectionReason());
+            ps.setString(12, exam.getApprovedBy());
+            ps.setTimestamp(13, exam.getApprovedAt() == null
                     ? null : Timestamp.valueOf(exam.getApprovedAt()));
-            ps.setBoolean(13, exam.isCurrent());
-            ps.setTimestamp(14, Timestamp.valueOf(exam.getCreatedAt()));
+            ps.setBoolean(14, exam.isCurrent());
+            ps.setTimestamp(15, Timestamp.valueOf(exam.getCreatedAt()));
             ps.executeUpdate();
         }
     }
@@ -314,7 +316,8 @@ public class ExamDAO implements IDAO<Exam, String> {
 
     private String baseSelect() {
         return """
-            SELECT e.exam_id, e.version, e.course_code, e.subject_code, c.name AS course_name,
+            SELECT e.exam_id, e.version, e.name AS exam_name,
+                   e.course_code, e.subject_code, c.name AS course_name,
                    e.duration_minutes, e.instructions_for_students, e.notes_for_teacher,
                    e.author_id, u.full_name AS author_name, e.status, e.rejection_reason,
                    e.approved_by, e.approved_at, e.is_current, e.created_at
@@ -369,6 +372,7 @@ public class ExamDAO implements IDAO<Exam, String> {
         exam.setSubjectCode(rs.getString("subject_code"));
         exam.setCourseName(rs.getString("course_name"));
         exam.setDurationMinutes(rs.getInt("duration_minutes"));
+        exam.setName(rs.getString("exam_name"));
         exam.setInstructionsForStudents(rs.getString("instructions_for_students"));
         exam.setNotesForTeacher(rs.getString("notes_for_teacher"));
         exam.setAuthorId(rs.getString("author_id"));

@@ -209,11 +209,20 @@ public final class SeedRunner {
             link(conn, "course_teacher", "07", teachers.get(7).getUserId());
             link(conn, "course_teacher", "08", teachers.get(7).getUserId());
 
-            // Coordinators teach too - they are teachers with an extra duty.
+            // Most coordinators teach too - they are teachers with an extra duty.
             link(conn, "course_teacher", "02", coordinators.get(0).getUserId());
             link(conn, "course_teacher", "04", coordinators.get(1).getUserId());
-            link(conn, "course_teacher", "06", coordinators.get(2).getUserId());
             link(conn, "course_teacher", "08", coordinators.get(3).getUserId());
+
+            // ...but coordinator3 deliberately teaches NOTHING. Nothing in the
+            // documents says a coordinator must teach - the client story says a
+            // course has teachers AND has a coordinator, as two separate facts - and
+            // the system behaves differently for her: releasing an exam is done by
+            // the teacher OF THE COURSE (SUC-6), so she has nothing she could ever
+            // release and that entry is not on her menu at all. A rule with no
+            // example of it in the data is a rule nobody can check.
+            //
+            // Course 06 keeps its teachers: teacher6 and teacher9 both take it.
 
             // ---- 40 students, each enrolled in 3 to 5 courses ----
             Random random = new Random(RANDOM_SEED);

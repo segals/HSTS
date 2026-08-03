@@ -95,13 +95,13 @@
                         </HBox>
                         <TableView fx:id="lineTable" prefHeight="280">
                             <columns>
-                                <TableColumn fx:id="examColumn"    text="Exam"       prefWidth="230"/>
-                                <TableColumn fx:id="detailColumn"  text="Detail"     prefWidth="290"/>
-                                <TableColumn fx:id="countColumn"   text="Marks"      prefWidth="70"/>
-                                <TableColumn fx:id="averageColumn" text="Average"    prefWidth="80"/>
-                                <TableColumn fx:id="medianColumn"  text="Median"     prefWidth="80"/>
-                                <TableColumn fx:id="markColumn"    text="Her mark"   prefWidth="80"/>
-                                <TableColumn fx:id="gapColumn"     text="vs class"   prefWidth="80"/>
+                                <TableColumn fx:id="examColumn"    text="Exam"       prefWidth="230" minWidth="120"/>
+                                <TableColumn fx:id="detailColumn"  text="Detail"     prefWidth="290" minWidth="120"/>
+                                <TableColumn fx:id="countColumn"   text="Marks"      prefWidth="70"  minWidth="62"/>
+                                <TableColumn fx:id="averageColumn" text="Average"    prefWidth="80" minWidth="70"/>
+                                <TableColumn fx:id="medianColumn"  text="Median"     prefWidth="80"  minWidth="70"/>
+                                <TableColumn fx:id="markColumn"    text="Her mark"   prefWidth="80" minWidth="75"/>
+                                <TableColumn fx:id="gapColumn"     text="vs class"   prefWidth="80"  minWidth="70"/>
                             </columns>
                         </TableView>
                     </VBox>

@@ -143,6 +143,10 @@ public final class SchemaManager {
                 CREATE TABLE IF NOT EXISTS exam (
                   exam_id      CHAR(6)  NOT NULL,
                   version      INT      NOT NULL DEFAULT 1,
+                  -- What the teacher calls it. Compulsory when she saves; the empty
+                  -- default exists only so the migration can add the column to a
+                  -- database that already has exams in it.
+                  name         VARCHAR(120) NOT NULL DEFAULT '',
                   course_code  CHAR(2)  NOT NULL,
                   subject_code CHAR(2)  NOT NULL,
                   duration_minutes          INT  NOT NULL,
@@ -417,6 +421,19 @@ public final class SchemaManager {
         }
         if (datetimePrecision(conn, "exam", "approved_at") == 0) {
             st.executeUpdate("ALTER TABLE exam MODIFY approved_at DATETIME(3) NULL");
+        }
+
+        // Exams gained a name. Rows written before it get one built from what they
+        // do have - the course and the number - rather than being left blank: a
+        // list of empty names would look like data loss, and this is at least true.
+        if (!columnExists(conn, "exam", "name")) {
+            st.executeUpdate(
+                "ALTER TABLE exam ADD COLUMN name VARCHAR(120) NOT NULL DEFAULT '' AFTER version");
+            st.executeUpdate("""
+                UPDATE exam e
+                JOIN course c ON c.course_code = e.course_code
+                SET e.name = CONCAT(c.name, ' exam ', e.exam_id)
+                WHERE e.name = ''""");
         }
 
         // ...and it has to be compared against grade.approved_at, which was written
