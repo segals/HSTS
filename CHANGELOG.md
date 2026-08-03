@@ -2701,3 +2701,114 @@ attempts."* That was this, and it would have been the demo's flake to explain.
 | Screens | 19/19 load |
 
 Run **three times back to back with no database reset**, identical each time.
+
+---
+
+## The coordinator's decision now waits for the teacher, and the menu says who she is
+
+### 1. Was the teacher already told? Yes - and it was not enough
+
+She has been pushed a message the moment her coordinator decides since milestone 5:
+
+> *"Your exam 050101 was approved by Noa Katz. You can now release it to a class."*
+
+But a push only reaches somebody who is **signed in at that moment**, and a teacher
+usually is not. She logged in the next morning to nothing at all: no mark on the
+menu, no mark beside the exam, and the only way to find out was to open the release
+list and compare it against her memory.
+
+So the decision now **waits for her**, in three places:
+
+| Where | What |
+|---|---|
+| The message, at the time | now names the **course** as well as the number, and says **APPROVED** or **REJECTED** in as many words |
+| The menu | a badge on **Release an exam** counting exams of hers approved since she last looked |
+| The release list | a **dot** beside each of those exams, and a line saying "Approved since you last looked" |
+
+The badge says how many; the dot says which. One without the other leaves her to
+work out for herself which of eleven approved exams is the one that just changed.
+
+**Her own exams only.** Another teacher's exam being approved in a course she happens
+to teach is not news she is waiting for, and a badge counting it would be pointing at
+somebody else's work.
+
+**Looking is what spends it**, exactly as with a student's results: the flags are
+worked out first and the marker is written after, so the reply that carries the dots
+is the last one that does.
+
+Rejections take the same path and say the same things, but carry no dot - a rejected
+exam is not in the release list at all, because it cannot be released. The message
+and the exam's status ("Rejected", with the reason) are where she sees it.
+
+### A schema detail that would have bitten
+
+`exam.approved_at` was whole seconds. It is now `DATETIME(3)`, for the same reason
+`grade.approved_at` was widened a fortnight ago: this column is compared against the
+moment the teacher last looked, and at whole-second precision an approval made in
+that same second sorts equal to her visit and would never be marked as new - not
+"late", but never. Widened on existing databases too.
+
+### 2. A coordinator who teaches nothing has no Release entry
+
+Releasing is done by the teacher **of the course** (SUC-6, requirement 37, מתווה 5),
+which the system enforces. A coordinator with no classes of her own therefore has
+nothing she could ever release, and the entry opened onto an empty screen - a
+question the user had to answer for herself.
+
+The rule is written as "teaches no courses", not as "is a coordinator": a plain
+teacher between timetables gets the same treatment, and there is no special case for
+a role.
+
+Her **Approve or reject exams** entry is untouched - that is subject-scoped and has
+nothing to do with teaching.
+
+### 3. The menu says who she is, in words
+
+The line under her name read:
+
+> Coordinates subject 01   ·   teaches course(s): 02
+
+Both facts were already there and neither meant anything. It now reads:
+
+> Coordinates Mathematics (01)   ·   Teaches Algebra (02)
+
+...and for a coordinator with no classes of her own, *"Coordinates Physics (02) ·
+teaches no courses of her own"* - said out loud, because it is a real state and a
+sentence that trails off looks like a fault.
+
+The names could not come from the question bank's course list: since requirement 19
+that list is deliberately **wider** than the courses a coordinator teaches, because
+she may edit the questions of her whole subject. Printing it as "teaches" would have
+been plainly false. `MENU_CONTEXT` returns the two lists separately, each meaning
+exactly what it says, from `course_teacher` and `course_student`.
+
+### Two faults in the suites, both found by the demo
+
+**A test that assumed nobody else had touched the data.** `M11Test` looked for a
+sitting with a full class by checking `xs.get(0)` - the *newest* sitting of each
+exam. A teacher released the same exam again by hand during the walkthrough, nobody
+had sat it yet, and eighteen students behind it became invisible; the check failed
+and the next line threw. It now scans every sitting of every exam, which is what
+requirement 36 says an exam can have.
+
+**Every suite held a fixed port.** One run failed with "Address already in use", and
+the port turned out to be held by an unrelated process on the machine - Windows here
+hands out ephemeral ports from 1024 upwards, the whole range, so any fixed number a
+suite picks can be taken at any moment. It was never safe, just usually lucky. All
+eighteen suites now ask the operating system for a free port at the moment they
+start.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| **BadgeTest** | **77/77** (was 51; the notice, the dot, and the menu context) |
+| **MenuBadgeTest** | **37/37** (was 29; the release entry appearing and disappearing, and the context line) |
+| M2–M15, NewUsersTest, ClosingTimeTest, StreamRaceTest | unchanged, all passing |
+| **Total** | **999 checks** |
+| Screens | 19/19 load, 17/17 with no cut-off text |
+
+One practical note for anyone running the suites: three full passes take Plane
+Geometry from 9 exams to the documented ceiling of 99, because most suites build
+their exams there. `SeedRunner.resetAndSeed` puts it back; `buildExam` says so in as
+many words rather than failing obscurely.

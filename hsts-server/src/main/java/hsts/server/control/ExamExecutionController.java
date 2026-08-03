@@ -56,6 +56,9 @@ public class ExamExecutionController {
     private final ExecutionDAO executionDAO;
     private final ExamDAO examDAO;
 
+    /** Only to remember when this teacher last looked at her release list. */
+    private final hsts.server.dao.UserDAO userDAO = new hsts.server.dao.UserDAO();
+
     /**
      * Told (sitting, courseCode) whenever an exam is given to a class.
      *
@@ -93,10 +96,33 @@ public class ExamExecutionController {
         try {
             List<Exam> releasable =
                     executionDAO.findReleasableForCourses(teacher.getTaughtCourseCodes());
+
+            // Which of these are news to HER: exams she wrote, approved since she
+            // last opened this list. The coordinator's decision is pushed to her at
+            // the time, but that only reaches her if she is signed in at that
+            // moment - and she usually is not. This is the part that waits.
+            java.time.LocalDateTime seen = userDAO.approvalsSeenAt(user.getUserId());
+            int fresh = 0;
+            for (Exam exam : releasable) {
+                boolean hers = user.getUserId().equals(exam.getAuthorId());
+                boolean sinceSheLooked = exam.getApprovedAt() != null
+                        && (seen == null || exam.getApprovedAt().isAfter(seen));
+                exam.setNewlyApproved(hers && sinceSheLooked);
+                if (exam.isNewlyApproved()) {
+                    fresh++;
+                }
+            }
+            // She is looking now, so the dots are spent. Written after the flags are
+            // worked out, so this reply still carries them and the next does not.
+            userDAO.markApprovalsSeen(user.getUserId());
+
             return Response.ok(releasable, releasable.isEmpty()
                     ? "No approved exams yet. An exam needs the coordinator's approval "
                       + "before it can be given to a class."
-                    : releasable.size() + " approved exam version(s) ready to release.");
+                    : releasable.size() + " approved exam version(s) ready to release."
+                      + (fresh == 0 ? ""
+                         : "  " + fresh + (fresh == 1 ? " of yours was" : " of yours were")
+                           + " approved since you last looked."));
         } catch (SQLException e) {
             return Response.error("Could not load the approved exams: " + e.getMessage());
         }

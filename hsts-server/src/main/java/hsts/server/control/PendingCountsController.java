@@ -41,6 +41,7 @@ public class PendingCountsController {
     private final ExecutionDAO executionDAO = new ExecutionDAO();
     private final SubmissionDAO submissionDAO = new SubmissionDAO();
     private final UserDAO userDAO = new UserDAO();
+    private final hsts.server.dao.CourseDAO courseDAO = new hsts.server.dao.CourseDAO();
 
     /**
      * The counts for whoever is asking.
@@ -53,10 +54,11 @@ public class PendingCountsController {
             return Response.error("Not signed in.");
         }
         try {
-            int examsToApprove  = 0;
-            int papersToApprove = 0;
-            int examsToSit      = 0;
-            int newResults      = 0;
+            int examsToApprove     = 0;
+            int papersToApprove    = 0;
+            int examsToSit         = 0;
+            int newResults         = 0;
+            int examsNewlyApproved = 0;
 
             // A coordinator is a teacher too, so both of the first two can apply to
             // the same person - and both are counted for her.
@@ -67,17 +69,61 @@ public class PendingCountsController {
             }
             if (user instanceof Teacher) {
                 papersToApprove = gradeDAO.countAwaitingApprovalBy(user.getUserId());
+                // News rather than work: her exam came back approved. On the menu
+                // because the message sent at the moment of the decision only
+                // reaches a teacher who happens to be signed in then.
+                examsNewlyApproved = userDAO.countNewlyApprovedExams(user.getUserId());
             }
             if (user instanceof Student student) {
                 examsToSit = countSittingsSheCanStart(student);
                 newResults = userDAO.countUnreadResults(student.getUserId());
             }
 
-            return Response.ok(new PendingCounts(
-                    examsToApprove, papersToApprove, examsToSit, newResults), null);
+            return Response.ok(new PendingCounts(examsToApprove, papersToApprove,
+                    examsToSit, newResults, examsNewlyApproved), null);
 
         } catch (SQLException e) {
             return Response.error("Could not count what is waiting: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Who this user is, in words, for the line under her name on the menu.
+     *
+     * <p>Answered here because the menu is this class's only reader, and because
+     * the answer must come from the {@code course_teacher} table rather than from
+     * the question bank's course list - that one is deliberately wider for a
+     * coordinator (requirement 19) and would claim she teaches courses she does
+     * not.</p>
+     */
+    public Response contextFor(User user) {
+        if (user == null) {
+            return Response.error("Not signed in.");
+        }
+        try {
+            java.util.List<hsts.common.entity.Course> taught =
+                    (user instanceof Teacher) ? courseDAO.findByTeacher(user.getUserId())
+                                              : java.util.List.of();
+            java.util.List<hsts.common.entity.Course> enrolled =
+                    (user instanceof Student) ? courseDAO.findByStudent(user.getUserId())
+                                              : java.util.List.of();
+
+            String subjectCode = null;
+            String subjectName = null;
+            if (user instanceof SubjectCoordinator coordinator) {
+                subjectCode = coordinator.getCoordinatedSubjectCode();
+                for (hsts.common.entity.Subject subject : userDAO.findAllSubjects()) {
+                    if (subject.getSubjectCode().equals(subjectCode)) {
+                        subjectName = subject.getName();
+                    }
+                }
+            }
+
+            return Response.ok(new hsts.common.protocol.MenuContext(
+                    taught, enrolled, subjectCode, subjectName), null);
+
+        } catch (SQLException e) {
+            return Response.error("Could not load your courses: " + e.getMessage());
         }
     }
 

@@ -140,10 +140,15 @@ public class ExamApprovalController {
                 return;
             }
 
+            // The course as well as the number. A teacher who wrote three exams this
+            // week does not carry "050101" in her head, and the message is the only
+            // thing she is given at that moment.
+            String which = "exam " + exam.getExamId() + " (" + exam.getCourseName() + ")";
+
             String message = approving
-                    ? "Your exam " + exam.getExamId() + " was approved by "
+                    ? "Your " + which + " was APPROVED by "
                       + decidedBy.getFullName() + ". You can now release it to a class."
-                    : "Your exam " + exam.getExamId() + " was rejected by "
+                    : "Your " + which + " was REJECTED by "
                       + decidedBy.getFullName() + ".\nReason: " + reason.trim();
 
             pushService.toUsername(author.getUsername(), new PushEvent(

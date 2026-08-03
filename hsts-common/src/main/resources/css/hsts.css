@@ -392,6 +392,17 @@ Label { -fx-text-fill: -hsts-text; }
     arithmetic in the controller. min-width keeps a single digit from being an
     oval, and the padding is what makes room for a second one.
 */
+/*
+    The "this one is new to you" dot beside a list row. Same pink family as the
+    badge on the menu, because they mean the same thing in two places: the badge
+    says how many, the dot says which.
+*/
+.dot-new {
+    -fx-background-color: #e0899a;
+    -fx-min-width: 9;  -fx-max-width: 9;
+    -fx-min-height: 9; -fx-max-height: 9;
+    -fx-background-radius: 999;
+}
 .badge-unread {
     /*
         Soft pink rather than a strong red. The count is a nudge - "there are three

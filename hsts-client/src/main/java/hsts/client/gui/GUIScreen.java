@@ -255,12 +255,39 @@ public abstract class GUIScreen {
      */
     protected static <T> void useWrappingCells(ListView<T> list,
                                                java.util.function.Function<T, String> toText) {
+        useWrappingCells(list, toText, item -> false);
+    }
+
+    /**
+     * The same, with a small dot beside the rows that are new to this reader.
+     *
+     * <p>The count on the menu says <em>how many</em>; this says <em>which</em>. One
+     * without the other leaves her to work out for herself which of eleven approved
+     * exams is the one her coordinator just decided on.</p>
+     *
+     * <p>The dot leads the row rather than trailing it: these rows wrap to three
+     * lines, and a mark at the end of a wrapped block is somewhere different on
+     * every row and reads as punctuation.</p>
+     *
+     * @param marked whether this item should carry a dot
+     */
+    protected static <T> void useWrappingCells(ListView<T> list,
+                                               java.util.function.Function<T, String> toText,
+                                               java.util.function.Predicate<T> marked) {
         list.setCellFactory(view -> new ListCell<>() {
             private final Label label = new Label();
+            private final javafx.scene.layout.Region dot = new javafx.scene.layout.Region();
+            private final javafx.scene.layout.HBox row =
+                    new javafx.scene.layout.HBox(8, dot, label);
             {
                 label.setWrapText(true);
-                // 28px leaves room for the scroll bar and the cell's own padding.
-                label.maxWidthProperty().bind(view.widthProperty().subtract(28));
+                // 44px leaves room for the scroll bar, the cell's padding and the dot.
+                label.maxWidthProperty().bind(view.widthProperty().subtract(44));
+                dot.getStyleClass().add("dot-new");
+                row.setAlignment(javafx.geometry.Pos.TOP_LEFT);
+                // The dot sits on the first line of a wrapped block, not centred
+                // against the whole of it.
+                javafx.scene.layout.HBox.setMargin(dot, new javafx.geometry.Insets(5, 0, 0, 0));
             }
 
             @Override
@@ -271,7 +298,10 @@ public abstract class GUIScreen {
                     setText(null);
                 } else {
                     label.setText(toText.apply(item));
-                    setGraphic(label);
+                    boolean isNew = marked.test(item);
+                    dot.setVisible(isNew);
+                    dot.setManaged(isNew);
+                    setGraphic(row);
                     setText(null);
                 }
             }

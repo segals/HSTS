@@ -46,6 +46,15 @@ public enum RequestType {
      */
     PENDING_COUNTS,
 
+    /**
+     * Who the signed-in user is, in words, for the line under her name on the
+     * menu. No payload; the reply is a {@link MenuContext}.
+     *
+     * <p>Asked once when the menu opens. Unlike the counts it never changes while
+     * she is signed in, so no push re-asks for it.</p>
+     */
+    MENU_CONTEXT,
+
     // ---- SUC-2: question bank (milestone 3) ----
 
     /** The courses the signed-in teacher teaches. No payload. */

@@ -297,6 +297,63 @@ public class UserDAO implements IDAO<User, String> {
     }
 
     /**
+     * Records that this teacher has just opened her release list.
+     *
+     * <p>Everything of hers approved after this moment is what the badge on
+     * "Release an exam" counts, and what carries a dot beside it in the list.</p>
+     */
+    public void markApprovalsSeen(String userId) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement(
+                "UPDATE users SET approvals_seen_at = NOW(3) WHERE user_id = ?")) {
+            ps.setString(1, userId);
+            ps.executeUpdate();
+        }
+    }
+
+    /** When she last looked, or null if she never has. */
+    public java.time.LocalDateTime approvalsSeenAt(String userId) throws SQLException {
+        try (PreparedStatement ps = conn().prepareStatement(
+                "SELECT approvals_seen_at FROM users WHERE user_id = ?")) {
+            ps.setString(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                java.sql.Timestamp seen = rs.getTimestamp(1);
+                return seen == null ? null : seen.toLocalDateTime();
+            }
+        }
+    }
+
+    /**
+     * Exams this teacher wrote that were approved since she last looked.
+     *
+     * <p>Her own exams only. Another teacher's exam being approved in a course she
+     * happens to teach is not news she is waiting for, and a badge that counted it
+     * would be pointing at somebody else's work.</p>
+     *
+     * <p>Current versions only: an old version that was approved before being
+     * edited is history, and the row the release list shows is the current one.</p>
+     */
+    public int countNewlyApprovedExams(String authorId) throws SQLException {
+        String sql = """
+            SELECT COUNT(*)
+            FROM exam e
+            JOIN users u ON u.user_id = e.author_id
+            WHERE e.author_id = ?
+              AND e.status = 'APPROVED'
+              AND e.is_current = TRUE
+              AND e.approved_at IS NOT NULL
+              AND (u.approvals_seen_at IS NULL OR e.approved_at > u.approvals_seen_at)""";
+        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+            ps.setString(1, authorId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    /**
      * Marks approved for this student since she last looked at her results.
      *
      * <p>A student who has never opened the screen has a NULL marker, and every

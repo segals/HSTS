@@ -72,6 +72,12 @@ public final class SchemaManager {
                   -- reads the list, not the rows, so the list is what to remember.
                   -- Milliseconds, to match grade.approved_at - see the note there.
                   results_seen_at     DATETIME(3)  NULL,
+                  -- When this teacher last opened her release list. Exams of hers
+                  -- approved after it are the ones marked as new, on the menu and
+                  -- beside the exams themselves. Same reasoning as results_seen_at:
+                  -- the push telling her only reaches her if she is signed in at
+                  -- that moment, and she is usually not.
+                  approvals_seen_at   DATETIME(3)  NULL,
                   CONSTRAINT fk_users_subject FOREIGN KEY (coordinated_subject)
                     REFERENCES subject(subject_code)
                 ) ENGINE=InnoDB""");
@@ -147,7 +153,11 @@ public final class SchemaManager {
                                NOT NULL DEFAULT 'PENDING_APPROVAL',
                   rejection_reason TEXT NULL,
                   approved_by  CHAR(9)  NULL,
-                  approved_at  DATETIME NULL,
+                  -- Milliseconds, for the same reason as grade.approved_at: this is
+                  -- compared against the moment the teacher last looked at her
+                  -- release list, and at whole seconds an approval made in that same
+                  -- second would never be marked as new to her.
+                  approved_at  DATETIME(3) NULL,
                   is_current   BOOLEAN  NOT NULL DEFAULT TRUE,
                   created_at   DATETIME NOT NULL,
                   PRIMARY KEY (exam_id, version),
@@ -399,6 +409,14 @@ public final class SchemaManager {
             // in the CREATE means a database from that day gets the fix too - which
             // is the whole point of this method.
             st.executeUpdate("ALTER TABLE users MODIFY results_seen_at DATETIME(3) NULL");
+        }
+
+        // The same idea for a teacher waiting on her coordinator's decision.
+        if (!columnExists(conn, "users", "approvals_seen_at")) {
+            st.executeUpdate("ALTER TABLE users ADD COLUMN approvals_seen_at DATETIME(3) NULL");
+        }
+        if (datetimePrecision(conn, "exam", "approved_at") == 0) {
+            st.executeUpdate("ALTER TABLE exam MODIFY approved_at DATETIME(3) NULL");
         }
 
         // ...and it has to be compared against grade.approved_at, which was written

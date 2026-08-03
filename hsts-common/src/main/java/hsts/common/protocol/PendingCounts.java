@@ -26,13 +26,15 @@ public class PendingCounts implements Serializable {
     private final int papersToApprove;
     private final int examsToSit;
     private final int newResults;
+    private final int examsNewlyApproved;
 
     public PendingCounts(int examsToApprove, int papersToApprove,
-                         int examsToSit, int newResults) {
-        this.examsToApprove  = examsToApprove;
-        this.papersToApprove = papersToApprove;
-        this.examsToSit      = examsToSit;
-        this.newResults      = newResults;
+                         int examsToSit, int newResults, int examsNewlyApproved) {
+        this.examsToApprove     = examsToApprove;
+        this.papersToApprove    = papersToApprove;
+        this.examsToSit         = examsToSit;
+        this.newResults         = newResults;
+        this.examsNewlyApproved = examsNewlyApproved;
     }
 
     /** Coordinator: exams in her subject waiting for her decision. */
@@ -55,8 +57,21 @@ public class PendingCounts implements Serializable {
         return newResults;
     }
 
+    /**
+     * Teacher: exams she wrote that a coordinator approved since she last opened
+     * her release list.
+     *
+     * <p>Unlike the others this is not a queue of work she must do - it is news she
+     * has been waiting for. It is on the menu for the same reason: the message sent
+     * at the moment of the decision only reaches her if she is signed in then.</p>
+     */
+    public int getExamsNewlyApproved() {
+        return examsNewlyApproved;
+    }
+
     public int total() {
-        return examsToApprove + papersToApprove + examsToSit + newResults;
+        return examsToApprove + papersToApprove + examsToSit + newResults
+             + examsNewlyApproved;
     }
 
     @Override
@@ -64,6 +79,7 @@ public class PendingCounts implements Serializable {
         return "pending: examsToApprove=" + examsToApprove
              + " papersToApprove=" + papersToApprove
              + " examsToSit=" + examsToSit
-             + " newResults=" + newResults;
+             + " newResults=" + newResults
+             + " examsNewlyApproved=" + examsNewlyApproved;
     }
 }

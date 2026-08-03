@@ -298,6 +298,11 @@ public class ExecutionDAO implements IDAO<ExamExecution, Integer> {
                     exam.setStatus(hsts.common.enums.ExamStatus.valueOf(rs.getString("status")));
                     exam.setCurrent(rs.getBoolean("is_current"));
                     exam.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+                    // Needed to work out which of these are news to the teacher
+                    // reading the list. Already in the SELECT; it was simply not
+                    // being carried across.
+                    java.sql.Timestamp approved = rs.getTimestamp("approved_at");
+                    exam.setApprovedAt(approved == null ? null : approved.toLocalDateTime());
                     exams.add(exam);
                 }
             }

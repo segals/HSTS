@@ -5,6 +5,8 @@ import hsts.common.entity.Student;
 import hsts.common.entity.SubjectCoordinator;
 import hsts.common.entity.Teacher;
 import hsts.common.entity.User;
+import hsts.common.entity.Course;
+import hsts.common.protocol.MenuContext;
 import hsts.common.protocol.PendingCounts;
 import hsts.common.protocol.PushEvent;
 import hsts.common.protocol.PushType;
@@ -43,7 +45,8 @@ import java.util.List;
 public class MainMenuController extends GUIScreen {
 
     private static final String REQ_LOGOUT = "logout";
-    private static final String REQ_COUNTS = "counts";
+    private static final String REQ_COUNTS  = "counts";
+    private static final String REQ_CONTEXT = "context";
 
     @FXML private Label  nameLabel;
     @FXML private Label  roleLabel;
@@ -110,6 +113,9 @@ public class MainMenuController extends GUIScreen {
         // when a push says something that could change it has happened. No timer:
         // this must not become a request a second.
         askForCounts();
+        // ...and who she is, in words. Asked once: it cannot change while she is
+        // signed in, so no push re-asks for it.
+        send(RequestType.MENU_CONTEXT, null, REQ_CONTEXT);
     }
 
     /**
@@ -162,22 +168,80 @@ public class MainMenuController extends GUIScreen {
     /** The button's own left and right padding plus its border, from hsts.css. */
     private static final int GRAPHIC_INSET = 32;
 
-    /** A line of context that proves the server sent this user's real associations. */
+    /**
+     * The line under her name, written from codes until the names arrive.
+     *
+     * <p>Replaced a moment later by {@link #describeContext(MenuContext)}, which has
+     * the course <em>names</em>. This version is what she sees for the length of one
+     * round trip, and saying "02" for a moment is better than saying nothing and
+     * then jumping.</p>
+     */
     private String describeContext(User user) {
         if (user instanceof SubjectCoordinator coordinator) {
             return "Coordinates subject " + coordinator.getCoordinatedSubjectCode()
-                 + "   ·   teaches course(s): " + join(coordinator.getTaughtCourseCodes());
+                 + "   ·   teaches: " + join(coordinator.getTaughtCourseCodes());
         }
         if (user instanceof Teacher teacher) {
-            return "Teaches course(s): " + join(teacher.getTaughtCourseCodes());
+            return "Teaches: " + join(teacher.getTaughtCourseCodes());
         }
         if (user instanceof Student student) {
-            return "Enrolled in course(s): " + join(student.getEnrolledCourseCodes());
+            return "Studies: " + join(student.getEnrolledCourseCodes());
         }
         if (user instanceof Principal) {
             return "Read-only access to all questions, exams and results.";
         }
         return "";
+    }
+
+    /**
+     * The same line once the server has said what those codes are called.
+     *
+     * <p>A coordinator is told both things separately, because they are separate:
+     * the subject she runs, and the classes she teaches herself. Those are
+     * different lists and conflating them is what made "teaches course(s): 02"
+     * unreadable in the first place.</p>
+     *
+     * <p>A coordinator with no classes of her own is told so in as many words. It
+     * is a real state - she runs a subject without teaching in it - and leaving the
+     * sentence to trail off would look like a fault.</p>
+     */
+    private String describeContext(MenuContext context) {
+        StringBuilder line = new StringBuilder();
+
+        if (context.getCoordinatedSubjectName() != null) {
+            line.append("Coordinates ").append(context.getCoordinatedSubjectName())
+                .append(" (").append(context.getCoordinatedSubjectCode()).append(")");
+        }
+
+        if (!context.getTaughtCourses().isEmpty()) {
+            if (line.length() > 0) {
+                line.append("   ·   ");
+            }
+            line.append("Teaches ").append(nameCourses(context.getTaughtCourses()));
+        } else if (context.getCoordinatedSubjectName() != null) {
+            line.append("   ·   teaches no courses of her own");
+        }
+
+        if (!context.getEnrolledCourses().isEmpty()) {
+            if (line.length() > 0) {
+                line.append("   ·   ");
+            }
+            line.append("Studies ").append(nameCourses(context.getEnrolledCourses()));
+        }
+
+        return line.length() == 0 ? contextLabel.getText() : line.toString();
+    }
+
+    /** "Algebra (02), Mechanics (03)" - the name first, the code for the paperwork. */
+    private String nameCourses(List<Course> courses) {
+        StringBuilder out = new StringBuilder();
+        for (Course course : courses) {
+            if (out.length() > 0) {
+                out.append(", ");
+            }
+            out.append(course.getName()).append(" (").append(course.getCourseCode()).append(")");
+        }
+        return out.toString();
     }
 
     private String join(List<String> codes) {
@@ -196,7 +260,14 @@ public class MainMenuController extends GUIScreen {
         if (user instanceof Teacher) {                       // also covers coordinators
             entries.add(new MenuEntry("Question bank",           "/fxml/QuestionMgmt.fxml"));
             entries.add(new MenuEntry("Build an exam",           "/fxml/ExamBuilder.fxml"));
-            entries.add(new MenuEntry("Release an exam",         "/fxml/ExamRelease.fxml"));
+            // Only for somebody who actually teaches. Releasing is done by the
+            // teacher OF THE COURSE (SUC-6), so for a coordinator with no classes of
+            // her own the screen can only ever be empty - and an entry that opens
+            // onto nothing is a question the user has to answer for herself.
+            if (!((Teacher) user).getTaughtCourseCodes().isEmpty()) {
+                entries.add(new MenuEntry("Release an exam",     "/fxml/ExamRelease.fxml",
+                                          PendingCounts::getExamsNewlyApproved));
+            }
             entries.add(new MenuEntry("Exams running now",       "/fxml/TeacherLiveExam.fxml"));
             entries.add(new MenuEntry("Mark and approve grades", "/fxml/Grading.fxml",
                                       PendingCounts::getPapersToApprove));
@@ -246,6 +317,13 @@ public class MainMenuController extends GUIScreen {
     private void onServerResponse(Response response) {
         if (REQ_LOGOUT.equals(response.getRequestId())) {
             backToLogin();
+            return;
+        }
+        if (REQ_CONTEXT.equals(response.getRequestId())) {
+            if (response.isOk() && response.getPayload() instanceof MenuContext context) {
+                contextLabel.setText(describeContext(context));
+                fitToContent();
+            }
             return;
         }
         if (REQ_COUNTS.equals(response.getRequestId())) {

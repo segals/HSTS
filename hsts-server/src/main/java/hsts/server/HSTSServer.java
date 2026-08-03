@@ -246,6 +246,7 @@ public class HSTSServer extends AbstractServer {
                 // The menu badges. Read-only, and the counts are of that user's own
                 // outstanding work - so it needs a signed-in user like everything else.
                 case PENDING_COUNTS -> withUser(client, pendingCountsController::countsFor);
+                case MENU_CONTEXT   -> withUser(client, pendingCountsController::contextFor);
 
                 // ---- SUC-2: question bank ----
                 // Every one of these needs a signed-in user, and every one

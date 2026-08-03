@@ -60,6 +60,9 @@ public class Exam implements Serializable {
     private LocalDateTime approvedAt;
 
     private boolean current = true;
+
+    /** Display only: see {@link #isNewlyApproved()}. Never stored. */
+    private boolean newlyApproved;
     private LocalDateTime createdAt;
 
     private List<ExamQuestion> questions = new ArrayList<>();
@@ -82,6 +85,17 @@ public class Exam implements Serializable {
     public String getApprovedBy()                { return approvedBy; }
     public LocalDateTime getApprovedAt()         { return approvedAt; }
     public boolean isCurrent()                   { return current; }
+
+    /**
+     * True when the author has not yet seen that this exam was approved.
+     *
+     * <p>Display only, and filled in by the release list alone - the same kind of
+     * derived flag as {@code Grade.isMarked()}. It is a fact about a <em>reader</em>,
+     * not about the exam, so it is never stored and is false everywhere else.</p>
+     */
+    public boolean isNewlyApproved()             { return newlyApproved; }
+
+    public void setNewlyApproved(boolean flag)   { this.newlyApproved = flag; }
     public LocalDateTime getCreatedAt()          { return createdAt; }
     public List<ExamQuestion> getQuestions()     { return questions; }
 
