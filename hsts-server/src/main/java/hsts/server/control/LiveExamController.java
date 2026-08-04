@@ -372,11 +372,26 @@ public class LiveExamController {
             if (execution == null) {
                 return;
             }
+            java.util.Set<String> tell = new java.util.LinkedHashSet<>();
             User teacher = userDAO.findById(execution.getReleasedBy());
-            if (teacher == null) {
+            if (teacher != null) {
+                tell.add(teacher.getUsername());
+            }
+
+            // The principal too. Her calendar has a column saying how many sat
+            // each exam, and a student starting one changes it - so without this
+            // the one number on that screen that moves during the school day was
+            // the one number on it that stood still. She is not sent this because
+            // she is being told about a child; she is sent it because a figure on
+            // her screen has just gone out of date.
+            //
+            // Not written to the activity log, which is staff only: a student
+            // sitting an exam is recorded against her own paper.
+            tell.addAll(userDAO.findUsernamesWithRole(hsts.common.enums.UserRole.PRINCIPAL));
+            if (tell.isEmpty()) {
                 return;
             }
-            pushService.toUsername(teacher.getUsername(), new PushEvent(
+            pushService.toUsernames(tell, new PushEvent(
                     PushType.EXAM_LIVE_STATUS, executionId, what));
         } catch (SQLException e) {
             // A missed notification must never disturb the student's exam.

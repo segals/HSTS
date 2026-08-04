@@ -277,6 +277,14 @@ public class PrincipalBrowseController extends GUIScreen {
             send(RequestType.PRINCIPAL_EXAMS, null, REQ_EXAMS);
             return;
         }
+        if (event.getType() == PushType.EXAM_LIVE_STATUS) {
+            // A student started an exam or handed one in. Only the calendar cares:
+            // it says how many sat each sitting. Nothing else on this screen moved,
+            // and a student's exam is not staff activity, so the log is untouched.
+            showMessage(event.getMessage());
+            send(RequestType.PRINCIPAL_CALENDAR, null, REQ_CALENDAR);
+            return;
+        }
         if (event.getType() != PushType.RESULTS_CHANGED) {
             super.onPush(event);
             return;

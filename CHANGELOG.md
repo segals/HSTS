@@ -3245,6 +3245,14 @@ ticked across a rebuild, and the lists put the selection back on the same
 question, exam and sitting by id. A screen that cleared her filter every time a
 colleague did something would be worse than the stale one it replaced.
 
+**A student starting an exam counts too.** The calendar says how many sat each
+sitting, and that number is the students' doing, not the staff's - so without
+this the one figure on her screen that moves during the school day was the one
+figure on it that stood still. There was already a push telling the teacher who
+released a sitting that somebody had started; the principal is now on it, and her
+calendar reloads. It is **not** written to the activity log: that is staff only,
+and a student sitting an exam is recorded against her own paper.
+
 ### 5. The exam builder was cut off
 
 The automatic pane's quota line ran off the edge: "any topic | any level | 5"
@@ -3332,13 +3340,13 @@ missing.
 
 | Suite | Checks | What it covers |
 |---|---|---|
-| **LiveUpdateTest** | **51** (new) | course names on questions, exams and sittings; save-twice refused and no second question or version; every kind of change still noticed one at a time; the same for exams; the principal told when a question is written and when an exam is released, with the calendar really one longer; a student, another teacher, a read and a refused action all told nothing |
+| **LiveUpdateTest** | **57** (new) | course names on questions, exams and sittings; save-twice refused and no second question or version; every kind of change still noticed one at a time; the same for exams; the principal told when a question is written and when an exam is released, with the calendar really one longer; a student, another teacher, a read and a refused action all told nothing |
 | **ScreenBehaviourTest** | **49** (new) | a tick leaves a refusal on the screen on three screens while a real announcement still arrives; seven columns starting on Sunday; every sitting drawn on its day with its name and time; the day panel carrying the code, the teacher and the count; the arrows; an empty month explaining itself; the old filter boxes gone; the exam history comparing field by field including the paper |
 | **TruncationTest** | 19 screens | now measures **height** on wrapping labels, which is how the two reported labels were being cut, and fills every empty label with a sentence first, since half of them are filled in by the controller |
 
 | Suite | Result |
 |---|---|
-| M2-M15, NewUsers, ClosingTime, Badge, StreamRace, StaffView, **LiveUpdate** | **1120 checks, all passing** |
+| M2-M15, NewUsers, ClosingTime, Badge, StreamRace, StaffView, **LiveUpdate** | **1126 checks, all passing** |
 | Screens | **21/21** load, **19/19** with no cut-off text at four sizes |
 | MenuBadgeTest / ScreenBehaviourTest | 49 / 49 |
 
