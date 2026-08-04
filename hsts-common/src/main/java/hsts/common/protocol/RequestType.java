@@ -241,6 +241,26 @@ public enum RequestType {
     /** Marks and statistics together. Payload is a {@link ResultsQuery}. */
     PRINCIPAL_RESULTS,
 
+    /**
+     * Every sitting in the school, for the principal's calendar. No payload; the
+     * reply is a list of {@code ExamExecution}, newest first.
+     */
+    PRINCIPAL_CALENDAR,
+
+    /**
+     * What the staff have done lately, for the principal. Payload is how many
+     * entries at most, or null for a sensible default.
+     *
+     * <p>Teachers and coordinators only - see {@code ActivityEntry}.</p>
+     */
+    PRINCIPAL_ACTIVITY,
+
+    /**
+     * What this teacher or coordinator still has to do. No payload; the reply is a
+     * list of {@link TodoItem}.
+     */
+    MY_TODO,
+
     // ---- SUC-11 / SUC-12: statistical reports (milestone 13) ----
 
     /** Which reports this user may run. No payload. */

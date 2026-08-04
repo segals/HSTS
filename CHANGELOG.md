@@ -3065,3 +3065,117 @@ Run **three times**, with a reset between passes.
 JavaFX and have no server behaviour to assert, so `TruncationTest` proves only
 that they fit and cut nothing off. Whether ticking is actually nicer than
 ctrl-clicking is a judgement to make on the screen.
+
+---
+
+## A school calendar, a to-do list, and a record of what the staff have done
+
+Three things asked for together, all of them views onto data the system already
+held - except the third, which needed somewhere to keep it.
+
+### 1. The school calendar
+
+A new tab on the principal's screen: **every sitting in the school**, newest
+first, as a table.
+
+| Opens | Closes | Exam | Course | Code | Given by | Sat it | State |
+|---|---|---|---|---|---|---|---|
+
+*State* - Finished, Open now, Still to come - is worked out from the clock rather
+than stored, for the same reason "in the drawer" is not stored: it changes by
+itself, and a flag would need somebody to remember to turn it.
+
+**Nothing is filtered out.** Past sittings are the record of the year; a calendar
+that quietly dropped last term would be a diary rather than a register. The screen
+filters instead - by course, by who gave it out, and by those three states, with
+free text over the exam name, code and teacher.
+
+The principal only. A teacher asking for it is refused, and so is a coordinator:
+SUC-10 gives each of them their own slice, and the whole school is the
+principal's.
+
+### 2. A to-do list for teachers and coordinators
+
+A new first entry on their menu, because it is the answer to "what should I do
+now" and every other entry is a place to go and do one of the things on it.
+
+| Line | When it appears |
+|---|---|
+| *N exams waiting for your approval* | coordinator, exams pending in her subject |
+| *N exams came back rejected* | her exams a coordinator sent back |
+| *N approved exams never given to a class* | approved, in the drawer, no sitting |
+| *N papers to mark and approve* | handed in on sittings she released |
+| *N exams with the coordinator* | hers, still waiting for a decision |
+
+Each line says how many, what they are, and **opens the screen they are on** - a
+list that made her go and find the marking screen herself would have told her
+something she mostly knew.
+
+**Two groups, deliberately.** Work that is hers, and work she is waiting on
+somebody else for. The second one is not something she can act on, but "where is
+my exam" is a question this list should answer rather than send her off to find
+out. They are drawn under separate headings so the difference is visible.
+
+Empty lines are left out entirely: a list of six rows all saying "0" is a list
+nobody reads twice. When there is genuinely nothing, it says so in a sentence
+rather than showing an empty card, which reads as something that failed to load.
+
+It re-asks itself on the same pushes the menu badges listen for, so it is right
+without being reopened.
+
+### 3. What the staff have done
+
+A second new tab for the principal: the recent actions, newest first, with
+**when**, **who**, **their role**, **what**, and the detail.
+
+**Teachers and coordinators only**, as asked. A student sitting an exam is
+recorded against her own paper and is not staff activity; the principal changes
+nothing herself (system description §7.3), so a log of her would be a mirror.
+
+**Only actions that changed something.** Nineteen request types are recorded -
+writing, editing and deleting questions and exams; approving and rejecting;
+releasing; changing a running exam's time; allowing another attempt; publishing
+marks and factors; and every change to a study bot. Reading a screen is not an
+action, and a log of every list anybody opened would bury the six entries a head
+teacher wants under a thousand she does not. A **refused** request is not recorded
+either: it changed nothing, and a log of attempts is a different feature nobody
+asked for.
+
+Recorded in **one place** - where every request is dispatched - rather than a line
+in fifteen controllers. A controller that forgot to log would be invisible; this
+cannot forget, because everything passes through it.
+
+**The detail stored is the sentence the person was given at the time**, not a
+second description invented for the log:
+
+> "StaffViewTest exam 1754306794…" (060101) approved. It can now be released to a class.
+
+If the two ever disagreed, one of them would be wrong, and it would be the log. It
+also meant the approval message had to start naming the exam rather than only its
+number - "060101" on its own tells a head teacher nothing.
+
+A failure to write the log is printed and swallowed. The action has already
+happened; a full disk must not turn a successful approval into an error on a
+teacher's screen.
+
+`activity_log` is cleared by `resetAndSeed` with everything else - a log of a
+school that no longer exists would be worse than none.
+
+### Verified
+
+`StaffViewTest`, a new harness, 40 checks:
+
+| What | Checked |
+|---|---|
+| Calendar | every sitting in the school (counted against the table), newest first, carries name, both dates, code and teacher, keeps finished sittings, refused to a teacher and to a coordinator |
+| To-do | refused to a student and to the principal; an exam appears as *with the coordinator* the moment it is written and is **not** counted as her own work; the coordinator sees the same exam as hers to approve; approving moves it to *never given to a class* on the author's list; a rejection becomes its own line; every line points at a screen and none is empty |
+| Activity | newest first, every entry has a moment, a person and an action; only teachers and coordinators; the writing, the approval and the rejection all appear; the detail is the sentence she was given and names the exam; **reading a screen is not recorded**; **a refused action is not recorded**; refused to a teacher and to a coordinator |
+
+| Suite | Result |
+|---|---|
+| **StaffViewTest** | **40/40** (new) |
+| M2–M15, NewUsersTest, ClosingTimeTest, BadgeTest, StreamRaceTest | unchanged, all passing |
+| **Total** | **1069 checks** |
+| Screens | **20/20** load, **18/18** with no cut-off text at four sizes |
+
+Run **three times**, with a reset between passes.

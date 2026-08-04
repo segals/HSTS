@@ -157,6 +157,11 @@ public class HSTSServer extends AbstractServer {
     private final ReportController reportController = new ReportController(reportFactory);
     /** The numbers behind the menu badges. Builds its own DAOs; it only reads. */
     private final PendingCountsController pendingCountsController = new PendingCountsController();
+    /** What one member of staff still has to do. Read-only; builds its own DAOs. */
+    private final hsts.server.control.TodoController todoController =
+            new hsts.server.control.TodoController();
+    /** The record of what the staff have done, for the principal. */
+    private final hsts.server.dao.ActivityDAO activityDAO = new hsts.server.dao.ActivityDAO();
     private final BotDAO botDAO = new BotDAO();
 
     /**
@@ -396,6 +401,12 @@ public class HSTSServer extends AbstractServer {
                         principalController.listExams(u));
                 case PRINCIPAL_EXAM_GET  -> withUser(client, u ->
                         principalController.getExam(u, (ExamRef) request.getPayload()));
+                case PRINCIPAL_CALENDAR  -> withUser(client, u ->
+                        principalController.schoolCalendar(u));
+                case PRINCIPAL_ACTIVITY  -> withUser(client, u ->
+                        principalController.recentActivity(u, (Integer) request.getPayload()));
+                case MY_TODO             -> withUser(client, u ->
+                        todoController.listFor(u));
                 case PRINCIPAL_SITTINGS  -> withUser(client, u ->
                         principalController.listSittings(u, (String) request.getPayload()));
                 case PRINCIPAL_RESULTS   -> withUser(client, u ->
@@ -477,6 +488,9 @@ public class HSTSServer extends AbstractServer {
             log("FAILED to handle " + request.getType() + ": " + e);
             response = Response.error("Server error: " + e.getMessage());
         }
+
+        // Record it, if it was a staff action that changed something.
+        recordActivity(client, request, response);
 
         // Stamp the reply with the id of the request it answers, so the screen
         // that asked can recognise its own answer. Done once here rather than in
@@ -599,6 +613,81 @@ public class HSTSServer extends AbstractServer {
         // or an abandoned session stays signed in until somebody notices.
         inactivity.setLogSink(this::log);
         inactivity.start();
+    }
+
+    /**
+     * A short label for the actions worth recording, or null for the rest.
+     *
+     * <p>Only things that <b>change</b> something. Reading a screen is not an
+     * action, and a log of every list anybody opened would bury the six entries a
+     * head teacher actually wants under a thousand she does not.</p>
+     *
+     * <p>One switch in one place rather than a line in fifteen controllers: a
+     * controller that forgot to log would be invisible, and this cannot forget
+     * because every request passes through it.</p>
+     */
+    private static String activityLabel(RequestType type) {
+        return switch (type) {
+            case QUESTION_ADD          -> "Added a question";
+            case QUESTION_EDIT         -> "Edited a question";
+            case QUESTION_DELETE       -> "Removed a question";
+            case EXAM_SAVE             -> "Wrote an exam";
+            case EXAM_EDIT             -> "Edited an exam";
+            case EXAM_APPROVE          -> "Approved an exam";
+            case EXAM_REJECT           -> "Rejected an exam";
+            case EXECUTION_RELEASE     -> "Released an exam to a class";
+            case LIVE_CHANGE_TIME      -> "Changed the time of a running exam";
+            case LIVE_GRANT_ATTEMPT    -> "Allowed another attempt";
+            case GRADING_PUBLISH       -> "Published a mark";
+            case GRADING_APPROVE       -> "Approved a mark";
+            case GRADING_APPROVE_ALL   -> "Approved a whole class's marks";
+            case GRADING_FACTOR        -> "Applied a factor";
+            case BOT_CREATE            -> "Created a study bot";
+            case BOT_DELETE            -> "Deleted a study bot";
+            case BOT_SET_STATUS        -> "Switched a study bot on or off";
+            case BOT_ADD_SOURCE        -> "Gave a study bot material";
+            case BOT_REMOVE_SOURCE     -> "Took material off a study bot";
+            default                    -> null;
+        };
+    }
+
+    /**
+     * Writes one line into the staff log, if this was one worth writing.
+     *
+     * <p>Teachers and coordinators only - a student sitting an exam is recorded
+     * against her paper, and the principal changes nothing. Only successful
+     * requests: a refusal changed nothing, and a log of attempts is a different
+     * feature nobody asked for.</p>
+     *
+     * <p>The detail stored is <b>the sentence the person was given at the time</b>,
+     * rather than a second description invented here. If the two ever disagreed one
+     * of them would be wrong, and it would be this one.</p>
+     *
+     * <p>A failure to log is swallowed after being printed: the action has already
+     * happened, and a full disk must not turn a successful approval into an error
+     * on a teacher's screen.</p>
+     */
+    private void recordActivity(ConnectionToClient client, Request request, Response response) {
+        if (response == null || !response.isOk()) {
+            return;
+        }
+        String label = activityLabel(request.getType());
+        if (label == null) {
+            return;
+        }
+        User who = sessions.getUser(client);
+        if (who == null) {
+            return;
+        }
+        if (!(who instanceof hsts.common.entity.Teacher)) {
+            return;                       // students and the principal are not staff actions
+        }
+        try {
+            activityDAO.record(who.getUserId(), who.getRole().name(), label,
+                               response.getMessage());
+        } catch (Exception e) {
+            log("Could not record activity for " + who.getUsername() + ": " + e.getMessage());
+        }
     }
 
     /**

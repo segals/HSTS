@@ -58,6 +58,9 @@ public class PrincipalController {
     private final QuestionDAO questionDAO;
     private final ExamDAO examDAO;
     private final ExecutionDAO executionDAO;
+
+    /** Read-only: the record of what the staff have done. */
+    private final hsts.server.dao.ActivityDAO activityDAO = new hsts.server.dao.ActivityDAO();
     private final GradeDAO gradeDAO;
 
     public PrincipalController(QuestionDAO questionDAO, ExamDAO examDAO,
@@ -152,6 +155,55 @@ public class PrincipalController {
     }
 
     /** The sittings of one exam, so results can be read per class. */
+    /**
+     * Every sitting in the school, newest first - the calendar.
+     *
+     * <p>The whole school rather than one exam at a time, because the question a
+     * head teacher asks is "what is happening this week", and answering it by
+     * opening forty exams one by one is not answering it.</p>
+     *
+     * <p>Nothing is filtered out: past sittings are the record of the year, and a
+     * calendar that quietly dropped them would be a diary rather than a register.
+     * The screen filters.</p>
+     */
+    public Response schoolCalendar(User user) {
+        String refusal = refuseIfNotPrincipal(user);
+        if (refusal != null) {
+            return Response.error(refusal);
+        }
+        try {
+            List<hsts.common.entity.ExamExecution> sittings = executionDAO.findAll();
+            return Response.ok(sittings, sittings.isEmpty()
+                    ? "No exam has been given to a class yet."
+                    : sittings.size() + " sitting(s) in the school's calendar.");
+        } catch (SQLException e) {
+            return Response.error("Could not load the calendar: " + e.getMessage());
+        }
+    }
+
+    /**
+     * What the staff have done lately, newest first.
+     *
+     * <p>Teachers and coordinators only. A student sitting an exam is recorded
+     * against her paper and is not staff activity; the principal changes nothing
+     * herself, so she would only ever be reading her own reflection.</p>
+     */
+    public Response recentActivity(User user, Integer howMany) {
+        String refusal = refuseIfNotPrincipal(user);
+        if (refusal != null) {
+            return Response.error(refusal);
+        }
+        int limit = (howMany == null || howMany <= 0) ? 200 : Math.min(howMany, 500);
+        try {
+            List<hsts.common.entity.ActivityEntry> entries = activityDAO.recent(limit);
+            return Response.ok(entries, entries.isEmpty()
+                    ? "Nothing has been done yet."
+                    : entries.size() + " recent action(s).");
+        } catch (SQLException e) {
+            return Response.error("Could not load the activity: " + e.getMessage());
+        }
+    }
+
     public Response listSittings(User user, String examId) {
         String refusal = refuseIfNotPrincipal(user);
         if (refusal != null) {

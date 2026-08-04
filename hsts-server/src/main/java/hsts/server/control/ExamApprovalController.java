@@ -116,9 +116,14 @@ public class ExamApprovalController {
 
             notifyAuthor(exam, coordinator, approving, reason);
 
+            // The name as well as the number, like everywhere else - and this is the
+            // sentence that ends up in the principal's activity log, where "060101"
+            // on its own would tell her nothing at all.
             return Response.ok(exam.getExamId(), approving
-                    ? "Exam " + exam.getExamId() + " approved. It can now be released to a class."
-                    : "Exam " + exam.getExamId() + " rejected. The reason has been sent to "
+                    ? "\"" + exam.getName() + "\" (" + exam.getExamId()
+                      + ") approved. It can now be released to a class."
+                    : "\"" + exam.getName() + "\" (" + exam.getExamId()
+                      + ") rejected. The reason has been sent to "
                       + exam.getAuthorName() + ".");
 
         } catch (SQLException e) {

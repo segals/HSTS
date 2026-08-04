@@ -104,6 +104,7 @@ public final class SeedRunner {
         "student_answer", "attempt_grant", "student_exam", "exam_execution",
         "exam_question", "exam",
         "answer", "question",
+        "activity_log",
         "code_attempt", "login_attempt", "course_teacher", "course_student",
         "users", "course", "subject",
     };

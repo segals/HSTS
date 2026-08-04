@@ -374,6 +374,23 @@ public final class SchemaManager {
             st.executeUpdate("DROP TABLE IF EXISTS m1_skeleton");
             st.executeUpdate("DROP TABLE IF EXISTS m1_skeleton_user");
 
+            // ---------- what the staff have done ----------
+            // Read by the principal, written by nobody else and never updated: a log
+            // that can be edited is not a log. No foreign key on user_id would be
+            // wrong here - the person must exist - but there is no ON DELETE, because
+            // an action does not stop having happened.
+            st.executeUpdate("""
+                CREATE TABLE IF NOT EXISTS activity_log (
+                  entry_id  BIGINT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                  at        DATETIME(3) NOT NULL,
+                  user_id   CHAR(9)     NOT NULL,
+                  role      VARCHAR(20) NOT NULL,
+                  action    VARCHAR(60) NOT NULL,
+                  detail    VARCHAR(400) NULL,
+                  KEY ix_activity_at (at),
+                  CONSTRAINT fk_activity_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+                ) ENGINE=InnoDB""");
+
             migrate(conn, st);
         }
     }

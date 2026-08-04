@@ -50,6 +50,8 @@ import java.util.Locale;
 public class PrincipalBrowseController extends GUIScreen {
 
     private static final String REQ_QUESTIONS = "pb.questions";
+    private static final String REQ_CALENDAR = "p.calendar";
+    private static final String REQ_ACTIVITY = "p.activity";
     private static final String REQ_QUESTION_GET = "pb.question";
     private static final String REQ_EXAMS     = "pb.exams";
     private static final String REQ_EXAM_GET  = "pb.exam";
@@ -87,6 +89,27 @@ public class PrincipalBrowseController extends GUIScreen {
      */
     private final FilterBar<Question> questionButtons = new FilterBar<>();
     private final FilterBar<Exam>     examButtons     = new FilterBar<>();
+
+    // ---- the school calendar ----
+    @FXML private javafx.scene.control.TableView<hsts.common.entity.ExamExecution> calendarTable;
+    @FXML private javafx.scene.control.TableColumn<hsts.common.entity.ExamExecution, String>
+            calWhenColumn, calUntilColumn, calExamColumn, calCourseColumn,
+            calCodeColumn, calWhoColumn, calSatColumn, calStateColumn;
+    @FXML private Label calendarCountLabel;
+    @FXML private javafx.scene.layout.VBox calendarFilterHolder;
+    private final java.util.List<hsts.common.entity.ExamExecution> allSittings =
+            new java.util.ArrayList<>();
+    private final FilterBar<hsts.common.entity.ExamExecution> calendarFilter = new FilterBar<>();
+
+    // ---- what the staff have done ----
+    @FXML private javafx.scene.control.TableView<hsts.common.entity.ActivityEntry> activityTable;
+    @FXML private javafx.scene.control.TableColumn<hsts.common.entity.ActivityEntry, String>
+            actWhenColumn, actWhoColumn, actRoleColumn, actWhatColumn, actDetailColumn;
+    @FXML private Label activityCountLabel;
+    @FXML private javafx.scene.layout.VBox activityFilterHolder;
+    private final java.util.List<hsts.common.entity.ActivityEntry> allActivity =
+            new java.util.ArrayList<>();
+    private final FilterBar<hsts.common.entity.ActivityEntry> activityFilter = new FilterBar<>();
 
     @FXML private ListView<Question> questionList;
     @FXML private VBox              questionDetailBox;
@@ -183,10 +206,16 @@ public class PrincipalBrowseController extends GUIScreen {
         examSearchField.textProperty()
                 .addListener((obs, old, text) -> applyExamFilter());
 
+        send(RequestType.PRINCIPAL_CALENDAR, null, REQ_CALENDAR);
+        send(RequestType.PRINCIPAL_ACTIVITY, 200, REQ_ACTIVITY);
+
         questionButtonHolder.getChildren().add(questionButtons);
         examButtonHolder.getChildren().add(examButtons);
         questionButtons.onChanged(this::applyQuestionFilter);
         examButtons.onChanged(this::applyExamFilter);
+
+        setUpCalendar();
+        setUpActivity();
 
         controller.setResponseHandler(this::onServerResponse);
         controller.setConnectionLostHandler(this::showError);
@@ -257,6 +286,37 @@ public class PrincipalBrowseController extends GUIScreen {
             return;
         }
         switch (id) {
+            case REQ_CALENDAR -> {
+                allSittings.clear();
+                allSittings.addAll((List<hsts.common.entity.ExamExecution>) response.getPayload());
+                calendarFilter.clearGroups();
+                calendarFilter.withButtons("COURSE",
+                        FilterBar.distinct(allSittings,
+                                hsts.common.entity.ExamExecution::getCourseName),
+                        (x, choice) -> choice.equals(x.getCourseName()));
+                calendarFilter.withButtons("GIVEN BY",
+                        FilterBar.distinct(allSittings,
+                                hsts.common.entity.ExamExecution::getReleasedByName),
+                        (x, choice) -> choice.equals(x.getReleasedByName()));
+                calendarFilter.withButtons("WHEN", java.util.List.of("Finished",
+                        "Open now", "Still to come"),
+                        (x, choice) -> choice.equals(calendarState(x)));
+                showCalendar();
+            }
+            case REQ_ACTIVITY -> {
+                allActivity.clear();
+                allActivity.addAll((List<hsts.common.entity.ActivityEntry>) response.getPayload());
+                activityFilter.clearGroups();
+                activityFilter.withButtons("WHO",
+                        FilterBar.distinct(allActivity,
+                                hsts.common.entity.ActivityEntry::getUserName),
+                        (a, choice) -> choice.equals(a.getUserName()));
+                activityFilter.withButtons("WHAT",
+                        FilterBar.distinct(allActivity,
+                                hsts.common.entity.ActivityEntry::getAction),
+                        (a, choice) -> choice.equals(a.getAction()));
+                showActivity();
+            }
             case REQ_QUESTIONS -> {
                 allQuestions.clear();
                 allQuestions.addAll((List<Question>) response.getPayload());
@@ -331,6 +391,91 @@ public class PrincipalBrowseController extends GUIScreen {
         String kept = questionCourseBox.getValue();
         questionCourseBox.setItems(FXCollections.observableArrayList(courses));
         questionCourseBox.setValue(courses.contains(kept) ? kept : ALL_COURSES);
+    }
+
+    // -----------------------------------------------------------------
+    //  The school calendar
+    // -----------------------------------------------------------------
+
+    private static final java.time.format.DateTimeFormatter CAL_WHEN =
+            java.time.format.DateTimeFormatter.ofPattern("EEE d MMM, HH:mm");
+
+    /**
+     * Where one sitting is in time: over, running, or still to come.
+     *
+     * <p>Worked out here rather than stored, for the same reason "in the drawer" is
+     * not stored: it changes by itself as the clock moves, and a flag would need
+     * somebody to remember to turn it.</p>
+     */
+    private static String calendarState(hsts.common.entity.ExamExecution x) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        if (x.getCloseTime().isBefore(now)) {
+            return "Finished";
+        }
+        return x.getOpenTime().isAfter(now) ? "Still to come" : "Open now";
+    }
+
+    private void setUpCalendar() {
+        calendarFilterHolder.getChildren().add(calendarFilter);
+        calendarFilter.searchingIn(x -> x.describeExam() + " " + x.getCourseName()
+                                      + " " + x.getExecutionCode() + " " + x.getReleasedByName())
+                      .onChanged(this::showCalendar);
+
+        calWhenColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getOpenTime().format(CAL_WHEN)));
+        calUntilColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getCloseTime().format(CAL_WHEN)));
+        calExamColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().describeExam()));
+        calCourseColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getCourseName()));
+        calCodeColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getExecutionCode()));
+        calWhoColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getReleasedByName()));
+        calSatColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                String.valueOf(c.getValue().getNumStarted())));
+        calStateColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                calendarState(c.getValue())));
+        calendarTable.setPlaceholder(new Label("No exam has been given to a class yet."));
+    }
+
+    private void showCalendar() {
+        List<hsts.common.entity.ExamExecution> shown = calendarFilter.apply(allSittings);
+        calendarTable.setItems(FXCollections.observableArrayList(shown));
+        calendarCountLabel.setText(shown.size() + " of " + allSittings.size() + " shown");
+    }
+
+    // -----------------------------------------------------------------
+    //  What the staff have done
+    // -----------------------------------------------------------------
+
+    private static final java.time.format.DateTimeFormatter ACT_WHEN =
+            java.time.format.DateTimeFormatter.ofPattern("d MMM, HH:mm:ss");
+
+    private void setUpActivity() {
+        activityFilterHolder.getChildren().add(activityFilter);
+        activityFilter.searchingIn(a -> a.getUserName() + " " + a.getAction()
+                                      + " " + a.getDetail())
+                      .onChanged(this::showActivity);
+
+        actWhenColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getAt().format(ACT_WHEN)));
+        actWhoColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getUserName()));
+        actRoleColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getRole()));
+        actWhatColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getAction()));
+        actDetailColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getDetail()));
+        activityTable.setPlaceholder(new Label("Nothing has been done yet."));
+    }
+
+    private void showActivity() {
+        List<hsts.common.entity.ActivityEntry> shown = activityFilter.apply(allActivity);
+        activityTable.setItems(FXCollections.observableArrayList(shown));
+        activityCountLabel.setText(shown.size() + " of " + allActivity.size() + " shown");
     }
 
     private void applyQuestionFilter() {

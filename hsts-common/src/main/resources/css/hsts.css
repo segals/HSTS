@@ -177,6 +177,16 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-font-weight: 600;
 }
 
+/* The number at the left of a to-do line. Big enough to scan down the
+   column and read only the numbers. */
+.todo-count {
+    -fx-font-size: 20px;
+    -fx-font-weight: 600;
+    -fx-text-fill: -hsts-accent;
+    -fx-min-width: 34;
+    -fx-alignment: CENTER;
+}
+
 /* ---------- inputs -------------------------------------------------- */
 .text-field, .password-field, .text-area, .combo-box-base, .spinner {
     -fx-background-color: -hsts-surface;

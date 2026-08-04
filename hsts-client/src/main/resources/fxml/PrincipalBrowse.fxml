@@ -111,6 +111,84 @@
         </Tab>
 
         <!-- ===================== results ===================== -->
+        <!-- The school's calendar: every sitting, whenever it was or will be. -->
+        <Tab text="School calendar">
+            <VBox spacing="12">
+                <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
+
+                <VBox styleClass="card" spacing="10" VBox.vgrow="ALWAYS">
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="EVERY EXAM GIVEN TO A CLASS" styleClass="section-title"
+                               wrapText="true"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="calendarCountLabel" styleClass="caption" wrapText="true"/>
+                    </HBox>
+
+                    <VBox fx:id="calendarFilterHolder" spacing="6"/>
+
+                    <TableView fx:id="calendarTable" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="calWhenColumn"   text="Opens"    prefWidth="150"
+                                         minWidth="110"/>
+                            <TableColumn fx:id="calUntilColumn"  text="Closes"   prefWidth="150"
+                                         minWidth="110"/>
+                            <TableColumn fx:id="calExamColumn"   text="Exam"     prefWidth="240"
+                                         minWidth="130"/>
+                            <TableColumn fx:id="calCourseColumn" text="Course"   prefWidth="150"
+                                         minWidth="100"/>
+                            <TableColumn fx:id="calCodeColumn"   text="Code"     prefWidth="80"
+                                         minWidth="70"/>
+                            <TableColumn fx:id="calWhoColumn"    text="Given by" prefWidth="160"
+                                         minWidth="110"/>
+                            <TableColumn fx:id="calSatColumn"    text="Sat it"   prefWidth="90"
+                                         minWidth="80"/>
+                            <TableColumn fx:id="calStateColumn"  text="State"    prefWidth="110"
+                                         minWidth="90"/>
+                        </columns>
+                    </TableView>
+
+                    <Label text="Past, present and future. Nothing is hidden - a calendar that dropped last term would be a diary rather than a register."
+                           styleClass="caption" wrapText="true"/>
+                </VBox>
+            </VBox>
+        </Tab>
+
+        <!-- What the staff have been doing, newest first. -->
+        <Tab text="Recent activity">
+            <VBox spacing="12">
+                <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
+
+                <VBox styleClass="card" spacing="10" VBox.vgrow="ALWAYS">
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="WHAT THE STAFF HAVE DONE" styleClass="section-title"
+                               wrapText="true"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="activityCountLabel" styleClass="caption" wrapText="true"/>
+                    </HBox>
+
+                    <VBox fx:id="activityFilterHolder" spacing="6"/>
+
+                    <TableView fx:id="activityTable" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="actWhenColumn"   text="When"   prefWidth="160"
+                                         minWidth="120"/>
+                            <TableColumn fx:id="actWhoColumn"    text="Who"    prefWidth="160"
+                                         minWidth="110"/>
+                            <TableColumn fx:id="actRoleColumn"   text="Role"   prefWidth="120"
+                                         minWidth="90"/>
+                            <TableColumn fx:id="actWhatColumn"   text="What"   prefWidth="230"
+                                         minWidth="130"/>
+                            <TableColumn fx:id="actDetailColumn" text="Detail" prefWidth="420"
+                                         minWidth="150"/>
+                        </columns>
+                    </TableView>
+
+                    <Label text="Teachers and subject coordinators only, and only actions that changed something. A student's exam is recorded on her own paper, and the principal changes nothing herself."
+                           styleClass="caption" wrapText="true"/>
+                </VBox>
+            </VBox>
+        </Tab>
+
         <Tab text="Results">
             <HBox spacing="14">
                 <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>

@@ -258,6 +258,10 @@ public class MainMenuController extends GUIScreen {
         List<MenuEntry> entries = new ArrayList<>();
 
         if (user instanceof Teacher teacher) {               // also covers coordinators
+            // First, because it is the answer to "what should I do now" and every
+            // other entry is a place to go and do one of the things on it.
+            entries.add(new MenuEntry("My to-do list",           "/fxml/Todo.fxml"));
+
             // The question bank is hers whatever she teaches: requirement 19 gives a
             // coordinator every question in the subject she coordinates.
             entries.add(new MenuEntry("Question bank",           "/fxml/QuestionMgmt.fxml"));
@@ -306,7 +310,8 @@ public class MainMenuController extends GUIScreen {
         if (user instanceof Principal) {
             // Requirement 62 names questions, exams and results together, and they
             // are three tabs of one screen rather than three near-identical windows.
-            entries.add(new MenuEntry("Browse questions, exams and results", "/fxml/PrincipalBrowse.fxml"));
+            entries.add(new MenuEntry(
+                    "Questions, exams, calendar and activity", "/fxml/PrincipalBrowse.fxml"));
             entries.add(new MenuEntry("Statistical reports",     "/fxml/Reports.fxml"));
         }
 
