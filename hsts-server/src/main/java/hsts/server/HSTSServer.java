@@ -688,6 +688,35 @@ public class HSTSServer extends AbstractServer {
         } catch (Exception e) {
             log("Could not record activity for " + who.getUsername() + ": " + e.getMessage());
         }
+        tellThePrincipal(who, label);
+    }
+
+    /**
+     * Tells any signed-in principal that the school has changed under her.
+     *
+     * <p>Her screens are the only ones showing the whole school, so they are the
+     * only ones that go stale because somebody else did something. NFR 18 forbids
+     * a Refresh button, which leaves the server to speak first.</p>
+     *
+     * <p>Sent from here, beside the log, because the two answer the same question -
+     * "did something happen" - and a second place to decide would eventually
+     * disagree with this one: an action would appear in her list without her list
+     * being told to reload.</p>
+     */
+    private void tellThePrincipal(User who, String whatTheyDid) {
+        try {
+            hsts.common.protocol.PushEvent event = new hsts.common.protocol.PushEvent(
+                    hsts.common.protocol.PushType.SCHOOL_ACTIVITY, null,
+                    who.getFullName() + ": " + whatTheyDid.toLowerCase());
+            for (SessionRegistry.Session session : sessions.getAllSessions()) {
+                if (session.getUser() instanceof hsts.common.entity.Principal) {
+                    pushService.toUsername(session.getUser().getUsername(), event);
+                }
+            }
+        } catch (Exception e) {
+            // The action stands; she will see it the next time she opens the screen.
+            log("Could not tell the principal about " + whatTheyDid + ": " + e.getMessage());
+        }
     }
 
     /**

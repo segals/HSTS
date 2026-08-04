@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Every stored version of one exam, and what changed between them.
+
+    The same window as a question's history and for the same reason: editing an
+    exam keeps the previous version, and a list of version numbers proves they
+    exist without saying what is different about them. An exam has one thing a
+    question has not - its questions and their marks - so that is a row of the
+    comparison like any other field.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="hsts.client.gui.ExamVersionHistoryController"
+      spacing="0" prefWidth="960" prefHeight="620" minWidth="700" minHeight="440">
+
+    <HBox styleClass="header-bar" spacing="12" alignment="CENTER_LEFT">
+        <VBox spacing="2" HBox.hgrow="ALWAYS" maxWidth="Infinity">
+            <Label fx:id="titleLabel" styleClass="h2" wrapText="true"/>
+            <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="closeButton" text="Close" onAction="#onClose" styleClass="quiet"/>
+    </HBox>
+
+    <HBox spacing="16" VBox.vgrow="ALWAYS">
+        <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
+
+        <!-- ===== every stored version ===== -->
+        <VBox styleClass="card" spacing="10" prefWidth="270" minWidth="230">
+            <Label text="STORED VERSIONS" styleClass="section-title" wrapText="true"/>
+            <ListView fx:id="versionList" VBox.vgrow="ALWAYS"/>
+            <Label text="Select an older version to compare it with the current one."
+                   styleClass="caption" wrapText="true"/>
+        </VBox>
+
+        <!-- ===== side-by-side comparison ===== -->
+        <VBox styleClass="card" spacing="10" HBox.hgrow="ALWAYS" minWidth="420">
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="COMPARISON" styleClass="section-title" wrapText="true"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="changeSummaryLabel" styleClass="caption" wrapText="true"/>
+            </HBox>
+
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                <GridPane fx:id="diffGrid" hgap="12" vgap="8">
+                    <padding><Insets right="8"/></padding>
+                </GridPane>
+            </ScrollPane>
+        </VBox>
+    </HBox>
+
+</VBox>

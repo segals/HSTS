@@ -44,6 +44,19 @@ public class Course implements Serializable {
 
     @Override
     public String toString() {
-        return name;
+        return describe();
+    }
+
+    /**
+     * "Plane Geometry (01)".
+     *
+     * <p>Both, everywhere. The two digits are inside the id of every question and
+     * exam in the course, so a teacher does need to know which is which; and a
+     * list of courses reading 01 to 08 tells her nothing at all. This is what a
+     * combo box shows, because {@code toString} is what a combo box shows.</p>
+     */
+    public String describe() {
+        return (name == null || name.isBlank())
+                ? courseCode : name + " (" + courseCode + ")";
     }
 }

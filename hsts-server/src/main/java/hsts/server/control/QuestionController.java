@@ -214,6 +214,16 @@ public class QuestionController {
                 return Response.error(invalid);
             }
 
+            // A version that is identical to the one before it is not history, it
+            // is noise: it makes the version list longer without recording
+            // anything, and it makes "what changed between v3 and v4" answer
+            // "nothing". Pressing Save twice is the ordinary way to produce one.
+            if (isTheSame(existing, edited)) {
+                return Response.error("No changes were made. \"" + existing.getName()
+                        + "\" is still version " + existing.getVersion()
+                        + " - change something first, or leave it as it is.");
+            }
+
             int newVersion = questionDAO.createNewVersion(edited);
             return Response.ok(edited,
                     "Saved as version " + newVersion + ". Version " + (newVersion - 1)
@@ -256,6 +266,58 @@ public class QuestionController {
      */
     /** Long enough to say what a question is about, short enough for a list row. */
     private static final int MAX_NAME_LENGTH = 120;
+
+    /**
+     * Whether an edit would store an exact copy of what is already there.
+     *
+     * <p>Compares only what the author can type: the number, the version, who
+     * wrote it and when are all different by definition and say nothing about
+     * whether the question changed.</p>
+     *
+     * <p>Blank and absent are treated as the same thing, because the screen sends
+     * an empty instructions box as null and the database may hold either.</p>
+     */
+    private static boolean isTheSame(Question before, Question after) {
+        if (!same(before.getName(), after.getName())
+                || !same(before.getText(), after.getText())
+                || !same(before.getInstructions(), after.getInstructions())
+                || !same(before.getTopic(), after.getTopic())
+                || before.getDifficulty() != after.getDifficulty()
+                || !java.util.Arrays.equals(before.getImage(), after.getImage())) {
+            return false;
+        }
+        for (int answerNo = 1; answerNo <= 4; answerNo++) {
+            Answer wasThere = find(before, answerNo);
+            Answer isThere  = find(after, answerNo);
+            if (wasThere == null || isThere == null) {
+                return wasThere == isThere;
+            }
+            if (!same(wasThere.getText(), isThere.getText())
+                    || wasThere.isCorrect() != isThere.isCorrect()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static Answer find(Question q, int answerNo) {
+        if (q.getAnswers() == null) {
+            return null;
+        }
+        for (Answer a : q.getAnswers()) {
+            if (a.getAnswerNo() == answerNo) {
+                return a;
+            }
+        }
+        return null;
+    }
+
+    /** Blank, empty and absent all count as the same value. */
+    private static boolean same(String a, String b) {
+        String left  = (a == null) ? "" : a.trim();
+        String right = (b == null) ? "" : b.trim();
+        return left.equals(right);
+    }
 
     private String validate(Question q) {
         // Compulsory, alongside the exam name and for the same reason: a list of

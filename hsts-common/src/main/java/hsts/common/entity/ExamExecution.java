@@ -96,6 +96,24 @@ public class ExamExecution implements Serializable {
     }
 
     public String getCourseName()           { return courseName; }
+
+    /**
+     * The course's two-digit code, read out of the exam's own number.
+     *
+     * <p>Digits 2 and 3 of a six-digit exam id: two for the exam, two for the
+     * course, two for the subject. Taken from the id rather than stored again, so
+     * the two can never disagree.</p>
+     */
+    public String getCourseCode() {
+        return (examId == null || examId.length() != 6) ? "" : examId.substring(2, 4);
+    }
+
+    /** "Plane Geometry (01)". */
+    public String describeCourse() {
+        return (courseName == null || courseName.isBlank())
+                ? getCourseCode() : courseName + " (" + getCourseCode() + ")";
+    }
+
     public String getExamTitle()            { return examTitle; }
     public int getNumStarted()              { return numStarted; }
     public int getNumFinishedSelf()         { return numFinishedSelf; }

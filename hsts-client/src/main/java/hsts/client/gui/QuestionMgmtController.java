@@ -321,15 +321,42 @@ public class QuestionMgmtController extends GUIScreen {
                 showBank();
                 bankCountLabel.setText(questions.size() + " question(s) in this course");
                 showMessage(response.getMessage());
+
+                // Keep the list on whatever the editor is on. After adding a
+                // question the editor holds it, and a list that did not show it
+                // as chosen invited her to press Save again to "make sure".
+                if (editing != null) {
+                    for (Question q : questionList.getItems()) {
+                        if (q.getQuestionId().equals(editing.getQuestionId())) {
+                            questionList.getSelectionModel().select(q);
+                            break;
+                        }
+                    }
+                }
             }
             case REQ_TOPICS -> {
                 List<String> topics = (List<String>) response.getPayload();
                 topicCombo.setItems(FXCollections.observableArrayList(topics));
             }
             case REQ_GET -> showQuestion((Question) response.getPayload());
-            case REQ_ADD, REQ_EDIT -> {
+            case REQ_ADD -> {
                 saveButton.setDisable(false);
                 showSuccess(response.getMessage());
+
+                // The question now exists, so the form is no longer a new
+                // question - it is that one. Without this line the screen stayed
+                // in "new" mode with the same text still in the boxes, and a
+                // second press of Save added a second question: press it four
+                // times and the bank had four copies, each at version 1. Now the
+                // second press is an edit, and an edit that changes nothing is
+                // refused by the server.
+                showQuestion((Question) response.getPayload());
+                refreshAfterChange();
+            }
+            case REQ_EDIT -> {
+                saveButton.setDisable(false);
+                showSuccess(response.getMessage());
+                showQuestion((Question) response.getPayload());
                 refreshAfterChange();
             }
             case REQ_DELETE -> {
@@ -395,6 +422,10 @@ public class QuestionMgmtController extends GUIScreen {
     private void startNewQuestion() {
         editing = null;
         imageBytes = null;
+        // Nothing in the bank is being edited any more, so nothing in the bank
+        // should look chosen - and leaving a row highlighted meant clicking it
+        // again did nothing, the selection not having changed.
+        questionList.getSelectionModel().clearSelection();
 
         editorTitleLabel.setText("New question");
         versionLabel.setText("It will be given the next free 5-digit id: "

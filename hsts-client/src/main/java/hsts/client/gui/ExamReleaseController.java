@@ -229,8 +229,8 @@ public class ExamReleaseController extends GUIScreen {
                 // exam should not have a button that can only ever show nothing.
                 approvedFilter.clearGroups();
                 approvedFilter.withButtons("COURSE",
-                        FilterBar.distinct(approved, Exam::getCourseName),
-                        (exam, choice) -> choice.equals(exam.getCourseName()));
+                        FilterBar.distinct(approved, Exam::describeCourse),
+                        (exam, choice) -> choice.equals(exam.describeCourse()));
                 approvedFilter.withButtons("WRITTEN BY",
                         FilterBar.distinct(approved, Exam::getAuthorName),
                         (exam, choice) -> choice.equals(exam.getAuthorName()));

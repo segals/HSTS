@@ -185,5 +185,21 @@ public enum PushType {
      * <p>Requirement 61. Told rather than discovered: without this she would find
      * out by typing the code again and being surprised it worked.</p>
      */
-    EXTRA_ATTEMPT_GRANTED
+    EXTRA_ATTEMPT_GRANTED,
+
+    /**
+     * A member of staff did something that changed the school. Payload is what
+     * they did, in the same words the activity log stores.
+     *
+     * <p>Sent to the principal and to nobody else, because she is the only person
+     * whose screens show the whole school: her calendar, her activity list, her
+     * question bank and her exam list all go stale for reasons that have nothing
+     * to do with her, and NFR 18 leaves her no Refresh button to press.</p>
+     *
+     * <p>One event for every kind of change rather than one per kind. The
+     * alternative is a list of push types that has to be extended every time a
+     * request type is added, and forgetting to extend it is invisible - the screen
+     * simply stops keeping up.</p>
+     */
+    SCHOOL_ACTIVITY
 }

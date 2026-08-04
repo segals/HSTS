@@ -3179,3 +3179,168 @@ school that no longer exists would be worse than none.
 | Screens | **20/20** load, **18/18** with no cut-off text at four sizes |
 
 Run **three times**, with a reset between passes.
+
+---
+
+## Nine things reported from the screen
+
+All nine came from using the system rather than from reading the documents, and
+five of them were faults rather than wishes.
+
+### 1. A course reads as its name, not only its two digits
+
+The filter buttons showed `01 02 03 ... 08`. The two digits are real - they are
+inside the id of every question and exam in the course - but they are not what a
+teacher calls the course.
+
+A question now carries its course **name** as well as its code, read from the
+course table on the way out and never written back. Everywhere a course appears
+it reads **"Plane Geometry (01)"**: the filter buttons on all four screens that
+have them, the question and exam lists, the detail panels, the calendar, and
+every course drop-down (`Course.toString`, so no screen can be the one that
+forgets).
+
+### 2. One filter, not two
+
+The principal's question tab had a course box and a search field of its own
+**above** the filter bar, and her exam tab had a second search field. Two boxes
+narrowing the same list is one more than anybody needs, and the count beside each
+disagreed with the other about what "shown" meant. The old row is gone from both
+tabs; the filter bar - free text plus buttons - is the only one left.
+
+### 3. The calendar is a calendar
+
+It was a table sorted by date, which is a list of dates.
+
+It is now a **month**: seven columns starting on **Sunday**, because this is an
+Israeli school; a square per day with the exams that start on it, drawn as chips
+carrying the time and the exam's name and coloured by whether the sitting is
+finished, open or still to come; arrows and **This month** to move; and today's
+square outlined.
+
+Everything the old table had a column for - the code, who gave it out, how many
+sat it - is beside the grid, on the day she picks, where there is room to say it
+in words rather than in a 90-pixel column.
+
+**Nothing is filtered out** and the filter bar still narrows what is drawn. An
+empty month says *"Nothing in September. The nearest is 3 August - Mid-term"*
+rather than showing an empty grid, which reads as a screen that failed to load.
+
+### 4. The principal's screens keep up on their own
+
+Reported: *"the principal data, calendar and recent activities doesn't update
+well - for example when a teacher releases the exam"*. They were asked for once,
+when the screen opened, and never again.
+
+Every staff action is already recorded in one place, where requests are
+dispatched. That is now also where the principal is **told**: a `SCHOOL_ACTIVITY`
+push carrying who did what, sent to signed-in principals and to nobody else. Her
+screen re-asks for all four lists - calendar, activity, questions, exams -
+because deciding here which request types affect which tab is a decision that
+would be silently wrong the first time somebody added a request type and did not
+think of this screen.
+
+**She does not lose her place.** The filter bar remembers which buttons were
+ticked across a rebuild, and the lists put the selection back on the same
+question, exam and sitting by id. A screen that cleared her filter every time a
+colleague did something would be worse than the stale one it replaced.
+
+### 5. The exam builder was cut off
+
+The automatic pane's quota line ran off the edge: "any topic | any level | 5"
+with the count box half there and the remove button gone. Four controls side by
+side need about 420 points and the panel is allowed to be 330, so at some width
+they cannot all fit however small their minimums are. It is a **flow** now: what
+will not fit goes on the next line instead of off the end.
+
+### 6. Saving twice made a second question
+
+Reported exactly: *"when you create a new question and press save multiple time,
+it make new v1 questions every time"*. Two faults, one on each side.
+
+The screen stayed in "new question" mode after saving, with the same text still
+in the boxes, so the second press was a second **add**. It now edits the question
+it has just created - which is also what the list shows as chosen.
+
+And the server had nothing to say about an edit that changed nothing. It now
+compares what arrives with what is stored - every field the author can type, the
+four answers, which one is right, and the picture - and refuses:
+
+> No changes were made. "Triangle angle sum" is still version 1 - change
+> something first, or leave it as it is.
+
+Blank and absent count as the same thing, because the screen sends an empty
+instructions box as nothing and the database may hold either.
+
+**An exam behaves the same way**, and it matters more there: a new exam version
+has to be approved again, so an accidental one would put a working exam back in
+front of the coordinator. One consequence worth stating plainly: a teacher can no
+longer re-submit a **rejected** exam unchanged. Requirement 33 sends her the
+reason so she knows what to change, and re-submitting the same paper would loop.
+
+### 7. No cut-off text
+
+Two labels in the reported pictures ended in "..." - *"Tick the questions you
+want. Filter first if the bank is long -..."* and *"Only you can see this. Your
+teacher sees ho..."*. Both **wrap**. Wrapping solves running off the side; it
+does nothing about running out of **height**. Given the height of one line when
+its text needs two, JavaFX draws one line and an ellipsis, and the sentence is
+gone.
+
+Every wrapping label on every screen is now given `USE_PREF_SIZE` as its minimum
+height - "never shorter than the text needs" - applied where screens are loaded
+rather than as an attribute in nineteen files and every file written after them.
+Because a wrapping label's preferred height is worked out from the width it has,
+this is right at every window size rather than at the one it was tested at. What
+gives instead is the window, which is inside a scroll frame precisely so that it
+can.
+
+Two one-word labels ("Course", "minutes") are kept at their natural width
+instead: wrapping a single word can only ever break it in half.
+
+### 8. An exam's history reads like a question's
+
+It was a block of text in a dialog. It proved the older versions existed and left
+the reader to spot the difference between two paragraphs - which on an exam is
+usually one question out of ten, exactly what reading two lists does not find.
+
+It is now the same side-by-side window a question has: versions on the left, the
+fields on the right, every difference marked. **The paper itself is one of the
+fields**, one question to a line with its name, the version this exam pinned, and
+its marks. The state is shown but not counted as a change - it is what happened
+*to* a version, not something its author edited.
+
+### 9. A message that vanished after a second
+
+Reported: the study bot's refusal appeared and was gone.
+
+The exam clock ticks **once a second**, carrying the seconds remaining as its
+payload and **no message at all** - it is data for the exam screen. Every other
+screen showed whatever it was sent, so it wrote a blank line over the status
+label. A student who asked the bot during an exam was told *"the study bot is not
+available while you are sitting an exam in this course"* and had it taken away
+within a second, leaving her with a bot that did nothing and no reason.
+
+A push with nothing to say is now ignored. This was never only the bot: any
+message on any screen a student could be on while an exam was running had a life
+of one second.
+
+### Verified
+
+Two new harnesses, and one existing one taught to see the fault it had been
+missing.
+
+| Suite | Checks | What it covers |
+|---|---|---|
+| **LiveUpdateTest** | **51** (new) | course names on questions, exams and sittings; save-twice refused and no second question or version; every kind of change still noticed one at a time; the same for exams; the principal told when a question is written and when an exam is released, with the calendar really one longer; a student, another teacher, a read and a refused action all told nothing |
+| **ScreenBehaviourTest** | **49** (new) | a tick leaves a refusal on the screen on three screens while a real announcement still arrives; seven columns starting on Sunday; every sitting drawn on its day with its name and time; the day panel carrying the code, the teacher and the count; the arrows; an empty month explaining itself; the old filter boxes gone; the exam history comparing field by field including the paper |
+| **TruncationTest** | 19 screens | now measures **height** on wrapping labels, which is how the two reported labels were being cut, and fills every empty label with a sentence first, since half of them are filled in by the controller |
+
+| Suite | Result |
+|---|---|
+| M2-M15, NewUsers, ClosingTime, Badge, StreamRace, StaffView, **LiveUpdate** | **1120 checks, all passing** |
+| Screens | **21/21** load, **19/19** with no cut-off text at four sizes |
+| MenuBadgeTest / ScreenBehaviourTest | 49 / 49 |
+
+Run **three times** from fresh classes with a reset between passes, and once more
+from the packaged jars.

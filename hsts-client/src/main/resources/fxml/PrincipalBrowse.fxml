@@ -19,7 +19,6 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ScrollPane?>
@@ -27,7 +26,7 @@
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
-<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
@@ -53,14 +52,10 @@
             <VBox spacing="12">
                 <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
 
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="Course" styleClass="caption"/>
-                    <ComboBox fx:id="questionCourseBox" prefWidth="230"/>
-                    <TextField fx:id="questionSearchField" promptText="Search the text or topic"
-                               HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                    <Label fx:id="questionCountLabel" styleClass="caption" wrapText="true"/>
-                </HBox>
-
+                <!-- One filter, not two. There used to be a course box and a
+                     search field here as well as the filter bar below, which meant
+                     two boxes that both narrowed the same list and neither of which
+                     told you what the other was doing. -->
                 <HBox spacing="14" VBox.vgrow="ALWAYS">
                     <VBox styleClass="card" spacing="8" prefWidth="430" minWidth="340">
                         <Label text="QUESTIONS" styleClass="section-title" wrapText="true"/>
@@ -84,13 +79,6 @@
         <Tab text="Exams">
             <VBox spacing="12">
                 <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
-
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <TextField fx:id="examSearchField"
-                               promptText="Search by exam number, course, author or state"
-                               HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                    <Label fx:id="examCountLabel" styleClass="caption" wrapText="true"/>
-                </HBox>
 
                 <HBox spacing="14" VBox.vgrow="ALWAYS">
                     <VBox styleClass="card" spacing="8" prefWidth="420" minWidth="330">
@@ -117,35 +105,49 @@
                 <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
 
                 <VBox styleClass="card" spacing="10" VBox.vgrow="ALWAYS">
-                    <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Label text="EVERY EXAM GIVEN TO A CLASS" styleClass="section-title"
-                               wrapText="true"/>
+
+                    <!-- One month at a time, with the arrows a wall calendar has.
+                         A table sorted by date is a list of dates; a month you can
+                         look at answers "how busy is next week" in one glance,
+                         which is the question a head teacher actually has. -->
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Button fx:id="calPrevButton" text="‹" onAction="#onPreviousMonth"
+                                styleClass="quiet"/>
+                        <Label fx:id="calMonthLabel" styleClass="h3" wrapText="true"
+                               minWidth="-Infinity"/>
+                        <Button fx:id="calNextButton" text="›" onAction="#onNextMonth"
+                                styleClass="quiet"/>
+                        <Button fx:id="calTodayButton" text="This month" onAction="#onThisMonth"
+                                styleClass="quiet"/>
                         <Region HBox.hgrow="ALWAYS"/>
                         <Label fx:id="calendarCountLabel" styleClass="caption" wrapText="true"/>
                     </HBox>
 
                     <VBox fx:id="calendarFilterHolder" spacing="6"/>
 
-                    <TableView fx:id="calendarTable" VBox.vgrow="ALWAYS">
-                        <columns>
-                            <TableColumn fx:id="calWhenColumn"   text="Opens"    prefWidth="150"
-                                         minWidth="110"/>
-                            <TableColumn fx:id="calUntilColumn"  text="Closes"   prefWidth="150"
-                                         minWidth="110"/>
-                            <TableColumn fx:id="calExamColumn"   text="Exam"     prefWidth="240"
-                                         minWidth="130"/>
-                            <TableColumn fx:id="calCourseColumn" text="Course"   prefWidth="150"
-                                         minWidth="100"/>
-                            <TableColumn fx:id="calCodeColumn"   text="Code"     prefWidth="80"
-                                         minWidth="70"/>
-                            <TableColumn fx:id="calWhoColumn"    text="Given by" prefWidth="160"
-                                         minWidth="110"/>
-                            <TableColumn fx:id="calSatColumn"    text="Sat it"   prefWidth="90"
-                                         minWidth="80"/>
-                            <TableColumn fx:id="calStateColumn"  text="State"    prefWidth="110"
-                                         minWidth="90"/>
-                        </columns>
-                    </TableView>
+                    <HBox spacing="14" VBox.vgrow="ALWAYS">
+
+                        <VBox spacing="6" HBox.hgrow="ALWAYS" minWidth="520">
+                            <GridPane fx:id="calendarHeadingRow" hgap="6"/>
+                            <ScrollPane fitToWidth="true" fitToHeight="true"
+                                        VBox.vgrow="ALWAYS" styleClass="cal-scroll">
+                                <GridPane fx:id="calendarGrid" hgap="6" vgap="6"
+                                          minHeight="380"/>
+                            </ScrollPane>
+                            <Label fx:id="calendarHintLabel" styleClass="caption" wrapText="true"/>
+                        </VBox>
+
+                        <VBox styleClass="card" spacing="8" prefWidth="330" minWidth="270"
+                              maxWidth="380">
+                            <Label text="THE DAY YOU PICKED" styleClass="section-title"
+                                   wrapText="true"/>
+                            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                                <VBox fx:id="calendarDetailBox" spacing="8">
+                                    <padding><Insets right="10"/></padding>
+                                </VBox>
+                            </ScrollPane>
+                        </VBox>
+                    </HBox>
 
                     <Label text="Past, present and future. Nothing is hidden - a calendar that dropped last term would be a diary rather than a register."
                            styleClass="caption" wrapText="true"/>

@@ -160,6 +160,11 @@ here. They belong to Phase 3 alongside the entries above.
 | Use case table | SUC-10 says "courses she teaches"; requirement 59 and מתווה 10 say "exams she wrote" — these are different sets |
 | Class diagram (Assignment 2) | `StudentExam` carries the sitting's close time beside her own deadline, and `effectiveEnd()` picks the earlier — see §9 |
 | Textual specifications | SUC-7: the exam now ends at the sitting's close for anyone still inside, and the warning she receives depends on which end binds — see §9 |
+| Class diagram (Assignment 2) | `Question` carries `courseName`, and `Question` / `Exam` / `ExamExecution` / `Course` each have a `describeCourse()` — display only, read from the course table on the way out |
+| Class diagram (Assignment 2) | `PushType.SCHOOL_ACTIVITY` — the principal's screens are the only ones showing the whole school, so they are the only ones that go stale because of somebody else |
+| Class diagram (Assignment 2) | `ExamVersionHistoryController` beside `VersionHistoryController`; `ExamDAO.findAllVersionsWithQuestions()` |
+| Textual specifications | SUC-2 and SUC-4: an edit that changes nothing is refused rather than stored as a new version. The submitted specification says an edit creates a version; it does not say what an edit that edits nothing does |
+| Use case table | SUC-4: a rejected exam can no longer be re-submitted unchanged, which follows from the line above |
 
 ---
 
@@ -443,9 +448,15 @@ there is nothing she could ever release and the screen could only ever be empty.
 Her approval powers are untouched - those are scoped to her **subject**, and have
 nothing to do with teaching.
 
-**Marking is deliberately left on her menu.** It is scoped to sittings she
-*released*, at any time in the past, so a coordinator who taught last year still
-has last year's papers to finish. Hiding it would strand them.
+**Marking and building an exam are not on her menu either.** The argument for
+keeping marking was that it is scoped to sittings she *released*, at any time in
+the past, so a coordinator who taught last year would still have last year's
+papers to finish. The customer's instruction was the other way - *"I don't want a
+coordinator that teaches nothing even have the options to mark grades"* - and it
+is his call: a coordinator who has never taught has released nothing, so the
+screen could only ever be empty, and an empty screen behind a menu entry reads as
+a fault. The server still allows it, so a coordinator who taught in a previous
+year loses nothing but the button.
 
 ### Still missing, and worth listing
 

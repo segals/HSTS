@@ -43,8 +43,20 @@ public class FilterBar<T> extends VBox {
     private Function<T, String> searchText = item -> String.valueOf(item);
     private Runnable onChanged = () -> { };
 
-    /** One row of buttons: a label, the choices, and how to test an item. */
-    private record Group<T>(FlowPane buttons, BiPredicate<T, String> matches) { }
+    /** One row of buttons: its heading, its heading label, the choices, and the test. */
+    private record Group<T>(String heading, Label label, FlowPane buttons,
+                            BiPredicate<T, String> matches) { }
+
+    /**
+     * What was ticked in each row before the rows were thrown away.
+     *
+     * <p>The rows are rebuilt whenever fresh data arrives, and fresh data now
+     * arrives on its own: a teacher releasing an exam reloads the principal's
+     * lists under her. Without this, her filter cleared itself every time somebody
+     * else did something, which is worse than the stale list it was meant to
+     * fix.</p>
+     */
+    private final java.util.Map<String, Set<String>> remembered = new java.util.HashMap<>();
 
     public FilterBar() {
         setSpacing(6);
@@ -84,16 +96,20 @@ public class FilterBar<T> extends VBox {
         }
         Label label = new Label(heading);
         label.getStyleClass().add("section-title");
+        label.setWrapText(true);
+
+        Set<String> wasTicked = remembered.getOrDefault(heading, Set.of());
 
         FlowPane buttons = new FlowPane(6, 6);
         for (String choice : choices) {
             ToggleButton button = new ToggleButton(choice);
             button.getStyleClass().add("filter-chip");
             button.setMinWidth(Region.USE_PREF_SIZE);
+            button.setSelected(wasTicked.contains(choice));
             button.setOnAction(e -> changed());
             buttons.getChildren().add(button);
         }
-        groups.add(new Group<>(buttons, matches));
+        groups.add(new Group<>(heading, label, buttons, matches));
         getChildren().addAll(label, buttons);
         return this;
     }
@@ -108,11 +124,10 @@ public class FilterBar<T> extends VBox {
      */
     public void clearGroups() {
         for (Group<T> group : groups) {
-            getChildren().remove(group.buttons());
+            // Remember what was ticked, so a reload does not clear her filter.
+            remembered.put(group.heading(), selected(group.buttons()));
+            getChildren().removeAll(group.label(), group.buttons());
         }
-        // The heading label sits immediately before each row; take it with it.
-        getChildren().removeIf(node -> node instanceof Label label
-                && label.getStyleClass().contains("section-title"));
         groups.clear();
     }
 
@@ -172,6 +187,9 @@ public class FilterBar<T> extends VBox {
 
     public void clear() {
         search.clear();
+        // Forget the ticks as well, or the next reload would put back the very
+        // filter she has just cleared.
+        remembered.clear();
         for (Group<T> group : groups) {
             for (var node : group.buttons().getChildren()) {
                 ((ToggleButton) node).setSelected(false);

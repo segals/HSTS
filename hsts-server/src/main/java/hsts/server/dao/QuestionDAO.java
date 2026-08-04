@@ -235,9 +235,11 @@ public class QuestionDAO implements IDAO<Question, String> {
         String sql = """
             SELECT q.question_id, q.version, q.name, q.course_code, q.text, q.instructions,
                    q.topic, q.difficulty, q.is_current, q.is_deleted,
-                   q.author_id, u.full_name AS author_name, q.created_at
+                   q.author_id, u.full_name AS author_name, q.created_at,
+                   c.name AS course_name
             FROM question q
             JOIN users u ON u.user_id = q.author_id
+            JOIN course c ON c.course_code = q.course_code
             WHERE q.course_code = ? AND q.is_current = TRUE AND q.is_deleted = FALSE
             ORDER BY q.question_id""";
 
@@ -261,9 +263,11 @@ public class QuestionDAO implements IDAO<Question, String> {
         String sql = """
             SELECT q.question_id, q.version, q.name, q.course_code, q.text, q.instructions,
                    q.topic, q.difficulty, q.image, q.is_current, q.is_deleted,
-                   q.author_id, u.full_name AS author_name, q.created_at
+                   q.author_id, u.full_name AS author_name, q.created_at,
+                   c.name AS course_name
             FROM question q
             JOIN users u ON u.user_id = q.author_id
+            JOIN course c ON c.course_code = q.course_code
             WHERE q.question_id = ? AND q.version = ?""";
 
         try (PreparedStatement ps = conn().prepareStatement(sql)) {
@@ -297,9 +301,11 @@ public class QuestionDAO implements IDAO<Question, String> {
         String sql = """
             SELECT q.question_id, q.version, q.name, q.course_code, q.text, q.instructions,
                    q.topic, q.difficulty, q.is_current, q.is_deleted,
-                   q.author_id, u.full_name AS author_name, q.created_at
+                   q.author_id, u.full_name AS author_name, q.created_at,
+                   c.name AS course_name
             FROM question q
             JOIN users u ON u.user_id = q.author_id
+            JOIN course c ON c.course_code = q.course_code
             WHERE q.question_id = ?
             ORDER BY q.version DESC""";
 
@@ -348,9 +354,11 @@ public class QuestionDAO implements IDAO<Question, String> {
         String sql = """
             SELECT q.question_id, q.version, q.name, q.course_code, q.text, q.instructions,
                    q.topic, q.difficulty, q.is_current, q.is_deleted,
-                   q.author_id, u.full_name AS author_name, q.created_at
+                   q.author_id, u.full_name AS author_name, q.created_at,
+                   c.name AS course_name
             FROM question q
             JOIN users u ON u.user_id = q.author_id
+            JOIN course c ON c.course_code = q.course_code
             WHERE q.is_current = TRUE AND q.is_deleted = FALSE
             ORDER BY q.course_code, q.question_id""";
 
@@ -387,6 +395,7 @@ public class QuestionDAO implements IDAO<Question, String> {
         q.setQuestionId(rs.getString("question_id"));
         q.setVersion(rs.getInt("version"));
         q.setCourseCode(rs.getString("course_code"));
+        q.setCourseName(rs.getString("course_name"));
         q.setName(rs.getString("name"));
         q.setText(rs.getString("text"));
         q.setInstructions(rs.getString("instructions"));

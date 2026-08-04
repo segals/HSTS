@@ -74,6 +74,19 @@ public abstract class GUIScreen {
             signedOutForIdleness(event.getMessage());
             return;
         }
+        // An event with nothing to say must not be shown, because "showing" it
+        // means writing a blank line over whatever the status label held.
+        //
+        // This was a real defect, not a tidy-up. The exam clock ticks once a
+        // second and carries the seconds remaining as its payload with no message
+        // at all - it is data for the exam screen, not an announcement. On every
+        // other screen it landed here and wiped the line: a student who asked the
+        // study bot during an exam was told "the study bot is not available while
+        // you are sitting an exam in this course", and the refusal disappeared
+        // within a second, leaving her with a bot that did nothing and no reason.
+        if (event.getMessage() == null || event.getMessage().isBlank()) {
+            return;
+        }
         if (event.getType() == PushType.EXAM_REJECTED) {
             showError(event.getMessage());
         } else {

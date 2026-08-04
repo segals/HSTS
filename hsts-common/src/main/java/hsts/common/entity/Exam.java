@@ -193,6 +193,17 @@ public class Exam implements Serializable {
         }
     }
 
+    /**
+     * "Plane Geometry (01)" - the course the way it should be read.
+     *
+     * <p>The two digits are inside this exam's own six-digit number, so they are
+     * worth keeping in front of her; they are not what she calls the course.</p>
+     */
+    public String describeCourse() {
+        return (courseName == null || courseName.isBlank())
+                ? courseCode : courseName + " (" + courseCode + ")";
+    }
+
     /** Exam-code part of the id - digits 0 and 1. */
     public String getExamCodePart() {
         return (examId == null || examId.length() != 6) ? "" : examId.substring(0, 2);

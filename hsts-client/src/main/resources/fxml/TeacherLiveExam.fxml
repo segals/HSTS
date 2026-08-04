@@ -54,7 +54,7 @@
             </HBox>
             <HBox spacing="10" alignment="CENTER_LEFT">
                 <Spinner fx:id="minutesSpinner" editable="true" prefWidth="110"/>
-                <Label text="minutes" wrapText="true"/>
+                <Label text="minutes" minWidth="-Infinity"/>
                 <Button fx:id="addButton" text="Give extra time" onAction="#onAddTime"
                         styleClass="primary"/>
                 <Button fx:id="removeButton" text="Take time away" onAction="#onRemoveTime"

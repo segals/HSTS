@@ -200,7 +200,18 @@ public class ExamBuilderController {
                 return Response.error(invalid);
             }
 
+            // The same rule as a question: an exact copy of the version before it
+            // records nothing, and a second press of Save is the ordinary way to
+            // make one. It matters more here than on a question, because a new
+            // exam version has to be approved all over again - so an accidental
+            // one would put a working exam back in front of the coordinator.
             renumber(edited);
+            if (isTheSame(existing, edited)) {
+                return Response.error("No changes were made. \"" + existing.getName()
+                        + "\" is still version " + existing.getVersion()
+                        + ", and it keeps the approval it already has.");
+            }
+
             int newVersion = examDAO.createNewVersion(edited);
 
             return Response.ok(edited,
@@ -249,7 +260,7 @@ public class ExamBuilderController {
 
     public Response listVersions(User user, String examId) {
         try {
-            List<Exam> versions = examDAO.findAllVersions(examId);
+            List<Exam> versions = examDAO.findAllVersionsWithQuestions(examId);
             if (versions.isEmpty()) {
                 return Response.error("No exam with id " + examId + ".");
             }
@@ -277,6 +288,46 @@ public class ExamBuilderController {
      */
     /** The longest name that still fits a list row without pushing the number off it. */
     private static final int MAX_NAME_LENGTH = 120;
+
+    /**
+     * Whether an edit would store an exact copy of the version already there.
+     *
+     * <p>Everything the author can change: the name, the duration, both sets of
+     * instructions, and the questions with their marks in the order they appear.
+     * The id, the version, the author and the approval state are not hers to
+     * change and say nothing about whether the exam did.</p>
+     */
+    private static boolean isTheSame(Exam before, Exam after) {
+        if (!same(before.getName(), after.getName())
+                || before.getDurationMinutes() != after.getDurationMinutes()
+                || !same(before.getInstructionsForStudents(),
+                         after.getInstructionsForStudents())
+                || !same(before.getNotesForTeacher(), after.getNotesForTeacher())) {
+            return false;
+        }
+        List<hsts.common.entity.ExamQuestion> wasThere = before.getQuestions();
+        List<hsts.common.entity.ExamQuestion> isThere  = after.getQuestions();
+        if (wasThere == null || isThere == null || wasThere.size() != isThere.size()) {
+            return wasThere == isThere;
+        }
+        for (int i = 0; i < wasThere.size(); i++) {
+            hsts.common.entity.ExamQuestion a = wasThere.get(i);
+            hsts.common.entity.ExamQuestion b = isThere.get(i);
+            if (!same(a.getQuestionId(), b.getQuestionId())
+                    || a.getQuestionVersion() != b.getQuestionVersion()
+                    || a.getPoints() != b.getPoints()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Blank, empty and absent all count as the same value. */
+    private static boolean same(String a, String b) {
+        String left  = (a == null) ? "" : a.trim();
+        String right = (b == null) ? "" : b.trim();
+        return left.equals(right);
+    }
 
     private String validate(Exam exam) {
         // Compulsory, at the customer's request. The 6-digit number is unique and

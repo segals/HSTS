@@ -20,13 +20,11 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -58,8 +56,6 @@ public class PrincipalBrowseController extends GUIScreen {
     private static final String REQ_SITTINGS  = "pb.sittings";
     private static final String REQ_RESULTS   = "pb.results";
 
-    private static final String ALL_COURSES = "All courses";
-
     /** See {@code TeacherReportsController.SittingRow} - same reason. */
     private record SittingRow(ExamExecution sitting) {
         boolean isAllTogether() {
@@ -73,9 +69,6 @@ public class PrincipalBrowseController extends GUIScreen {
     @FXML private Label   statusLabel;
 
     // ---- questions ----
-    @FXML private ComboBox<String>  questionCourseBox;
-    @FXML private TextField         questionSearchField;
-    @FXML private Label             questionCountLabel;
     @FXML private javafx.scene.layout.VBox questionButtonHolder;
     @FXML private javafx.scene.layout.VBox examButtonHolder;
 
@@ -91,12 +84,19 @@ public class PrincipalBrowseController extends GUIScreen {
     private final FilterBar<Exam>     examButtons     = new FilterBar<>();
 
     // ---- the school calendar ----
-    @FXML private javafx.scene.control.TableView<hsts.common.entity.ExamExecution> calendarTable;
-    @FXML private javafx.scene.control.TableColumn<hsts.common.entity.ExamExecution, String>
-            calWhenColumn, calUntilColumn, calExamColumn, calCourseColumn,
-            calCodeColumn, calWhoColumn, calSatColumn, calStateColumn;
+    @FXML private javafx.scene.layout.GridPane calendarGrid;
+    @FXML private javafx.scene.layout.GridPane calendarHeadingRow;
+    @FXML private Label calMonthLabel;
+    @FXML private Label calendarHintLabel;
+    @FXML private VBox  calendarDetailBox;
     @FXML private Label calendarCountLabel;
     @FXML private javafx.scene.layout.VBox calendarFilterHolder;
+
+    /** Which month is on the wall. Starts at this one, moved by the arrows. */
+    private java.time.YearMonth shownMonth = java.time.YearMonth.now();
+
+    /** The day whose sittings are written out beside the grid. */
+    private java.time.LocalDate chosenDay;
     private final java.util.List<hsts.common.entity.ExamExecution> allSittings =
             new java.util.ArrayList<>();
     private final FilterBar<hsts.common.entity.ExamExecution> calendarFilter = new FilterBar<>();
@@ -115,8 +115,6 @@ public class PrincipalBrowseController extends GUIScreen {
     @FXML private VBox              questionDetailBox;
 
     // ---- exams ----
-    @FXML private TextField     examSearchField;
-    @FXML private Label         examCountLabel;
     @FXML private ListView<Exam> examList;
     @FXML private VBox          examDetailBox;
 
@@ -142,6 +140,9 @@ public class PrincipalBrowseController extends GUIScreen {
 
     private Exam chosenResultExam;
 
+    /** The sitting she is reading, so a reload can put her back on it. 0 = none. */
+    private int readingSittingId;
+
     @FXML
     private void initialize() {
         bindStatusLabel(statusLabel);
@@ -149,17 +150,17 @@ public class PrincipalBrowseController extends GUIScreen {
                             + "Nothing on this screen can change anything.");
 
         useWrappingCells(questionList, q ->
-                q.getQuestionId() + "  ·  " + q.getTopic()
-              + "  ·  " + q.getDifficulty().getDisplayName()
-              + "\n" + q.getText());
+                q.describe() + "  ·  " + q.describeCourse()
+              + "\n" + q.getTopic() + "  ·  " + q.getDifficulty().getDisplayName()
+              + "  ·  " + q.getText());
 
         useWrappingCells(examList, e ->
-                "Exam " + e.getExamId() + "  ·  " + e.getCourseName()
+                e.describe() + "  ·  " + e.getCourseName()
               + "\n" + e.getAuthorName() + "  ·  " + e.getStatus().getDisplayName()
               + "  ·  " + e.getQuestions().size() + " questions");
 
         useWrappingCells(resultExamList, e ->
-                "Exam " + e.getExamId() + "  ·  " + e.getCourseName()
+                e.describe() + "  ·  " + e.getCourseName()
               + "\nwritten by " + e.getAuthorName());
 
         useWrappingCells(resultSittingList, row -> row.isAllTogether()
@@ -199,20 +200,20 @@ public class PrincipalBrowseController extends GUIScreen {
                     }
                 });
 
-        questionCourseBox.getSelectionModel().selectedItemProperty()
-                .addListener((obs, old, course) -> applyQuestionFilter());
-        questionSearchField.textProperty()
-                .addListener((obs, old, text) -> applyQuestionFilter());
-        examSearchField.textProperty()
-                .addListener((obs, old, text) -> applyExamFilter());
-
         send(RequestType.PRINCIPAL_CALENDAR, null, REQ_CALENDAR);
         send(RequestType.PRINCIPAL_ACTIVITY, 200, REQ_ACTIVITY);
 
         questionButtonHolder.getChildren().add(questionButtons);
         examButtonHolder.getChildren().add(examButtons);
-        questionButtons.onChanged(this::applyQuestionFilter);
-        examButtons.onChanged(this::applyExamFilter);
+        questionButtons
+                .searchingIn(q -> q.describe() + " " + q.getText() + " " + q.getTopic()
+                                + " " + q.describeCourse() + " " + q.getAuthorName())
+                .onChanged(this::applyQuestionFilter);
+        examButtons
+                .searchingIn(e -> e.describe() + " " + e.getCourseName()
+                                + " " + e.getAuthorName()
+                                + " " + e.getStatus().getDisplayName())
+                .onChanged(this::applyExamFilter);
 
         setUpCalendar();
         setUpActivity();
@@ -260,6 +261,22 @@ public class PrincipalBrowseController extends GUIScreen {
      */
     @Override
     protected void onPush(PushEvent event) {
+        if (event.getType() == PushType.SCHOOL_ACTIVITY) {
+            // Somebody on the staff did something. Everything on this screen is
+            // the whole school, so everything on it is now possibly wrong: a
+            // release adds a sitting to the calendar, a new question changes the
+            // bank, an approval changes an exam's state, and all of them add a
+            // line to the activity list. Asking for all four is one round trip
+            // each and saves deciding, here, which request types affect which tab
+            // - a decision that would be silently wrong the first time somebody
+            // added a request type and did not think of this screen.
+            showMessage(event.getMessage());
+            send(RequestType.PRINCIPAL_CALENDAR, null, REQ_CALENDAR);
+            send(RequestType.PRINCIPAL_ACTIVITY, 200, REQ_ACTIVITY);
+            send(RequestType.PRINCIPAL_QUESTIONS, null, REQ_QUESTIONS);
+            send(RequestType.PRINCIPAL_EXAMS, null, REQ_EXAMS);
+            return;
+        }
         if (event.getType() != PushType.RESULTS_CHANGED) {
             super.onPush(event);
             return;
@@ -292,8 +309,8 @@ public class PrincipalBrowseController extends GUIScreen {
                 calendarFilter.clearGroups();
                 calendarFilter.withButtons("COURSE",
                         FilterBar.distinct(allSittings,
-                                hsts.common.entity.ExamExecution::getCourseName),
-                        (x, choice) -> choice.equals(x.getCourseName()));
+                                hsts.common.entity.ExamExecution::describeCourse),
+                        (x, choice) -> choice.equals(x.describeCourse()));
                 calendarFilter.withButtons("GIVEN BY",
                         FilterBar.distinct(allSittings,
                                 hsts.common.entity.ExamExecution::getReleasedByName),
@@ -321,9 +338,12 @@ public class PrincipalBrowseController extends GUIScreen {
                 allQuestions.clear();
                 allQuestions.addAll((List<Question>) response.getPayload());
                 questionButtons.clearGroups();
+                // "Plane Geometry (01)", not "01". The code is what the question's
+                // own number is built from and is worth keeping in front of her;
+                // it is not what she calls the course.
                 questionButtons.withButtons("COURSE",
-                        FilterBar.distinct(allQuestions, Question::getCourseCode),
-                        (q, choice) -> choice.equals(q.getCourseCode()));
+                        FilterBar.distinct(allQuestions, Question::describeCourse),
+                        (q, choice) -> choice.equals(q.describeCourse()));
                 questionButtons.withButtons("TOPIC",
                         FilterBar.distinct(allQuestions, Question::getTopic),
                         (q, choice) -> choice.equals(q.getTopic()));
@@ -331,7 +351,6 @@ public class PrincipalBrowseController extends GUIScreen {
                         FilterBar.distinct(allQuestions,
                                 q -> q.getDifficulty().getDisplayName()),
                         (q, choice) -> choice.equals(q.getDifficulty().getDisplayName()));
-                fillCourseBox();
                 applyQuestionFilter();
             }
             case REQ_EXAMS -> {
@@ -339,8 +358,8 @@ public class PrincipalBrowseController extends GUIScreen {
                 allExams.addAll((List<Exam>) response.getPayload());
                 examButtons.clearGroups();
                 examButtons.withButtons("COURSE",
-                        FilterBar.distinct(allExams, Exam::getCourseName),
-                        (e, choice) -> choice.equals(e.getCourseName()));
+                        FilterBar.distinct(allExams, Exam::describeCourse),
+                        (e, choice) -> choice.equals(e.describeCourse()));
                 examButtons.withButtons("STATUS",
                         FilterBar.distinct(allExams, e -> e.getStatus().getDisplayName()),
                         (e, choice) -> choice.equals(e.getStatus().getDisplayName()));
@@ -351,7 +370,10 @@ public class PrincipalBrowseController extends GUIScreen {
 
                 // Only exams somebody has actually sat belong on the results tab;
                 // an exam nobody has taken has no results to browse.
+                Exam wasReading = resultExamList.getSelectionModel().getSelectedItem();
                 resultExamList.setItems(FXCollections.observableArrayList(allExams));
+                reselect(resultExamList, wasReading,
+                         (a, b) -> a.getExamId().equals(b.getExamId()));
             }
             case REQ_QUESTION_GET -> showQuestion((Question) response.getPayload());
             case REQ_EXAM_GET  -> showExam((Exam) response.getPayload());
@@ -364,10 +386,22 @@ public class PrincipalBrowseController extends GUIScreen {
                 }
                 resultSittingList.setItems(FXCollections.observableArrayList(rows));
                 showMessage(response.getMessage());
-                if (!rows.isEmpty()) {
-                    resultSittingList.getSelectionModel().select(0);
-                } else {
+                if (rows.isEmpty()) {
                     clearResults();
+                } else {
+                    // Back to the sitting she was reading, if it is still there.
+                    // This list is rebuilt by other people's actions now, and
+                    // being thrown back to "all sittings together" every time a
+                    // colleague marked a paper would be its own annoyance.
+                    int back = 0;
+                    for (int i = 0; i < rows.size(); i++) {
+                        SittingRow row = rows.get(i);
+                        if (!row.isAllTogether()
+                                && row.sitting().getExecutionId() == readingSittingId) {
+                            back = i;
+                        }
+                    }
+                    resultSittingList.getSelectionModel().select(back);
                 }
             }
             case REQ_RESULTS -> showResults((ResultsReport) response.getPayload(),
@@ -380,25 +414,9 @@ public class PrincipalBrowseController extends GUIScreen {
     //  Questions
     // -----------------------------------------------------------------
 
-    private void fillCourseBox() {
-        List<String> courses = new ArrayList<>();
-        courses.add(ALL_COURSES);
-        allQuestions.stream()
-                .map(Question::getCourseCode)
-                .distinct()
-                .sorted()
-                .forEach(courses::add);
-        String kept = questionCourseBox.getValue();
-        questionCourseBox.setItems(FXCollections.observableArrayList(courses));
-        questionCourseBox.setValue(courses.contains(kept) ? kept : ALL_COURSES);
-    }
-
     // -----------------------------------------------------------------
     //  The school calendar
     // -----------------------------------------------------------------
-
-    private static final java.time.format.DateTimeFormatter CAL_WHEN =
-            java.time.format.DateTimeFormatter.ofPattern("EEE d MMM, HH:mm");
 
     /**
      * Where one sitting is in time: over, running, or still to come.
@@ -415,35 +433,282 @@ public class PrincipalBrowseController extends GUIScreen {
         return x.getOpenTime().isAfter(now) ? "Still to come" : "Open now";
     }
 
+    /** Sunday to Saturday - the Israeli school week, which is what this is. */
+    private static final java.time.DayOfWeek[] WEEK = {
+        java.time.DayOfWeek.SUNDAY,   java.time.DayOfWeek.MONDAY,
+        java.time.DayOfWeek.TUESDAY,  java.time.DayOfWeek.WEDNESDAY,
+        java.time.DayOfWeek.THURSDAY, java.time.DayOfWeek.FRIDAY,
+        java.time.DayOfWeek.SATURDAY
+    };
+
+    private static final java.time.format.DateTimeFormatter CAL_MONTH =
+            java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy");
+    private static final java.time.format.DateTimeFormatter CAL_TIME =
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+    private static final java.time.format.DateTimeFormatter CAL_DAY =
+            java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM yyyy");
+
     private void setUpCalendar() {
         calendarFilterHolder.getChildren().add(calendarFilter);
         calendarFilter.searchingIn(x -> x.describeExam() + " " + x.getCourseName()
                                       + " " + x.getExecutionCode() + " " + x.getReleasedByName())
                       .onChanged(this::showCalendar);
 
-        calWhenColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getOpenTime().format(CAL_WHEN)));
-        calUntilColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getCloseTime().format(CAL_WHEN)));
-        calExamColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().describeExam()));
-        calCourseColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getCourseName()));
-        calCodeColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getExecutionCode()));
-        calWhoColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                c.getValue().getReleasedByName()));
-        calSatColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                String.valueOf(c.getValue().getNumStarted())));
-        calStateColumn.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
-                calendarState(c.getValue())));
-        calendarTable.setPlaceholder(new Label("No exam has been given to a class yet."));
+        // Seven equal columns on both the heading row and the grid, so the day
+        // names stay over their own days at every window width.
+        for (java.time.DayOfWeek day : WEEK) {
+            javafx.scene.layout.ColumnConstraints column =
+                    new javafx.scene.layout.ColumnConstraints();
+            column.setPercentWidth(100.0 / WEEK.length);
+            column.setHgrow(Priority.ALWAYS);
+            calendarHeadingRow.getColumnConstraints().add(column);
+
+            javafx.scene.layout.ColumnConstraints same =
+                    new javafx.scene.layout.ColumnConstraints();
+            same.setPercentWidth(100.0 / WEEK.length);
+            same.setHgrow(Priority.ALWAYS);
+            calendarGrid.getColumnConstraints().add(same);
+
+            Label name = new Label(day.getDisplayName(
+                    java.time.format.TextStyle.SHORT, Locale.getDefault()));
+            name.getStyleClass().add("cal-weekday");
+            name.setMaxWidth(Double.MAX_VALUE);
+            name.setWrapText(true);
+            calendarHeadingRow.add(name, calendarHeadingRow.getColumnConstraints().size() - 1, 0);
+        }
+        showCalendarDay(null);
     }
 
+    @FXML private void onPreviousMonth() {
+        shownMonth = shownMonth.minusMonths(1);
+        showCalendar();
+    }
+
+    @FXML private void onNextMonth() {
+        shownMonth = shownMonth.plusMonths(1);
+        showCalendar();
+    }
+
+    @FXML private void onThisMonth() {
+        shownMonth = java.time.YearMonth.now();
+        showCalendar();
+    }
+
+    /**
+     * Draws the month.
+     *
+     * <p>A table sorted by date is a list of dates. A month laid out as a month
+     * answers "how busy is next week" by being looked at, which is the question a
+     * head teacher actually has - and it is the shape every other calendar she has
+     * ever used already has.</p>
+     *
+     * <p>The filter is applied first and the grid is drawn from what survives, so
+     * the buttons above narrow the calendar rather than a separate list.</p>
+     */
     private void showCalendar() {
         List<hsts.common.entity.ExamExecution> shown = calendarFilter.apply(allSittings);
-        calendarTable.setItems(FXCollections.observableArrayList(shown));
         calendarCountLabel.setText(shown.size() + " of " + allSittings.size() + " shown");
+        calMonthLabel.setText(shownMonth.format(CAL_MONTH));
+
+        // A sitting belongs to the day it opens. One that runs past midnight says
+        // so on its own line rather than being drawn twice, which would make the
+        // same exam look like two.
+        java.util.Map<java.time.LocalDate, List<hsts.common.entity.ExamExecution>> byDay =
+                new java.util.HashMap<>();
+        for (hsts.common.entity.ExamExecution sitting : shown) {
+            byDay.computeIfAbsent(sitting.getOpenTime().toLocalDate(),
+                    d -> new ArrayList<>()).add(sitting);
+        }
+        for (List<hsts.common.entity.ExamExecution> ofOneDay : byDay.values()) {
+            ofOneDay.sort(java.util.Comparator.comparing(
+                    hsts.common.entity.ExamExecution::getOpenTime));
+        }
+
+        calendarGrid.getChildren().clear();
+        calendarGrid.getRowConstraints().clear();
+
+        java.time.LocalDate first = shownMonth.atDay(1);
+        // Sunday is column 0. DayOfWeek numbers Monday 1 to Sunday 7, so the
+        // remainder by 7 puts Sunday at 0 and leaves the rest in order.
+        int blanksBefore = first.getDayOfWeek().getValue() % 7;
+        int cells = blanksBefore + shownMonth.lengthOfMonth();
+        int weeks = (cells + 6) / 7;
+
+        for (int week = 0; week < weeks; week++) {
+            javafx.scene.layout.RowConstraints row = new javafx.scene.layout.RowConstraints();
+            row.setPercentHeight(100.0 / weeks);
+            row.setVgrow(Priority.ALWAYS);
+            calendarGrid.getRowConstraints().add(row);
+        }
+
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate start = first.minusDays(blanksBefore);
+        int thisMonth = 0;
+
+        for (int cell = 0; cell < weeks * 7; cell++) {
+            java.time.LocalDate date = start.plusDays(cell);
+            List<hsts.common.entity.ExamExecution> onThatDay =
+                    byDay.getOrDefault(date, List.of());
+            if (java.time.YearMonth.from(date).equals(shownMonth)) {
+                thisMonth += onThatDay.size();
+            }
+            calendarGrid.add(dayCell(date, onThatDay, today), cell % 7, cell / 7);
+        }
+
+        // An empty month reads as a broken screen unless it says why it is empty
+        // and where the nearest thing is.
+        if (thisMonth == 0) {
+            calendarHintLabel.setText("Nothing in " + shownMonth.format(CAL_MONTH)
+                    + "." + nearestElsewhere(shown));
+        } else {
+            calendarHintLabel.setText(thisMonth + " sitting(s) this month. "
+                    + "Click a day to read it in full.");
+        }
+        if (chosenDay != null) {
+            showCalendarDay(chosenDay);
+        }
+    }
+
+    /** " The nearest is 3 September - Mid-term." Blank when there is nothing at all. */
+    private String nearestElsewhere(List<hsts.common.entity.ExamExecution> shown) {
+        hsts.common.entity.ExamExecution nearest = null;
+        long best = Long.MAX_VALUE;
+        java.time.LocalDate middle = shownMonth.atDay(15);
+        for (hsts.common.entity.ExamExecution sitting : shown) {
+            long days = Math.abs(java.time.temporal.ChronoUnit.DAYS.between(
+                    middle, sitting.getOpenTime().toLocalDate()));
+            if (days < best) {
+                best = days;
+                nearest = sitting;
+            }
+        }
+        return nearest == null
+                ? "  No exam has been given to a class yet."
+                : "  The nearest is " + nearest.getOpenTime().toLocalDate()
+                  .format(java.time.format.DateTimeFormatter.ofPattern("d MMMM"))
+                  + " - " + nearest.describeExam() + ".";
+    }
+
+    /** One square: the date, and a line for every sitting that starts on it. */
+    private VBox dayCell(java.time.LocalDate date,
+                         List<hsts.common.entity.ExamExecution> sittings,
+                         java.time.LocalDate today) {
+        VBox cell = new VBox(3);
+        cell.getStyleClass().add("cal-day");
+        if (!java.time.YearMonth.from(date).equals(shownMonth)) {
+            cell.getStyleClass().add("cal-day-outside");
+        }
+        if (date.equals(today)) {
+            cell.getStyleClass().add("cal-today");
+        }
+        if (date.equals(chosenDay)) {
+            cell.getStyleClass().add("cal-day-chosen");
+        }
+
+        Label number = new Label(String.valueOf(date.getDayOfMonth()));
+        number.getStyleClass().add("cal-day-number");
+        cell.getChildren().add(number);
+
+        for (hsts.common.entity.ExamExecution sitting : sittings) {
+            Label chip = new Label(sitting.getOpenTime().format(CAL_TIME)
+                    + "  " + shortName(sitting));
+            chip.getStyleClass().addAll("cal-chip", chipStyle(calendarState(sitting)));
+            chip.setWrapText(true);
+            chip.setMaxWidth(Double.MAX_VALUE);
+            chip.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+            chip.setOnMouseClicked(e -> showCalendarDay(date));
+            cell.getChildren().add(chip);
+        }
+
+        cell.setOnMouseClicked(e -> showCalendarDay(date));
+        return cell;
+    }
+
+    private static String shortName(hsts.common.entity.ExamExecution sitting) {
+        return (sitting.getExamName() == null || sitting.getExamName().isBlank())
+                ? sitting.getExamId() : sitting.getExamName();
+    }
+
+    private static String chipStyle(String state) {
+        return switch (state) {
+            case "Finished"  -> "cal-chip-done";
+            case "Open now"  -> "cal-chip-open";
+            default          -> "cal-chip-soon";
+        };
+    }
+
+    /**
+     * Writes one day out in full beside the grid.
+     *
+     * <p>The grid has room for a time and a name and no more, so everything the
+     * old table had a column for - the code, who gave it, how many sat it - lives
+     * here, where there is room to say it in words.</p>
+     */
+    private void showCalendarDay(java.time.LocalDate date) {
+        chosenDay = date;
+        List<javafx.scene.Node> parts = new ArrayList<>();
+
+        if (date == null) {
+            parts.add(caption("Click a day in the calendar."));
+            calendarDetailBox.getChildren().setAll(parts);
+            return;
+        }
+
+        parts.add(heading(date.format(CAL_DAY)));
+
+        List<hsts.common.entity.ExamExecution> onThatDay = new ArrayList<>();
+        for (hsts.common.entity.ExamExecution sitting : calendarFilter.apply(allSittings)) {
+            if (sitting.getOpenTime().toLocalDate().equals(date)) {
+                onThatDay.add(sitting);
+            }
+        }
+        onThatDay.sort(java.util.Comparator.comparing(
+                hsts.common.entity.ExamExecution::getOpenTime));
+
+        if (onThatDay.isEmpty()) {
+            parts.add(caption("No exam was given to a class that day."));
+        }
+        for (hsts.common.entity.ExamExecution sitting : onThatDay) {
+            VBox block = new VBox(3);
+            block.getStyleClass().add("card");
+            block.getChildren().add(heading(sitting.describeExam()));
+            block.getChildren().add(caption(sitting.describeCourse()));
+            block.getChildren().add(wrapped(sitting.getOpenTime().format(CAL_TIME)
+                    + " to " + sitting.getCloseTime().format(CAL_TIME)
+                    + (sitting.getCloseTime().toLocalDate().equals(date)
+                       ? "" : " the next day")));
+            block.getChildren().add(caption("Code " + sitting.getExecutionCode()
+                    + "  ·  given by " + sitting.getReleasedByName()));
+            block.getChildren().add(caption(sitting.getNumStarted() + " sat it  ·  "
+                    + calendarState(sitting)));
+            parts.add(block);
+        }
+        calendarDetailBox.getChildren().setAll(parts);
+        showCalendarChosenDay();
+    }
+
+    /**
+     * Marks the chosen square, without redrawing the month.
+     *
+     * <p>Redrawing would work and would also throw away the scroll position and
+     * flicker, for a change of one outline.</p>
+     */
+    private void showCalendarChosenDay() {
+        java.time.LocalDate first = shownMonth.atDay(1);
+        java.time.LocalDate start = first.minusDays(first.getDayOfWeek().getValue() % 7);
+
+        for (javafx.scene.Node node : calendarGrid.getChildren()) {
+            node.getStyleClass().remove("cal-day-chosen");
+
+            Integer column = javafx.scene.layout.GridPane.getColumnIndex(node);
+            Integer row    = javafx.scene.layout.GridPane.getRowIndex(node);
+            if (column == null || row == null) {
+                continue;
+            }
+            if (start.plusDays(row * 7L + column).equals(chosenDay)) {
+                node.getStyleClass().add("cal-day-chosen");
+            }
+        }
     }
 
     // -----------------------------------------------------------------
@@ -478,27 +743,42 @@ public class PrincipalBrowseController extends GUIScreen {
         activityCountLabel.setText(shown.size() + " of " + allActivity.size() + " shown");
     }
 
+    /**
+     * One filter over the bank: the search box and the buttons, both in the filter
+     * bar.
+     *
+     * <p>There used to be a course box and a search field above it as well. Two
+     * boxes that narrow the same list is one more than anybody needs, and the
+     * count beside each of them disagreed about what "shown" meant.</p>
+     */
     private void applyQuestionFilter() {
-        String course = questionCourseBox.getValue();
-        String search = text(questionSearchField);
-
-        List<Question> shown = new ArrayList<>();
-        for (Question q : allQuestions) {
-            boolean courseMatches = course == null || ALL_COURSES.equals(course)
-                                 || course.equals(q.getCourseCode());
-            boolean textMatches = search.isEmpty()
-                    || contains(q.getText(), search)
-                    || contains(q.getTopic(), search)
-                    || contains(q.getQuestionId(), search);
-            if (courseMatches && textMatches) {
-                shown.add(q);
-            }
-        }
-        shown = questionButtons.apply(shown);
+        Question wasOn = questionList.getSelectionModel().getSelectedItem();
+        List<Question> shown = questionButtons.apply(allQuestions);
         questionList.setItems(FXCollections.observableArrayList(shown));
-        questionCountLabel.setText(shown.size() + " of " + allQuestions.size() + " shown");
+        reselect(questionList, wasOn, (a, b) -> a.getQuestionId().equals(b.getQuestionId()));
         if (shown.isEmpty()) {
             clearQuestionDetail();
+        }
+    }
+
+    /**
+     * Puts the selection back on the same row after the list was rebuilt.
+     *
+     * <p>The lists now reload on their own - a teacher writing a question rebuilds
+     * the principal's bank underneath her. Losing her place every time somebody
+     * else did something would be a worse screen than the stale one this replaced,
+     * so the row is found again by its id rather than by its position.</p>
+     */
+    private <T> void reselect(ListView<T> list, T wasOn,
+                              java.util.function.BiPredicate<T, T> sameThing) {
+        if (wasOn == null) {
+            return;
+        }
+        for (T item : list.getItems()) {
+            if (sameThing.test(item, wasOn)) {
+                list.getSelectionModel().select(item);
+                return;
+            }
         }
     }
 
@@ -512,9 +792,10 @@ public class PrincipalBrowseController extends GUIScreen {
             return;
         }
         List<javafx.scene.Node> parts = new ArrayList<>();
-        parts.add(heading(q.getText()));
-        parts.add(caption(q.getQuestionId() + "  ·  version " + q.getVersion()
-                + "  ·  course " + q.getCourseCode()
+        parts.add(heading(q.describe()));
+        parts.add(wrapped(q.getText()));
+        parts.add(caption("version " + q.getVersion()
+                + "  ·  " + q.describeCourse()
                 + "  ·  " + q.getTopic()
                 + "  ·  " + q.getDifficulty().getDisplayName()
                 + "  ·  written by " + q.getAuthorName()));
@@ -539,20 +820,10 @@ public class PrincipalBrowseController extends GUIScreen {
     // -----------------------------------------------------------------
 
     private void applyExamFilter() {
-        String search = text(examSearchField);
-        List<Exam> shown = new ArrayList<>();
-        for (Exam e : allExams) {
-            if (search.isEmpty()
-                    || contains(e.getExamId(), search)
-                    || contains(e.getCourseName(), search)
-                    || contains(e.getAuthorName(), search)
-                    || contains(e.getStatus().getDisplayName(), search)) {
-                shown.add(e);
-            }
-        }
-        shown = examButtons.apply(shown);
+        Exam wasOn = examList.getSelectionModel().getSelectedItem();
+        List<Exam> shown = examButtons.apply(allExams);
         examList.setItems(FXCollections.observableArrayList(shown));
-        examCountLabel.setText(shown.size() + " of " + allExams.size() + " shown");
+        reselect(examList, wasOn, (a, b) -> a.getExamId().equals(b.getExamId()));
         if (shown.isEmpty()) {
             clearExamDetail();
         }
@@ -564,7 +835,7 @@ public class PrincipalBrowseController extends GUIScreen {
 
     private void showExam(Exam exam) {
         List<javafx.scene.Node> parts = new ArrayList<>();
-        parts.add(heading("Exam " + exam.getExamId() + "  ·  " + exam.getCourseName()));
+        parts.add(heading(exam.describe() + "  ·  " + exam.describeCourse()));
         parts.add(caption("version " + exam.getVersion()
                 + "  ·  written by " + exam.getAuthorName()
                 + "  ·  " + exam.getDurationMinutes() + " minutes"
@@ -626,6 +897,7 @@ public class PrincipalBrowseController extends GUIScreen {
     }
 
     private void askForResults(SittingRow row) {
+        readingSittingId = row.isAllTogether() ? 0 : row.sitting().getExecutionId();
         ResultsQuery query = row.isAllTogether()
                 ? ResultsQuery.wholeExam(chosenResultExam.getExamId(),
                                          chosenResultExam.getVersion())
@@ -706,15 +978,6 @@ public class PrincipalBrowseController extends GUIScreen {
         label.setWrapText(true);
         label.setMaxWidth(Double.MAX_VALUE);
         return label;
-    }
-
-    private static String text(TextField field) {
-        return field.getText() == null ? "" : field.getText().trim().toLowerCase(Locale.ROOT);
-    }
-
-    private static boolean contains(String haystack, String needleLowerCase) {
-        return haystack != null
-            && haystack.toLowerCase(Locale.ROOT).contains(needleLowerCase);
     }
 
     private void send(RequestType type, Object payload, String requestId) {

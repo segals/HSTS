@@ -556,3 +556,62 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-border-width: 0 0 0 3;
     -fx-padding: 9 12 9 12;
 }
+
+/* ---------- the school calendar ------------------------------------- */
+/* A month drawn as a month. The squares are plain and the exams inside
+   them carry the colour, because the exams are what she is looking for and
+   a grid of coloured boxes would compete with them. */
+
+.cal-weekday {
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+    -fx-text-fill: -hsts-text-faint;
+    -fx-alignment: CENTER;
+    -fx-padding: 2 0 2 0;
+}
+
+.cal-scroll { -fx-background-color: transparent; }
+.cal-scroll > .viewport { -fx-background-color: transparent; }
+
+.cal-day {
+    -fx-background-color: -hsts-surface;
+    -fx-border-color: -hsts-border;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 5;
+    -fx-cursor: hand;
+    -fx-min-height: 62;
+}
+.cal-day:hover { -fx-border-color: -hsts-border-firm; }
+
+/* Days either side of the month. Still real days with real exams on them,
+   so they are shown rather than left blank, only quieter. */
+.cal-day-outside { -fx-background-color: -hsts-bg; }
+.cal-day-outside .cal-day-number { -fx-text-fill: -hsts-text-faint; }
+
+.cal-today {
+    -fx-border-color: -hsts-accent;
+    -fx-border-width: 2;
+}
+.cal-day-chosen {
+    -fx-background-color: -hsts-accent-soft;
+    -fx-border-color: -hsts-accent;
+}
+
+.cal-day-number {
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+    -fx-text-fill: -hsts-text-muted;
+}
+
+/* One exam in one square. Wrapping rather than trimming: a name cut to
+   "Mid-te..." is a name she has to click to read. */
+.cal-chip {
+    -fx-font-size: 11px;
+    -fx-padding: 2 5 2 5;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+.cal-chip-done { -fx-background-color: #eef0f3; -fx-text-fill: #5b6472; }
+.cal-chip-open { -fx-background-color: -hsts-success-soft; -fx-text-fill: -hsts-success; }
+.cal-chip-soon { -fx-background-color: -hsts-accent-soft; -fx-text-fill: -hsts-accent; }

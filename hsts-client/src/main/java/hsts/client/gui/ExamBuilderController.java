@@ -350,27 +350,47 @@ public class ExamBuilderController extends GUIScreen {
         }
     }
 
-    /** A plain list of exam versions - enough to show the old one survived. */
+    /**
+     * Opens the version-history window.
+     *
+     * <p>This was a block of text in a dialog. It proved the older versions were
+     * still there and left the reader to find the difference between two
+     * paragraphs herself - and on an exam the difference is usually one question
+     * out of ten, which is exactly the kind of thing reading two lists side by
+     * side does not find. It is now the same side-by-side comparison a question
+     * has, with the paper itself as one of the fields.</p>
+     *
+     * <p>A window rather than a dialog, so it can be left open while she looks at
+     * the exam underneath it - which is the moment anybody wants to.</p>
+     */
     private void showExamVersions(List<Exam> versions) {
-        StringBuilder sb = new StringBuilder();
-        for (Exam exam : versions) {
-            sb.append("Version ").append(exam.getVersion())
-              .append(exam.isCurrent() ? "   (current)" : "")
-              .append("\n   ").append(exam.getQuestionCount()).append(" questions, ")
-              .append(exam.getDurationMinutes()).append(" minutes, ")
-              .append(exam.getStatus().getDisplayName())
-              .append("\n   written ").append(exam.getCreatedAt())
-              .append("\n\n");
+        if (versions == null || versions.isEmpty()) {
+            showError("No version history came back from the server.");
+            return;
         }
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Exam version history");
-        alert.setHeaderText(versions.size() + " version(s) of exam "
-                          + versions.get(0).getExamId());
-        TextArea area = new TextArea(sb.toString());
-        area.setEditable(false);
-        area.setPrefSize(520, 320);
-        alert.getDialogPane().setContent(area);
-        alert.showAndWait();
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
+                    getClass().getResource("/fxml/ExamVersionHistory.fxml"));
+            javafx.scene.Scene scene = new javafx.scene.Scene(loader.load());
+            hsts.client.HSTSApp.applyStylesheet(scene);
+
+            ExamVersionHistoryController window = loader.getController();
+            window.setVersions(versions);
+
+            javafx.stage.Stage stage = new javafx.stage.Stage();
+            stage.setTitle("Version history - " + versions.get(0).describe());
+            stage.setScene(scene);
+            stage.initOwner(hsts.client.HSTSApp.getPrimaryStage());
+            stage.show();
+            fitToScreen(stage);
+
+            showMessage(versions.size() == 1
+                    ? "This exam has only one version - it has not been edited yet."
+                    : versions.size() + " versions stored. The older ones are still "
+                      + "in the database, with the questions they had at the time.");
+        } catch (Exception e) {
+            showError("Could not open the version history: " + e.getMessage());
+        }
     }
 
     // -----------------------------------------------------------------
@@ -535,7 +555,18 @@ public class ExamBuilderController extends GUIScreen {
      */
     private final class QuotaRow {
 
-        private final HBox box;
+        /**
+         * A flow, not a row.
+         *
+         * <p>Reported from the screen with a picture: the panel was narrow and the
+         * line read "any topic | any level | 5" with the count box half there and
+         * the × gone off the edge - a button you cannot see is a line you cannot
+         * remove. Four things side by side need about 420 points and the panel is
+         * allowed to be 330, so at some width they cannot all fit however small
+         * their minimums are made. A flow pane puts what will not fit on the next
+         * line instead of off the end.</p>
+         */
+        private final javafx.scene.layout.FlowPane box;
         private final ComboBox<String> topic = new ComboBox<>();
         private final ComboBox<DifficultyLevel> difficulty = new ComboBox<>();
         private final Spinner<Integer> count = new Spinner<>(1, 100, 5);
@@ -547,22 +578,21 @@ public class ExamBuilderController extends GUIScreen {
             topic.setEditable(true);
             topic.setPromptText("any topic");
             topic.setItems(FXCollections.observableArrayList(availableTopics));
-            topic.setMinWidth(150);
-            topic.setMaxWidth(Double.MAX_VALUE);
-            HBox.setHgrow(topic, Priority.ALWAYS);
+            topic.setMinWidth(140);
+            topic.setPrefWidth(160);
 
             difficulty.setPromptText("any level");
             difficulty.setItems(FXCollections.observableArrayList(DifficultyLevel.values()));
-            difficulty.setMinWidth(135);
-            difficulty.setPrefWidth(135);
+            difficulty.setMinWidth(125);
+            difficulty.setPrefWidth(125);
 
-            count.setPrefWidth(92);
-            count.setMinWidth(92);
+            count.setPrefWidth(88);
+            count.setMinWidth(88);
             count.valueProperty().addListener((o, a, b) -> updateQuotaTotal());
 
             // The row has to exist before the remove button's action can refer to
             // it - a lambda may only capture a field that is already assigned.
-            box = new HBox(6, topic, difficulty, count);
+            box = new javafx.scene.layout.FlowPane(6, 6, topic, difficulty, count);
             box.setUserData(this);
 
             Button remove = new Button("×");
@@ -574,7 +604,7 @@ public class ExamBuilderController extends GUIScreen {
             box.getChildren().add(remove);
         }
 
-        HBox node() {
+        javafx.scene.layout.FlowPane node() {
             return box;
         }
 

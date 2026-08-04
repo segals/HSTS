@@ -48,7 +48,8 @@
             <Label fx:id="subtitleLabel" styleClass="caption" wrapText="true"/>
         </VBox>
         <Region minWidth="20"/>
-        <Label text="Course" styleClass="field-label" wrapText="true"/>
+        <!-- One word: wrapping it can only break it in half. -->
+        <Label text="Course" styleClass="field-label" minWidth="-Infinity"/>
         <ComboBox fx:id="courseCombo" prefWidth="240"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="backButton" text="Back to menu" onAction="#onBack" styleClass="quiet"/>

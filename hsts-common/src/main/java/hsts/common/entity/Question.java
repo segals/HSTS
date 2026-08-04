@@ -52,6 +52,18 @@ public class Question implements Serializable {
     private int version = 1;
 
     private String courseCode;
+
+    /**
+     * The course's name, filled in for display only.
+     *
+     * <p>"01" is what the database stores and what the question id is built from,
+     * and it is the only thing that was ever shown. A teacher does not think in
+     * two-digit codes, so a row of buttons reading 01 to 08 told her nothing she
+     * could act on. Read from the course table on the way out, never written back:
+     * the code is the fact, the name is how it reads.</p>
+     */
+    private String courseName;
+
     /**
      * A short title the author gives it: "Triangle angle sum".
      *
@@ -89,6 +101,19 @@ public class Question implements Serializable {
     public String getQuestionId()          { return questionId; }
     public int getVersion()                { return version; }
     public String getCourseCode()          { return courseCode; }
+    public String getCourseName()          { return courseName; }
+
+    /**
+     * "Plane Geometry (01)" - the name first, the code in brackets after it.
+     *
+     * <p>Both, because the code is what appears inside the question's own number
+     * and the name is what she recognises. Falls back to the bare code, so a
+     * question that arrived without a course name still says something true.</p>
+     */
+    public String describeCourse() {
+        return (courseName == null || courseName.isBlank())
+                ? courseCode : courseName + " (" + courseCode + ")";
+    }
     public String getName()                { return name; }
 
     /**
@@ -116,6 +141,7 @@ public class Question implements Serializable {
     public void setQuestionId(String questionId)   { this.questionId = questionId; }
     public void setVersion(int version)            { this.version = version; }
     public void setCourseCode(String courseCode)   { this.courseCode = courseCode; }
+    public void setCourseName(String courseName)   { this.courseName = courseName; }
     public void setName(String name)             { this.name = name; }
     public void setText(String text)               { this.text = text; }
     public void setInstructions(String s)          { this.instructions = s; }

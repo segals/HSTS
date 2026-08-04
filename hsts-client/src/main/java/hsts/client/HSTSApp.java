@@ -81,6 +81,7 @@ public class HSTSApp extends Application {
      * are the only way to see everything.</p>
      */
     private static javafx.scene.Parent scrollable(javafx.scene.Parent screen) {
+        neverSqueezeText(screen);
         javafx.scene.control.ScrollPane frame = new javafx.scene.control.ScrollPane(screen);
         frame.setFitToWidth(true);
         frame.setFitToHeight(true);
@@ -89,6 +90,44 @@ public class HSTSApp extends Application {
         // and it must not draw a line around every screen in the system.
         frame.getStyleClass().add("screen-frame");
         return frame;
+    }
+
+    /**
+     * Stops any wrapping text being squeezed shorter than it needs to be.
+     *
+     * <h2>The fault</h2>
+     *
+     * <p>Reported from the screen, with pictures: "Tick the questions you want.
+     * Filter first if the bank is long -..." and "Only you can see this. Your
+     * teacher sees ho...". Both of those labels wrap. Wrapping solves running off
+     * the <em>side</em>; it does nothing about running out of <em>height</em>.
+     * When a label that needs two lines is given the height of one - because it
+     * sits in a box with something growing beside it, and boxes shrink their
+     * children to their minimum before they give up - JavaFX draws one line and an
+     * ellipsis. The sentence is simply gone.</p>
+     *
+     * <h2>The fix</h2>
+     *
+     * <p>{@code USE_PREF_SIZE} as a minimum height means "never shorter than the
+     * text needs", and because the preferred height of a wrapping label is worked
+     * out from the width it has been given, it is right at every window size
+     * rather than at the one it was tested at. What has to give instead is the
+     * window, which is inside a scroll frame precisely so that it can.</p>
+     *
+     * <p>Done here, where every screen is loaded, rather than as an attribute in
+     * eighteen FXML files and every one written after them.</p>
+     */
+    private static void neverSqueezeText(javafx.scene.Node node) {
+        if (node instanceof javafx.scene.control.Labeled labeled && labeled.isWrapText()) {
+            labeled.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        }
+        if (node instanceof javafx.scene.Parent parent) {
+            // getChildrenUnmodifiable, not getChildren: a control's skin builds its
+            // own children later, and they are not ours to change.
+            for (javafx.scene.Node child : parent.getChildrenUnmodifiable()) {
+                neverSqueezeText(child);
+            }
+        }
     }
 
     /**

@@ -279,6 +279,27 @@ public class ExamDAO implements IDAO<Exam, String> {
         return queryList(sql, examId, null);
     }
 
+    /**
+     * Every version with its questions written out in full.
+     *
+     * <p>Separate from {@link #findAllVersions} on purpose. That one is used to
+     * find out who wrote an exam, on paths that run for every mark approved, and
+     * it has no use for the questions; this one is used by the one window that
+     * lays two papers side by side, where "00301 v2" against "00701 v1" says
+     * which rows differ without saying what changed.</p>
+     *
+     * <p>Each version pins its own question versions, which is the whole point of
+     * loading them rather than looking the questions up as they are now.</p>
+     */
+    public List<Exam> findAllVersionsWithQuestions(String examId) throws SQLException {
+        List<Exam> versions = findAllVersions(examId);
+        for (Exam version : versions) {
+            version.setQuestions(findExamQuestions(
+                    version.getExamId(), version.getVersion(), true));
+        }
+        return versions;
+    }
+
     @Override
     public List<Exam> findAll() throws SQLException {
         String sql = baseSelect() + " WHERE e.is_current = TRUE ORDER BY e.exam_id";
