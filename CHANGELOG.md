@@ -2943,3 +2943,125 @@ word and it is a small addition.
 
 Run **three times**, with a reset between passes because the suites exhaust Plane
 Geometry's 99 exam numbers in about two and a half.
+
+---
+
+## Ticks instead of ctrl-click, filters everywhere, and named questions
+
+### 1. A coordinator who teaches nothing sees only what she can use
+
+Gone from her menu: **Build an exam**, **Mark and approve grades**, **Exams
+running now**, **Results and histogram**, **Course study bot** - and Release,
+which went last time.
+
+Each of them already refused her on the server, and each for a reason in the
+documents:
+
+| Screen | Why it could only ever be empty |
+|---|---|
+| Build an exam | requirement 20 - *"מורה יכולה ליצור בחינות רק עבור קורסים שהיא מלמדת"* |
+| Release an exam | SUC-6 - the teacher **of the course** |
+| Mark and approve grades | scoped to the sittings **she released**, and she can release none |
+| Course study bot | requirement 65 - *"מורה רשאית ליצור בוט עוזר עבור קורסים **שהיא מלמדת**"* |
+
+**Question bank stays** - requirement 19 gives her every question in the subject
+she coordinates. **My reports stays** - it is about exams she *wrote*, which she
+may still have from a year when she taught. **Approve or reject exams** is
+untouched; it is subject-scoped and has nothing to do with teaching.
+
+The rule is written as "teaches no courses", not "is a coordinator", so a teacher
+between timetables is treated the same and no role is special-cased. `MenuBadgeTest`
+now asserts both directions: absent for her, present for a teacher with a class.
+
+I had argued last time for keeping marking on her menu, on the grounds that a
+coordinator who taught last year still has last year's papers. The customer
+overruled it. The cost is exactly that case, and it is worth knowing: if she ever
+did teach and released sittings, those papers are now unreachable from her menu
+until a course is put back on her.
+
+### 2. Ticks instead of ctrl-click
+
+The bank was a multi-select list with *"Ctrl-click to select several"* underneath.
+That is a keyboard trick people either know or do not, one slip of the mouse loses
+a minute's work, and nothing on screen says what is selected.
+
+`QuestionPicker` replaces it: a tick beside every question, a running count, and
+**Tick everything shown** / **Untick all**.
+
+The ticks are kept by question id rather than read off the visible rows, which is
+what makes filtering usable at all: tick four questions about circles, type
+"triangle", tick two more, and all six are still chosen.
+
+### 3. Filters, with buttons and not only a box
+
+Typing works when you already know what to type. A button says what there *is* -
+a teacher looking at fifty exams can see at a glance that they are in four courses
+and two states, which no amount of typing will tell her.
+
+| Screen | Free text over | Buttons |
+|---|---|---|
+| Build an exam | name, number, text, topic | topic · difficulty |
+| Question bank | name, number, text, topic | topic · difficulty |
+| Release an exam | name, number, course, author | course · written by |
+| Reports and statistics | the row's label and detail | how it went (under 55 / 55-74 / 75+) · size |
+| Principal's questions | already had a box | course · topic · difficulty |
+| Principal's exams | already had a box | course · status · written by |
+
+Buttons of the same kind are OR'd and the kinds are AND'd - *"Algebra or
+Mechanics, and only the approved ones"* - which is what people expect without
+being told. Nothing selected means no restriction, so every list starts complete,
+and a count says "12 of 47 shown" so a filtered list never looks like a lost one.
+
+Every set of buttons is **built from the data that arrived**, not from a fixed
+list: topics are typed by teachers, so what is in front of her is the only honest
+answer to "what topics are there".
+
+### 4. Questions have names too
+
+Requirements 15 to 18 give a question its text, four answers, a topic, a
+difficulty, an optional picture and a 5-digit number - and no name. Same addition
+as the exam name and for the same reason: a list of forty questions showing their
+full text is a wall to read, and one showing "00101" says nothing.
+
+Compulsory, trimmed, and shown as **"Prime numbers · 10301"** - name first,
+number after, exactly as an exam reads. Both are unchanged underneath: the 5-digit
+number is still generated and still in requirement 16's format.
+
+The eighty demo questions are titled from their own text - *"Angles - The angles
+of a triangle add up to how many degrees"* - rather than left for somebody to
+write eighty times. It is what a teacher would type anyway, and she can change any
+of them. Questions written before the column get the same treatment by migration.
+
+### 5. The bot takes the questions she chooses
+
+**Questions from the bank...** opens the same picker with the same filters. It used
+to be one button that took the entire course bank: a teacher who wanted the bot to
+help with circles had to give it the whole of geometry.
+
+"Everything" is still one press - open it, *Tick everything shown*, add - and the
+source is titled by what she did: "Plane Geometry question bank" when she took all
+of it, "12 questions from Plane Geometry" when she did not.
+
+`SourceRequest.questionBank` gained a list of ids; **empty still means the whole
+bank**, so nothing that asked for "the bank" behaves differently. The server
+filters the ids against the course's own questions rather than fetching them by
+id, so an id from another course - or one somebody made up - simply does not
+appear.
+
+### Verified
+
+| Suite | Result |
+|---|---|
+| **M3** | **42/42** (was 34; the question-name rules) |
+| **NewUsersTest** | **39/39** (was 35; she cannot build an exam or make a bot) |
+| **MenuBadgeTest** | **48/48** (was 37; both directions of the menu rule) |
+| M2, M4–M15, ClosingTimeTest, BadgeTest, StreamRaceTest | unchanged, all passing |
+| **Total** | **1029 checks** |
+| Screens | 19/19 load, 17/17 with no cut-off text at four sizes |
+
+Run **three times**, with a reset between passes.
+
+**Not covered by an automatic check:** the picker and the filter bars are drawn by
+JavaFX and have no server behaviour to assert, so `TruncationTest` proves only
+that they fit and cut nothing off. Whether ticking is actually nicer than
+ctrl-clicking is a judgement to make on the screen.

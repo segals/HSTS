@@ -378,10 +378,16 @@ public class BotController {
 
             switch (request.getType()) {
                 case QUESTION_BANK -> {
-                    content = questionBankText(bot.getCourseCode());
+                    // Chosen questions if she chose any, the whole bank if she did
+                    // not. The old behaviour is the empty case, so nothing that
+                    // asked for "the bank" behaves differently.
+                    content = questionBankText(bot.getCourseCode(), request.getQuestionIds());
                     if (content.isBlank()) {
-                        return Response.error("There are no questions in "
-                                + bot.getCourseName() + "'s bank to give it.");
+                        return Response.error(request.getQuestionIds().isEmpty()
+                                ? "There are no questions in " + bot.getCourseName()
+                                  + "'s bank to give it."
+                                : "None of the questions you chose is in "
+                                  + bot.getCourseName() + "'s bank.");
                     }
                 }
                 case FREE_TEXT -> {
@@ -628,8 +634,26 @@ public class BotController {
 
     /** Every current question in the course, as text the bot can read. */
     private String questionBankText(String courseCode) throws SQLException {
+        return questionBankText(courseCode, java.util.List.of());
+    }
+
+    /**
+     * The bank as text, or just the questions named.
+     *
+     * <p>Filtered here rather than in a query keyed by id, so that a question id
+     * from another course - or one somebody made up - simply does not appear. The
+     * course is the authority on what may be given to its bot, not the list of ids
+     * that arrived.</p>
+     */
+    private String questionBankText(String courseCode, java.util.List<String> only)
+            throws SQLException {
+        java.util.Set<String> wanted = (only == null)
+                ? java.util.Set.of() : new java.util.HashSet<>(only);
         StringBuilder out = new StringBuilder();
         for (Question q : questionDAO.findCurrentByCourse(courseCode)) {
+            if (!wanted.isEmpty() && !wanted.contains(q.getQuestionId())) {
+                continue;
+            }
             out.append("Q: ").append(q.getText()).append('\n');
             if (q.getTopic() != null) {
                 out.append("   topic: ").append(q.getTopic()).append('\n');

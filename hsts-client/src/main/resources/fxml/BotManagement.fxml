@@ -109,8 +109,8 @@
                             <Label text="ADD MATERIAL" styleClass="section-title"
                                    wrapText="true"/>
                             <HBox spacing="8" alignment="CENTER_LEFT">
-                                <Button fx:id="addBankButton" text="The course question bank"
-                                        onAction="#onAddQuestionBank"/>
+                                <Button fx:id="addBankButton" text="Questions from the bank..."
+                                        onAction="#onAddQuestionBank" minWidth="-Infinity"/>
                                 <Button fx:id="addWordButton" text="A Word file..."
                                         onAction="#onAddWord"/>
                                 <Button fx:id="addPdfButton" text="A PDF file..."

@@ -257,23 +257,35 @@ public class MainMenuController extends GUIScreen {
     private List<MenuEntry> menuFor(User user) {
         List<MenuEntry> entries = new ArrayList<>();
 
-        if (user instanceof Teacher) {                       // also covers coordinators
+        if (user instanceof Teacher teacher) {               // also covers coordinators
+            // The question bank is hers whatever she teaches: requirement 19 gives a
+            // coordinator every question in the subject she coordinates.
             entries.add(new MenuEntry("Question bank",           "/fxml/QuestionMgmt.fxml"));
-            entries.add(new MenuEntry("Build an exam",           "/fxml/ExamBuilder.fxml"));
-            // Only for somebody who actually teaches. Releasing is done by the
-            // teacher OF THE COURSE (SUC-6), so for a coordinator with no classes of
-            // her own the screen can only ever be empty - and an entry that opens
-            // onto nothing is a question the user has to answer for herself.
-            if (!((Teacher) user).getTaughtCourseCodes().isEmpty()) {
+
+            // Everything else here needs a course of her own, and the server already
+            // says so for each of them:
+            //   building an exam   - requirement 20, "רק עבור קורסים שהיא מלמדת"
+            //   releasing one      - SUC-6, the teacher OF THE COURSE
+            //   marking            - the papers of sittings SHE released
+            //   a study bot        - requirement 65, "עבור קורסים שהיא מלמדת"
+            // So for a coordinator who teaches nothing every one of these screens can
+            // only ever be empty, and an entry that opens onto nothing is a question
+            // the user has to answer for herself. The menu is a courtesy, not the
+            // defence: each request is refused again on the server.
+            if (!teacher.getTaughtCourseCodes().isEmpty()) {
+                entries.add(new MenuEntry("Build an exam",       "/fxml/ExamBuilder.fxml"));
                 entries.add(new MenuEntry("Release an exam",     "/fxml/ExamRelease.fxml",
                                           PendingCounts::getExamsNewlyApproved));
+                entries.add(new MenuEntry("Exams running now",   "/fxml/TeacherLiveExam.fxml"));
+                entries.add(new MenuEntry("Mark and approve grades", "/fxml/Grading.fxml",
+                                          PendingCounts::getPapersToApprove));
+                entries.add(new MenuEntry("Results and histogram", "/fxml/TeacherReports.fxml"));
+                entries.add(new MenuEntry("Course study bot",    "/fxml/BotManagement.fxml"));
             }
-            entries.add(new MenuEntry("Exams running now",       "/fxml/TeacherLiveExam.fxml"));
-            entries.add(new MenuEntry("Mark and approve grades", "/fxml/Grading.fxml",
-                                      PendingCounts::getPapersToApprove));
-            entries.add(new MenuEntry("Results and histogram",   "/fxml/TeacherReports.fxml"));
+
+            // Her own reports stay: they are about exams she WROTE, which she may
+            // still have from a year when she did teach.
             entries.add(new MenuEntry("My reports",              "/fxml/Reports.fxml"));
-            entries.add(new MenuEntry("Course study bot",        "/fxml/BotManagement.fxml"));
         }
 
         if (user instanceof SubjectCoordinator) {

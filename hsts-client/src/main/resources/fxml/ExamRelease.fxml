@@ -56,6 +56,7 @@
                 <Region HBox.hgrow="ALWAYS"/>
                 <Label fx:id="releasableCountLabel" styleClass="caption" wrapText="true"/>
             </HBox>
+            <VBox fx:id="approvedFilterHolder" spacing="6"/>
             <ListView fx:id="approvedList" VBox.vgrow="ALWAYS"/>
             <Label text="Only approved versions appear here. An exam needs the coordinator's approval first. A dot marks one of yours that was approved since you last opened this screen."
                    styleClass="caption" wrapText="true"/>

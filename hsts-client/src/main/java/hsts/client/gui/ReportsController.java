@@ -58,6 +58,20 @@ public class ReportsController extends GUIScreen {
     @FXML private HBox  statsRow;
     @FXML private Label histogramScopeLabel;
     @FXML private HistogramView histogram;
+    @FXML private javafx.scene.layout.VBox lineFilterHolder;
+
+    /** The report as it arrived, before filtering. */
+    private final java.util.List<ReportLine> allLines = new java.util.ArrayList<>();
+
+    /**
+     * Search plus buttons over the rows of a report.
+     *
+     * <p>A report of forty exams is a wall of numbers. The buttons say which halves
+     * of it exist - which courses, and how the rows did - so a question like "how
+     * are the hard ones going" is two presses rather than reading every line.</p>
+     */
+    private final FilterBar<ReportLine> lineFilter = new FilterBar<>();
+
     @FXML private TableView<ReportLine> lineTable;
     @FXML private TableColumn<ReportLine, String> examColumn;
     @FXML private TableColumn<ReportLine, String> detailColumn;
@@ -95,6 +109,10 @@ public class ReportsController extends GUIScreen {
         // Clicking a row plots that exam alone; clicking away plots everything.
         lineTable.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, line) -> plot(line));
+
+        lineFilterHolder.getChildren().add(lineFilter);
+        lineFilter.searchingIn(line -> line.getLabel() + " " + line.getDetail())
+                  .onChanged(this::showLines);
 
         controller.setResponseHandler(this::onServerResponse);
         controller.setConnectionLostHandler(this::showError);
@@ -203,7 +221,25 @@ public class ReportsController extends GUIScreen {
                 statTile("Median", overall.getGradeCount() == 0 ? "-"
                         : String.format("%.1f", overall.getMedian())));
 
-        lineTable.setItems(FXCollections.observableArrayList(report.getLines()));
+        allLines.clear();
+        allLines.addAll(report.getLines());
+        lineFilter.clearGroups();
+        lineFilter.withButtons("HOW IT WENT", java.util.List.of(
+                        "Under 55", "55 to 74", "75 and over"),
+                (line, choice) -> {
+                    double average = line.getStatistics().getAverage();
+                    return switch (choice) {
+                        case "Under 55"    -> average < 55;
+                        case "55 to 74"    -> average >= 55 && average < 75;
+                        case "75 and over" -> average >= 75;
+                        default            -> true;
+                    };
+                });
+        lineFilter.withButtons("SIZE", java.util.List.of("Fewer than 10 marks", "10 or more"),
+                (line, choice) -> "10 or more".equals(choice)
+                        ? line.getStatistics().getGradeCount() >= 10
+                        : line.getStatistics().getGradeCount() < 10);
+        showLines();
         lineTable.setPlaceholder(new Label("Nothing to compare - no approved marks yet."));
         lineTable.getSelectionModel().clearSelection();
         plot(null);
@@ -211,6 +247,11 @@ public class ReportsController extends GUIScreen {
     }
 
     /** Plots one exam, or everything together when nothing is selected. */
+    /** Re-applies the filters to the report's rows. */
+    private void showLines() {
+        lineTable.setItems(FXCollections.observableArrayList(lineFilter.apply(allLines)));
+    }
+
     private void plot(ReportLine line) {
         if (currentReport == null) {
             histogram.show(null);

@@ -74,6 +74,20 @@ public class PrincipalBrowseController extends GUIScreen {
     @FXML private ComboBox<String>  questionCourseBox;
     @FXML private TextField         questionSearchField;
     @FXML private Label             questionCountLabel;
+    @FXML private javafx.scene.layout.VBox questionButtonHolder;
+    @FXML private javafx.scene.layout.VBox examButtonHolder;
+
+    /**
+     * Buttons beside the two search boxes.
+     *
+     * <p>She had a box to type in, which works when you know what to type. A
+     * principal looking at two hundred questions cannot know; the buttons tell her
+     * what there is - which courses, which topics, which states - and are one press
+     * rather than a spelling.</p>
+     */
+    private final FilterBar<Question> questionButtons = new FilterBar<>();
+    private final FilterBar<Exam>     examButtons     = new FilterBar<>();
+
     @FXML private ListView<Question> questionList;
     @FXML private VBox              questionDetailBox;
 
@@ -169,6 +183,11 @@ public class PrincipalBrowseController extends GUIScreen {
         examSearchField.textProperty()
                 .addListener((obs, old, text) -> applyExamFilter());
 
+        questionButtonHolder.getChildren().add(questionButtons);
+        examButtonHolder.getChildren().add(examButtons);
+        questionButtons.onChanged(this::applyQuestionFilter);
+        examButtons.onChanged(this::applyExamFilter);
+
         controller.setResponseHandler(this::onServerResponse);
         controller.setConnectionLostHandler(this::showError);
 
@@ -241,12 +260,33 @@ public class PrincipalBrowseController extends GUIScreen {
             case REQ_QUESTIONS -> {
                 allQuestions.clear();
                 allQuestions.addAll((List<Question>) response.getPayload());
+                questionButtons.clearGroups();
+                questionButtons.withButtons("COURSE",
+                        FilterBar.distinct(allQuestions, Question::getCourseCode),
+                        (q, choice) -> choice.equals(q.getCourseCode()));
+                questionButtons.withButtons("TOPIC",
+                        FilterBar.distinct(allQuestions, Question::getTopic),
+                        (q, choice) -> choice.equals(q.getTopic()));
+                questionButtons.withButtons("DIFFICULTY",
+                        FilterBar.distinct(allQuestions,
+                                q -> q.getDifficulty().getDisplayName()),
+                        (q, choice) -> choice.equals(q.getDifficulty().getDisplayName()));
                 fillCourseBox();
                 applyQuestionFilter();
             }
             case REQ_EXAMS -> {
                 allExams.clear();
                 allExams.addAll((List<Exam>) response.getPayload());
+                examButtons.clearGroups();
+                examButtons.withButtons("COURSE",
+                        FilterBar.distinct(allExams, Exam::getCourseName),
+                        (e, choice) -> choice.equals(e.getCourseName()));
+                examButtons.withButtons("STATUS",
+                        FilterBar.distinct(allExams, e -> e.getStatus().getDisplayName()),
+                        (e, choice) -> choice.equals(e.getStatus().getDisplayName()));
+                examButtons.withButtons("WRITTEN BY",
+                        FilterBar.distinct(allExams, Exam::getAuthorName),
+                        (e, choice) -> choice.equals(e.getAuthorName()));
                 applyExamFilter();
 
                 // Only exams somebody has actually sat belong on the results tab;
@@ -309,6 +349,7 @@ public class PrincipalBrowseController extends GUIScreen {
                 shown.add(q);
             }
         }
+        shown = questionButtons.apply(shown);
         questionList.setItems(FXCollections.observableArrayList(shown));
         questionCountLabel.setText(shown.size() + " of " + allQuestions.size() + " shown");
         if (shown.isEmpty()) {
@@ -364,6 +405,7 @@ public class PrincipalBrowseController extends GUIScreen {
                 shown.add(e);
             }
         }
+        shown = examButtons.apply(shown);
         examList.setItems(FXCollections.observableArrayList(shown));
         examCountLabel.setText(shown.size() + " of " + allExams.size() + " shown");
         if (shown.isEmpty()) {

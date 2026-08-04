@@ -84,10 +84,11 @@
                 <RadioButton fx:id="automaticRadio" text="Automatic"   toggleGroup="$modeGroup"/>
             </HBox>
 
-            <!-- manual: pick from the bank -->
+            <!-- manual: tick what you want, with filters above -->
             <VBox fx:id="manualPane" spacing="6" VBox.vgrow="ALWAYS">
-                <Label text="Ctrl-click to select several." styleClass="caption" wrapText="true"/>
-                <ListView fx:id="bankList" VBox.vgrow="ALWAYS"/>
+                <Label text="Tick the questions you want. Filter first if the bank is long - your ticks are kept while you filter."
+                       styleClass="caption" wrapText="true"/>
+                <VBox fx:id="pickerHolder" VBox.vgrow="ALWAYS"/>
             </VBox>
 
             <!-- automatic: quota lines -->

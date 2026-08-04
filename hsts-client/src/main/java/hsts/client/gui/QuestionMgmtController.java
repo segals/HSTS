@@ -69,6 +69,15 @@ public class QuestionMgmtController extends GUIScreen {
 
     @FXML private Label     editorTitleLabel;
     @FXML private Label     versionLabel;
+    @FXML private javafx.scene.layout.VBox bankFilterHolder;
+
+    /** The bank as it arrived, before filtering. */
+    private final java.util.List<Question> allBank = new java.util.ArrayList<>();
+
+    /** Search, plus a button per topic and per difficulty. */
+    private final FilterBar<Question> bankFilter = new FilterBar<>();
+
+    @FXML private TextField nameField;
     @FXML private TextArea  textArea;
     @FXML private TextArea  instructionsArea;
     @FXML private ComboBox<String> topicCombo;
@@ -106,8 +115,8 @@ public class QuestionMgmtController extends GUIScreen {
         // Wrap, so a long question is readable in the list rather than cut off
         // mid-sentence with no way to see the rest.
         useWrappingCells(questionList, q ->
-                q.getQuestionId() + "  ·  v" + q.getVersion()
-              + "  ·  " + q.getTopic() + "  ·  " + q.getDifficulty().getDisplayName()
+                q.describe() + "  ·  v" + q.getVersion()
+              + "\n" + q.getTopic() + "  ·  " + q.getDifficulty().getDisplayName()
               + "\n" + q.getText());
 
         courseCombo.valueProperty().addListener((obs, old, course) -> {
@@ -122,6 +131,10 @@ public class QuestionMgmtController extends GUIScreen {
                         requestFullQuestion(question);
                     }
                 });
+
+        bankFilterHolder.getChildren().add(bankFilter);
+        bankFilter.searchingIn(q -> q.describe() + " " + q.getText() + " " + q.getTopic())
+                  .onChanged(this::showBank);
 
         controller.setResponseHandler(this::onServerResponse);
         controller.setConnectionLostHandler(this::showError);
@@ -293,7 +306,19 @@ public class QuestionMgmtController extends GUIScreen {
             }
             case REQ_LIST -> {
                 List<Question> questions = (List<Question>) response.getPayload();
-                questionList.setItems(FXCollections.observableArrayList(questions));
+                allBank.clear();
+                allBank.addAll(questions);
+                // Buttons built from this course's own bank: topics are typed by
+                // teachers, so what is in front of her is the only honest list.
+                bankFilter.clearGroups();
+                bankFilter.withButtons("TOPIC",
+                        FilterBar.distinct(questions, Question::getTopic),
+                        (q, choice) -> choice.equals(q.getTopic()));
+                bankFilter.withButtons("DIFFICULTY",
+                        FilterBar.distinct(questions,
+                                q -> q.getDifficulty().getDisplayName()),
+                        (q, choice) -> choice.equals(q.getDifficulty().getDisplayName()));
+                showBank();
                 bankCountLabel.setText(questions.size() + " question(s) in this course");
                 showMessage(response.getMessage());
             }
@@ -374,6 +399,7 @@ public class QuestionMgmtController extends GUIScreen {
         editorTitleLabel.setText("New question");
         versionLabel.setText("It will be given the next free 5-digit id: "
                            + "3 digits for the question number, 2 for the course code.");
+        nameField.clear();
         textArea.clear();
         instructionsArea.clear();
         topicCombo.setValue(null);
@@ -393,6 +419,7 @@ public class QuestionMgmtController extends GUIScreen {
                            + " - saving will create version " + (q.getVersion() + 1)
                            + " and keep this one in the bank.");
 
+        nameField.setText(q.getName() == null ? "" : q.getName());
         textArea.setText(q.getText());
         instructionsArea.setText(q.getInstructions() == null ? "" : q.getInstructions());
         topicCombo.setValue(q.getTopic());
@@ -416,8 +443,14 @@ public class QuestionMgmtController extends GUIScreen {
         showImagePreview();
     }
 
+    /** Re-applies the filters to the bank. */
+    private void showBank() {
+        questionList.setItems(FXCollections.observableArrayList(bankFilter.apply(allBank)));
+    }
+
     private Question readForm() {
         Question q = new Question();
+        q.setName(nameField.getText() == null ? "" : nameField.getText().trim());
         q.setText(textArea.getText().trim());
         q.setInstructions(blankToNull(instructionsArea.getText()));
         q.setTopic(readTopic());

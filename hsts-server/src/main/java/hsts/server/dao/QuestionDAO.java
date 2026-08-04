@@ -170,23 +170,24 @@ public class QuestionDAO implements IDAO<Question, String> {
 
     private void insertRow(Question q) throws SQLException {
         String sql = """
-            INSERT INTO question (question_id, version, course_code, text, instructions,
+            INSERT INTO question (question_id, version, name, course_code, text, instructions,
                                   topic, difficulty, image, is_current, is_deleted,
                                   author_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""";
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""";
         try (PreparedStatement ps = conn().prepareStatement(sql)) {
             ps.setString(1, q.getQuestionId());
             ps.setInt(2, q.getVersion());
-            ps.setString(3, q.getCourseCode());
-            ps.setString(4, q.getText());
-            ps.setString(5, q.getInstructions());
-            ps.setString(6, q.getTopic());
-            ps.setString(7, q.getDifficulty().name());
-            ps.setBytes(8, q.getImage());
-            ps.setBoolean(9, q.isCurrent());
-            ps.setBoolean(10, q.isDeleted());
-            ps.setString(11, q.getAuthorId());
-            ps.setTimestamp(12, Timestamp.valueOf(q.getCreatedAt()));
+            ps.setString(3, q.getName() == null ? "" : q.getName());
+            ps.setString(4, q.getCourseCode());
+            ps.setString(5, q.getText());
+            ps.setString(6, q.getInstructions());
+            ps.setString(7, q.getTopic());
+            ps.setString(8, q.getDifficulty().name());
+            ps.setBytes(9, q.getImage());
+            ps.setBoolean(10, q.isCurrent());
+            ps.setBoolean(11, q.isDeleted());
+            ps.setString(12, q.getAuthorId());
+            ps.setTimestamp(13, Timestamp.valueOf(q.getCreatedAt()));
             ps.executeUpdate();
         }
     }
@@ -232,7 +233,7 @@ public class QuestionDAO implements IDAO<Question, String> {
      */
     public List<Question> findCurrentByCourse(String courseCode) throws SQLException {
         String sql = """
-            SELECT q.question_id, q.version, q.course_code, q.text, q.instructions,
+            SELECT q.question_id, q.version, q.name, q.course_code, q.text, q.instructions,
                    q.topic, q.difficulty, q.is_current, q.is_deleted,
                    q.author_id, u.full_name AS author_name, q.created_at
             FROM question q
@@ -258,7 +259,7 @@ public class QuestionDAO implements IDAO<Question, String> {
     /** One exact version, with its answers and its image. */
     public Question findByIdAndVersion(String questionId, int version) throws SQLException {
         String sql = """
-            SELECT q.question_id, q.version, q.course_code, q.text, q.instructions,
+            SELECT q.question_id, q.version, q.name, q.course_code, q.text, q.instructions,
                    q.topic, q.difficulty, q.image, q.is_current, q.is_deleted,
                    q.author_id, u.full_name AS author_name, q.created_at
             FROM question q
@@ -294,7 +295,7 @@ public class QuestionDAO implements IDAO<Question, String> {
      */
     public List<Question> findAllVersions(String questionId) throws SQLException {
         String sql = """
-            SELECT q.question_id, q.version, q.course_code, q.text, q.instructions,
+            SELECT q.question_id, q.version, q.name, q.course_code, q.text, q.instructions,
                    q.topic, q.difficulty, q.is_current, q.is_deleted,
                    q.author_id, u.full_name AS author_name, q.created_at
             FROM question q
@@ -345,7 +346,7 @@ public class QuestionDAO implements IDAO<Question, String> {
     @Override
     public List<Question> findAll() throws SQLException {
         String sql = """
-            SELECT q.question_id, q.version, q.course_code, q.text, q.instructions,
+            SELECT q.question_id, q.version, q.name, q.course_code, q.text, q.instructions,
                    q.topic, q.difficulty, q.is_current, q.is_deleted,
                    q.author_id, u.full_name AS author_name, q.created_at
             FROM question q
@@ -386,6 +387,7 @@ public class QuestionDAO implements IDAO<Question, String> {
         q.setQuestionId(rs.getString("question_id"));
         q.setVersion(rs.getInt("version"));
         q.setCourseCode(rs.getString("course_code"));
+        q.setName(rs.getString("name"));
         q.setText(rs.getString("text"));
         q.setInstructions(rs.getString("instructions"));
         q.setTopic(rs.getString("topic"));

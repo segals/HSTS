@@ -52,6 +52,19 @@ public class Question implements Serializable {
     private int version = 1;
 
     private String courseCode;
+    /**
+     * A short title the author gives it: "Triangle angle sum".
+     *
+     * <p>Not in the submitted documents - requirements 15 to 18 give a question its
+     * text, four answers, a topic, a difficulty, an optional picture and a 5-digit
+     * number, and no name. Added at the customer's request alongside the exam name,
+     * for the same reason: a list of forty questions showing their full text is a
+     * wall to read, and a list showing "00101" says nothing at all.</p>
+     *
+     * <p>The 5-digit number (requirement 16) and the text are both unchanged.</p>
+     */
+    private String name;
+
     private String text;
     private String instructions;
     private String topic;
@@ -76,6 +89,18 @@ public class Question implements Serializable {
     public String getQuestionId()          { return questionId; }
     public int getVersion()                { return version; }
     public String getCourseCode()          { return courseCode; }
+    public String getName()                { return name; }
+
+    /**
+     * "Triangle angle sum  ·  00101", for a list row.
+     *
+     * <p>The same order as an exam: the name first, the number after it.</p>
+     */
+    public String describe() {
+        return (name == null || name.isBlank())
+                ? questionId : name + "  ·  " + questionId;
+    }
+
     public String getText()                { return text; }
     public String getInstructions()        { return instructions; }
     public String getTopic()               { return topic; }
@@ -91,6 +116,7 @@ public class Question implements Serializable {
     public void setQuestionId(String questionId)   { this.questionId = questionId; }
     public void setVersion(int version)            { this.version = version; }
     public void setCourseCode(String courseCode)   { this.courseCode = courseCode; }
+    public void setName(String name)             { this.name = name; }
     public void setText(String text)               { this.text = text; }
     public void setInstructions(String s)          { this.instructions = s; }
     public void setTopic(String topic)             { this.topic = topic; }

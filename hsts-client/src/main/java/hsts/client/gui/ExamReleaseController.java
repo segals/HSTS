@@ -44,6 +44,13 @@ public class ExamReleaseController extends GUIScreen {
     @FXML private Button backButton;
 
     @FXML private Label            releasableCountLabel;
+    @FXML private javafx.scene.layout.VBox approvedFilterHolder;
+
+    /** Everything the server sent, before filtering. */
+    private final java.util.List<Exam> allApproved = new java.util.ArrayList<>();
+
+    /** Search, plus a button per course and per author. */
+    private final FilterBar<Exam> approvedFilter = new FilterBar<>();
     @FXML private ListView<Exam>   approvedList;
 
     @FXML private Label      chosenExamLabel;
@@ -103,6 +110,11 @@ public class ExamReleaseController extends GUIScreen {
         approvedList.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, exam) -> chooseExam(exam));
 
+        approvedFilterHolder.getChildren().add(approvedFilter);
+        approvedFilter.searchingIn(e -> e.describe() + " " + e.getCourseName()
+                                      + " " + e.getAuthorName())
+                      .onChanged(this::showApproved);
+
         controller.setResponseHandler(this::onServerResponse);
         controller.setConnectionLostHandler(this::showError);
 
@@ -119,6 +131,12 @@ public class ExamReleaseController extends GUIScreen {
     // -----------------------------------------------------------------
     //  Buttons
     // -----------------------------------------------------------------
+
+    /** Re-applies the filters to the approved list. */
+    private void showApproved() {
+        approvedList.setItems(FXCollections.observableArrayList(
+                approvedFilter.apply(allApproved)));
+    }
 
     @FXML
     private void onSetNow() {
@@ -205,7 +223,18 @@ public class ExamReleaseController extends GUIScreen {
         switch (id) {
             case REQ_RELEASABLE -> {
                 List<Exam> approved = (List<Exam>) response.getPayload();
-                approvedList.setItems(FXCollections.observableArrayList(approved));
+                allApproved.clear();
+                allApproved.addAll(approved);
+                // Buttons built from what actually arrived: a course with no approved
+                // exam should not have a button that can only ever show nothing.
+                approvedFilter.clearGroups();
+                approvedFilter.withButtons("COURSE",
+                        FilterBar.distinct(approved, Exam::getCourseName),
+                        (exam, choice) -> choice.equals(exam.getCourseName()));
+                approvedFilter.withButtons("WRITTEN BY",
+                        FilterBar.distinct(approved, Exam::getAuthorName),
+                        (exam, choice) -> choice.equals(exam.getAuthorName()));
+                showApproved();
                 releasableCountLabel.setText(approved.size() + " ready");
                 if (approved.isEmpty()) {
                     showMessage(response.getMessage());

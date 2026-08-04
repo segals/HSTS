@@ -70,6 +70,7 @@ public class BotManagementController extends GUIScreen {
     private static final String REQ_COURSES = "bm.courses";
     private static final String REQ_CREATE  = "bm.create";
     private static final String REQ_STATUS  = "bm.status";
+    private static final String REQ_BANK      = "b.bank";
     private static final String REQ_ADD     = "bm.add";
     private static final String REQ_REMOVE  = "bm.remove";
     private static final String REQ_USAGE   = "bm.usage";
@@ -267,14 +268,67 @@ public class BotManagementController extends GUIScreen {
         });
     }
 
+    /**
+     * Choose which questions to give the bot, rather than all of them.
+     *
+     * <p>This used to be one button that took the entire course bank, so a teacher
+     * who wanted the bot to help with circles had to give it the whole of geometry -
+     * and could never take part of it back. She now picks from the same tick-box
+     * list with the same filters as the exam builder, which is the screen she
+     * already knows.</p>
+     *
+     * <p>"Everything" is still one press: open it, "Tick everything shown", add.</p>
+     */
     @FXML
     private void onAddQuestionBank() {
         if (chosenBot == null) {
             showError("Choose a bot first.");
             return;
         }
-        send(RequestType.BOT_ADD_SOURCE, SourceRequest.questionBank(chosenBot.getBotId(),
-                chosenBot.getCourseName() + " question bank"), REQ_ADD);
+        askForBankThen(questions -> {
+            if (questions.isEmpty()) {
+                showError(chosenBot.getCourseName() + "'s bank has no questions to give it.");
+                return;
+            }
+            QuestionPicker picker = new QuestionPicker();
+            picker.setQuestions(questions);
+            picker.setPrefSize(680, 520);
+
+            javafx.scene.control.Dialog<javafx.scene.control.ButtonType> chooser =
+                    new javafx.scene.control.Dialog<>();
+            chooser.initOwner(hsts.client.HSTSApp.getPrimaryStage());
+            chooser.setTitle("Questions for " + chosenBot.getName());
+            chooser.setHeaderText("Tick the questions " + chosenBot.getName()
+                    + " should learn from.");
+            chooser.getDialogPane().setContent(picker);
+            chooser.getDialogPane().getButtonTypes().addAll(
+                    javafx.scene.control.ButtonType.OK, javafx.scene.control.ButtonType.CANCEL);
+            prepareDialog(chooser, 700);
+
+            if (chooser.showAndWait().orElse(javafx.scene.control.ButtonType.CANCEL)
+                    != javafx.scene.control.ButtonType.OK) {
+                return;
+            }
+            java.util.List<String> ids = picker.getChosenIds();
+            if (ids.isEmpty()) {
+                showError("No questions were ticked, so nothing was added.");
+                return;
+            }
+            String title = ids.size() == questions.size()
+                    ? chosenBot.getCourseName() + " question bank"
+                    : ids.size() + " questions from " + chosenBot.getCourseName();
+            send(RequestType.BOT_ADD_SOURCE,
+                    SourceRequest.questionBank(chosenBot.getBotId(), title, ids), REQ_ADD);
+        });
+    }
+
+    /** Waiting for the bank to arrive before the chooser can be shown. */
+    private java.util.function.Consumer<java.util.List<hsts.common.entity.Question>> whenBankArrives;
+
+    private void askForBankThen(
+            java.util.function.Consumer<java.util.List<hsts.common.entity.Question>> then) {
+        whenBankArrives = then;
+        send(RequestType.QUESTION_LIST_BY_COURSE, chosenBot.getCourseCode(), REQ_BANK);
     }
 
     @FXML
@@ -395,6 +449,14 @@ public class BotManagementController extends GUIScreen {
             return;
         }
         switch (id) {
+            case REQ_BANK -> {
+                // The bank arrived; whoever asked for it can now show the chooser.
+                var then = whenBankArrives;
+                whenBankArrives = null;
+                if (then != null) {
+                    then.accept((List<hsts.common.entity.Question>) response.getPayload());
+                }
+            }
             case REQ_BOTS -> {
                 List<Bot> bots = (List<Bot>) response.getPayload();
                 int keep = (chosenBot == null) ? -1 : chosenBot.getBotId();

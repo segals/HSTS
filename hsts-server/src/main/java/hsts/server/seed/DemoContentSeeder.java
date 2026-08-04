@@ -523,9 +523,9 @@ public final class DemoContentSeeder {
         Map<String, Integer> counter = new HashMap<>();
 
         String qSql = """
-            INSERT INTO question (question_id, version, course_code, text, instructions,
+            INSERT INTO question (question_id, version, name, course_code, text, instructions,
                                   topic, difficulty, is_current, is_deleted, author_id, created_at)
-            VALUES (?, 1, ?, ?, NULL, ?, ?, TRUE, FALSE, ?, ?)""";
+            VALUES (?, 1, ?, ?, ?, NULL, ?, ?, TRUE, FALSE, ?, ?)""";
         String aSql = """
             INSERT INTO answer (question_id, question_version, answer_no, text, is_correct)
             VALUES (?, 1, ?, ?, ?)""";
@@ -546,12 +546,13 @@ public final class DemoContentSeeder {
                 String author = firstTeacherOf(course, staff);
 
                 qs.setString(1, questionId);
-                qs.setString(2, course);
-                qs.setString(3, text);
-                qs.setString(4, topic);
-                qs.setString(5, difficulty);
-                qs.setString(6, author);
-                qs.setTimestamp(7, Timestamp.valueOf(LocalDateTime.now().minusDays(40)));
+                qs.setString(2, shortName(topic, text));
+                qs.setString(3, course);
+                qs.setString(4, text);
+                qs.setString(5, topic);
+                qs.setString(6, difficulty);
+                qs.setString(7, author);
+                qs.setTimestamp(8, Timestamp.valueOf(LocalDateTime.now().minusDays(40)));
                 qs.executeUpdate();
 
                 for (int i = 1; i <= 4; i++) {
@@ -565,6 +566,26 @@ public final class DemoContentSeeder {
             }
         }
         return byCourse;
+    }
+
+    /**
+     * A short title for a seeded question: its topic, then the gist of the text.
+     *
+     * <p>"Angles - the angles of a triangle add up to". Written from the question
+     * rather than by hand for eighty of them, and it is what a teacher would type
+     * anyway: what it is about, briefly. She can change any of them.</p>
+     *
+     * <p>Cut on a word boundary, never mid-word, and the question mark goes - a
+     * title is not a question.</p>
+     */
+    private static String shortName(String topic, String text) {
+        String gist = text.replace("?", "").trim();
+        int room = 70 - topic.length();
+        if (gist.length() > room) {
+            int cut = gist.lastIndexOf(' ', room);
+            gist = gist.substring(0, cut < 20 ? room : cut).trim();
+        }
+        return topic + " - " + gist;
     }
 
     private static final Map<String, String> COURSE_OWNER = Map.of(

@@ -93,6 +93,7 @@
                             <Label text="click a row to plot just that exam"
                                    styleClass="caption" wrapText="true"/>
                         </HBox>
+                        <VBox fx:id="lineFilterHolder" spacing="6"/>
                         <TableView fx:id="lineTable" prefHeight="280">
                             <columns>
                                 <TableColumn fx:id="examColumn"    text="Exam"       prefWidth="230" minWidth="120"/>

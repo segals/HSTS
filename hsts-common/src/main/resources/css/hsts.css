@@ -156,6 +156,27 @@ Label { -fx-text-fill: -hsts-text; }
     -fx-border-color: -hsts-border;
 }
 
+/* A filter button. Quiet until chosen, then clearly on - it has to be
+   obvious at a glance which filters are active, or a list that is hiding
+   half its rows looks like a list that has lost them. */
+.filter-chip {
+    -fx-background-color: -hsts-surface;
+    -fx-text-fill: -hsts-text-muted;
+    -fx-border-color: -hsts-border-firm;
+    -fx-border-radius: 999;
+    -fx-background-radius: 999;
+    -fx-padding: 4 12 4 12;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+.filter-chip:hover { -fx-background-color: #f2f4f7; }
+.filter-chip:selected {
+    -fx-background-color: -hsts-accent-soft;
+    -fx-border-color: -hsts-accent;
+    -fx-text-fill: -hsts-accent;
+    -fx-font-weight: 600;
+}
+
 /* ---------- inputs -------------------------------------------------- */
 .text-field, .password-field, .text-area, .combo-box-base, .spinner {
     -fx-background-color: -hsts-surface;

@@ -64,7 +64,8 @@
                 <HBox spacing="14" VBox.vgrow="ALWAYS">
                     <VBox styleClass="card" spacing="8" prefWidth="430" minWidth="340">
                         <Label text="QUESTIONS" styleClass="section-title" wrapText="true"/>
-                        <ListView fx:id="questionList" VBox.vgrow="ALWAYS"/>
+                        <VBox fx:id="questionButtonHolder" spacing="6"/>
+                    <ListView fx:id="questionList" VBox.vgrow="ALWAYS"/>
                     </VBox>
                     <VBox styleClass="card" spacing="8" HBox.hgrow="ALWAYS" minWidth="420">
                         <Label text="THE QUESTION AS IT STANDS" styleClass="section-title"
@@ -94,7 +95,8 @@
                 <HBox spacing="14" VBox.vgrow="ALWAYS">
                     <VBox styleClass="card" spacing="8" prefWidth="420" minWidth="330">
                         <Label text="EVERY EXAM" styleClass="section-title" wrapText="true"/>
-                        <ListView fx:id="examList" VBox.vgrow="ALWAYS"/>
+                        <VBox fx:id="examButtonHolder" spacing="6"/>
+                    <ListView fx:id="examList" VBox.vgrow="ALWAYS"/>
                     </VBox>
                     <VBox styleClass="card" spacing="8" HBox.hgrow="ALWAYS" minWidth="420">
                         <Label text="THE PAPER" styleClass="section-title" wrapText="true"/>

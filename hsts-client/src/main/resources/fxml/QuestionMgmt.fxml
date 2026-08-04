@@ -73,6 +73,7 @@
                 <Label fx:id="bankCountLabel" styleClass="caption" wrapText="true"/>
             </HBox>
 
+            <VBox fx:id="bankFilterHolder" spacing="6"/>
             <ListView fx:id="questionList" VBox.vgrow="ALWAYS"/>
 
             <HBox spacing="7">
@@ -98,6 +99,11 @@
                     <padding><Insets top="14" right="10" bottom="14" left="0"/></padding>
 
                     <VBox spacing="5">
+                        <Label text="NAME  ·  REQUIRED" styleClass="section-title" wrapText="true"/>
+                        <TextField fx:id="nameField" promptText="e.g. Triangle angle sum"/>
+                        <Label text="A short title, so this question can be found in a list. The 5-digit number is given by the system."
+                               styleClass="caption" wrapText="true"/>
+
                         <Label text="QUESTION TEXT" styleClass="section-title" wrapText="true"/>
                         <TextArea fx:id="textArea" prefRowCount="3" wrapText="true"/>
                     </VBox>

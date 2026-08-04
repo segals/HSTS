@@ -72,7 +72,10 @@ public class ExamBuilderController extends GUIScreen {
     @FXML private RadioButton automaticRadio;
     @FXML private VBox        manualPane;
     @FXML private VBox        automaticPane;
-    @FXML private ListView<Question> bankList;
+    @FXML private VBox pickerHolder;
+
+    /** Tick boxes and filters, in place of the old ctrl-click list. */
+    private final QuestionPicker picker = new QuestionPicker();
     @FXML private VBox   quotaBox;
     @FXML private Button addQuotaButton;
     @FXML private Label  quotaTotalLabel;
@@ -110,14 +113,10 @@ public class ExamBuilderController extends GUIScreen {
         durationSpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 600, 60));
 
-        bankList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-
-        // Wrap, so the whole question is readable. Choosing from a list you
-        // cannot read is the one thing this screen must not ask of anybody.
-        useWrappingCells(bankList, q ->
-                q.getQuestionId() + "  ·  v" + q.getVersion()
-              + "  ·  " + q.getTopic() + "  ·  " + q.getDifficulty().getDisplayName()
-              + "\n" + q.getText());
+        // Ticks rather than ctrl-click: a selection you can see, that survives
+        // filtering, and that needs no instructions. See QuestionPicker.
+        pickerHolder.getChildren().add(picker);
+        VBox.setVgrow(picker, Priority.ALWAYS);
 
         useWrappingCells(examList, e ->
                 e.describe() + "  ·  v" + e.getVersion() + "  ·  " + e.getStatus().getDisplayName()
@@ -220,14 +219,10 @@ public class ExamBuilderController extends GUIScreen {
             }
             criteria = ExamBuildCriteria.automatic(course.getCourseCode(), quotas);
         } else {
-            List<Question> picked = bankList.getSelectionModel().getSelectedItems();
-            if (picked.isEmpty()) {
-                showError("Select at least one question from the bank.");
+            List<String> ids = picker.getChosenIds();
+            if (ids.isEmpty()) {
+                showError("Tick at least one question from the bank.");
                 return;
-            }
-            List<String> ids = new ArrayList<>();
-            for (Question question : picked) {
-                ids.add(question.getQuestionId());
             }
             criteria = ExamBuildCriteria.manual(course.getCourseCode(), ids);
         }
@@ -336,8 +331,7 @@ public class ExamBuilderController extends GUIScreen {
             }
             case REQ_MY_EXAMS -> examList.setItems(
                     FXCollections.observableArrayList((List<Exam>) response.getPayload()));
-            case REQ_BANK -> bankList.setItems(
-                    FXCollections.observableArrayList((List<Question>) response.getPayload()));
+            case REQ_BANK -> picker.setQuestions((List<Question>) response.getPayload());
             case REQ_TOPICS -> topics = (List<String>) response.getPayload();
             case REQ_BUILD -> {
                 buildButton.setDisable(false);

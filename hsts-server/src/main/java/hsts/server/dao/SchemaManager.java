@@ -105,6 +105,10 @@ public final class SchemaManager {
                 CREATE TABLE IF NOT EXISTS question (
                   question_id  CHAR(5)     NOT NULL,
                   version      INT         NOT NULL DEFAULT 1,
+                  -- A short title the author gives it. Compulsory when she saves;
+                  -- the empty default exists only so the migration can add the
+                  -- column to a database that already has questions in it.
+                  name         VARCHAR(120) NOT NULL DEFAULT '',
                   course_code  CHAR(2)     NOT NULL,
                   text         TEXT        NOT NULL,
                   instructions TEXT        NULL,
@@ -426,6 +430,18 @@ public final class SchemaManager {
         // Exams gained a name. Rows written before it get one built from what they
         // do have - the course and the number - rather than being left blank: a
         // list of empty names would look like data loss, and this is at least true.
+        // Questions gained one at the same time. An older row is given a title
+        // built from the first words of its own text - true, and far better than a
+        // column of blanks that reads as data loss.
+        if (!columnExists(conn, "question", "name")) {
+            st.executeUpdate("ALTER TABLE question ADD COLUMN name VARCHAR(120) "
+                           + "NOT NULL DEFAULT '' AFTER version");
+            st.executeUpdate("""
+                UPDATE question
+                SET name = TRIM(TRAILING '?' FROM TRIM(LEFT(text, 60)))
+                WHERE name = ''""");
+        }
+
         if (!columnExists(conn, "exam", "name")) {
             st.executeUpdate(
                 "ALTER TABLE exam ADD COLUMN name VARCHAR(120) NOT NULL DEFAULT '' AFTER version");

@@ -166,9 +166,11 @@ public class QuestionController {
         try {
             question.setQuestionId(questionDAO.generateNextQuestionId(question.getCourseCode()));
             question.setAuthorId(user.getUserId());
+            question.setName(question.getName().trim());
             questionDAO.insert(question);
             return Response.ok(question,
-                    "Question " + question.getQuestionId() + " added to the bank.");
+                    "\"" + question.getName() + "\" added to the bank as question "
+                  + question.getQuestionId() + ".");
         } catch (SQLException e) {
             return Response.error("Could not save the question: " + e.getMessage());
         }
@@ -204,6 +206,7 @@ public class QuestionController {
             // with "The question must belong to a course", even though the server
             // was about to fill that field in itself.
             edited.setCourseCode(existing.getCourseCode());
+            edited.setName(edited.getName() == null ? null : edited.getName().trim());
             edited.setAuthorId(user.getUserId());
 
             String invalid = validate(edited);
@@ -251,7 +254,21 @@ public class QuestionController {
      * <p>The four-answers-one-correct rule comes straight from system description
      * §3.1 and cannot be expressed as a database constraint, so it lives here.</p>
      */
+    /** Long enough to say what a question is about, short enough for a list row. */
+    private static final int MAX_NAME_LENGTH = 120;
+
     private String validate(Question q) {
+        // Compulsory, alongside the exam name and for the same reason: a list of
+        // forty questions showing their full text is a wall, and one showing "00101"
+        // says nothing. A name that MAY be blank is one most questions will not have.
+        if (isBlank(q.getName())) {
+            return "Give the question a short name - something like "
+                 + "\"Triangle angle sum\" - so it can be found in a list.";
+        }
+        if (q.getName().trim().length() > MAX_NAME_LENGTH) {
+            return "That name is too long. Keep it under " + MAX_NAME_LENGTH
+                 + " characters so it fits on a list.";
+        }
         if (isBlank(q.getText())) {
             return "The question text cannot be empty.";
         }

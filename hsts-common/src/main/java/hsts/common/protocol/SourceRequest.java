@@ -25,29 +25,50 @@ public class SourceRequest implements Serializable {
     private final String text;
     private final byte[] fileBytes;
 
+    /**
+     * Which questions to give it, for a QUESTION_BANK source.
+     *
+     * <p>Empty means the whole current bank, which is what this used to do and all
+     * it could do: one button labelled "The course question bank" that took
+     * everything or nothing. A teacher who wanted the bot to help with circles had
+     * to give it the whole of geometry.</p>
+     */
+    private final java.util.List<String> questionIds;
+
     private SourceRequest(int botId, KnowledgeSourceType type, String title,
-                          String text, byte[] fileBytes) {
+                          String text, byte[] fileBytes,
+                          java.util.List<String> questionIds) {
         this.botId = botId;
         this.type = type;
         this.title = title;
         this.text = text;
         this.fileBytes = fileBytes;
+        // A copy: a view returned by List.of or subList is not serialisable.
+        this.questionIds = (questionIds == null)
+                ? new java.util.ArrayList<>() : new java.util.ArrayList<>(questionIds);
     }
 
     /** Free text the teacher typed. */
     public static SourceRequest text(int botId, String title, String text) {
-        return new SourceRequest(botId, KnowledgeSourceType.FREE_TEXT, title, text, null);
+        return new SourceRequest(botId, KnowledgeSourceType.FREE_TEXT, title, text, null, null);
     }
 
     /** Every current question in the bot's course, pulled in by the server. */
     public static SourceRequest questionBank(int botId, String title) {
-        return new SourceRequest(botId, KnowledgeSourceType.QUESTION_BANK, title, null, null);
+        return new SourceRequest(botId, KnowledgeSourceType.QUESTION_BANK, title, null, null, null);
+    }
+
+    /** Just these questions from the bank, chosen one by one. */
+    public static SourceRequest questionBank(int botId, String title,
+                                             java.util.List<String> questionIds) {
+        return new SourceRequest(botId, KnowledgeSourceType.QUESTION_BANK, title,
+                                 null, null, questionIds);
     }
 
     /** A PDF or Word file, still in its original bytes. */
     public static SourceRequest upload(int botId, KnowledgeSourceType type,
                                        String title, byte[] fileBytes) {
-        return new SourceRequest(botId, type, title, null, fileBytes);
+        return new SourceRequest(botId, type, title, null, fileBytes, null);
     }
 
     public int getBotId()                  { return botId; }
@@ -55,4 +76,7 @@ public class SourceRequest implements Serializable {
     public String getTitle()               { return title; }
     public String getText()                { return text; }
     public byte[] getFileBytes()           { return fileBytes; }
+
+    /** The chosen questions, or empty for the whole bank. */
+    public java.util.List<String> getQuestionIds() { return questionIds; }
 }
