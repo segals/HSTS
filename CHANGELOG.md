@@ -3352,3 +3352,52 @@ missing.
 
 Run **three times** from fresh classes with a reset between passes, and once more
 from the packaged jars.
+
+---
+
+## The tests move into the repository, and a handover
+
+`tests/` now holds the twenty-three harnesses and their runners. They had been
+sitting in a scratch folder outside the repository for the whole project, which
+was fine while there was one machine and became a hole the moment there were two:
+a clone had the system but no way to check it.
+
+Three things had to change before they could be committed.
+
+**The MySQL password was in the runner scripts.** `java ... $t root admin` - a
+local development password, but this repository is public and a password in a
+public repository is a password. Both runners take the user and the password as
+arguments now, and `env.sh` says so where somebody adding a fourth runner will
+read it.
+
+**The path was hard-coded to `C:/GitHub/SE/HSTS`.** A script that only runs on
+the laptop it was written on is a script nobody else can run. `env.sh` works the
+root out from its own location, converts it with `cygpath` because Git Bash
+reports `/c/GitHub/...` and java wants `C:/GitHub/...`, and picks `;` or `:` for
+the classpath by looking at the platform.
+
+**The ninety-nine exam ceiling was a trap.** An exam id carries two digits of
+exam number, so a course holds ninety-nine exams and no more, and a full pass
+writes a few dozen into course 01. Found again while testing the new runners: the
+third pass in a row without a reset failed five suites at once, which reads like a
+broken system and is a full disk. `run-all.sh` and `run-jars.sh` now take
+`reset` as a third argument. Deliberately not the default - a reset also throws
+away whatever was set up by hand for a demo, and losing that silently would be
+worse than a suite that fails and explains itself.
+
+### The handover
+
+`docs/HANDOVER.md` is written to be read once, at the start of a session on a
+different machine: what the project is, the standing instructions and the
+security rules, what is built and what is left, the things that will bite
+somebody who does not know them, the logins, and where to look. `docs/HANDOVER_PROMPT.md`
+is the first message to paste, with the rules restated in it rather than only
+linked, so that a session which never opens the file still follows them.
+
+The README's status line had said *"Milestone 1 complete. No HSTS features are
+implemented yet"* since milestone 1. It was the first thing a new reader would
+have believed.
+
+Verified by running the three new runners from the repository: the missing-password
+message, a full pass at **1126** across nineteen suites, and the four screen
+harnesses at 21/21 loading and 19/19 with no cut-off text.

@@ -7,17 +7,22 @@ building, exam sitting, automatic marking, statistics and reports, and a
 per-course AI study bot. Java over TCP/IP with a MySQL database, delivered as two
 runnable jars on two separate machines.
 
-> **Status: Milestone 1 (walking skeleton) complete.** No HSTS features are
-> implemented yet. Milestone 1 exists only to prove the technology stack works
-> end to end. See [CHANGELOG.md](CHANGELOG.md).
+> **Status: milestones 1–15 complete.** Every use case has a screen and a server
+> path behind it, verified by **1126 checks across 19 test suites**. What remains
+> is milestone 16: running the Assignment 1 acceptance tests by hand, finishing
+> the document redlines, and the two-laptop LAN test. See
+> [CHANGELOG.md](CHANGELOG.md) and [docs/HANDOVER.md](docs/HANDOVER.md).
 
 ## Documents
 
 | | |
 |---|---|
+| [docs/HANDOVER.md](docs/HANDOVER.md) | **Start here.** The state of the work, the rules, and everything true but not obvious from the code |
 | [docs/00_understanding.md](docs/00_understanding.md) | What the system must do, all 15 use cases, and the contradictions found across the source documents |
 | [docs/01_implementation_plan.md](docs/01_implementation_plan.md) | Architecture, database schema, protocol, milestones, risks |
+| [docs/03_document_updates.md](docs/03_document_updates.md) | Every place the submitted Assignment 1 and 2 documents are now wrong, with suggested wording |
 | [docs/test_accounts.md](docs/test_accounts.md) | Login convention for the seeded test users |
+| [tests/README.md](tests/README.md) | The 23 test harnesses and how to run them |
 | [CHANGELOG.md](CHANGELOG.md) | What changed, why, and how |
 
 ## Layout
@@ -27,7 +32,19 @@ hsts-ocsf      the reused OCSF communication framework (external reuse, unmodifi
 hsts-common    Data tier <<Entity>> + message protocol — packaged into BOTH jars
 hsts-server    Application tier <<Control>>            → G1_Server.jar
 hsts-client    Presentation tier <<Boundary>>          → G1_Client.jar
+tests          23 harnesses that drive the real system, and their runners
 ```
+
+## Tests
+
+```bash
+bash tests/run-all.sh <mysql-user> <mysql-password> reset
+bash tests/run-screens.sh
+```
+
+The MySQL password is passed on the command line and appears in no file.
+See [tests/README.md](tests/README.md) — and always pass `reset` on a full pass,
+for the reason explained there.
 
 ## Requirements
 
